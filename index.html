@@ -1,25 +1,26 @@
-<!-- index.html (COM HISTÓRICO NA SIDEBAR - sem mudar nada do chat atual, apenas adicionando) -->
+<!-- CORVUS 2.0 — UI/UX Refactor + Melhorias (versão estável) -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <!-- Favicon -->
-<link rel="icon" type="image/png" sizes="32x32" href="corvuslogo.png">
-<link rel="icon" type="image/png" sizes="16x16" href="corvuslogo.png">
-<link rel="apple-touch-icon" sizes="180x180" href="corvuslogo.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="corvuslogo.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="corvuslogo.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="corvuslogo.png">
 
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>CORVUS - Agente Oficial da MSY</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0a0a">
+  <title>CORVUS - Agente Oficial da MSY</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
-<body>
+<body data-theme="dark">
 
-<!-- ===== TELA DE LOGIN ===== -->
+<!-- TELA DE LOGIN -->
 <div id="loginScreen" class="login-screen">
   <div class="login-bg">
     <div class="gradient-orb orb-1"></div>
@@ -27,7 +28,7 @@
   </div>
   <div class="login-card">
     <div class="login-header">
-      <img src="corvuslogo.png" alt="Corvus" class="login-logo-img" />
+      <img src="corvuslogo.png" alt="Corvus" class="login-logo-img" id="loginLogo" />
       <h1 class="login-title">CORVUS</h1>
       <span class="login-subtitle">Ordem Masayoshi</span>
     </div>
@@ -46,128 +47,214 @@
     </div>
   </div>
 </div>
-    <!-- Animated Background -->
-    <div class="background-container">
-        <div class="gradient-orb orb-1"></div>
-        <div class="gradient-orb orb-2"></div>
-        <div class="gradient-orb orb-3"></div>
-    </div>
 
-    <!-- Main Container -->
-    <div class="app-container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <button class="menu-toggle" id="menuToggle" aria-label="Abrir menu">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </button>
-                <div class="logo">
-                    <img src="corvuslogo.png" alt="Corvus Logo" class="logo-icon" />
-                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                    </svg>
-                    <div class="logo-text">
-                        <h1>CORVUS</h1>
-                        <span>Agente oficial da MSY</span>
-                    </div>
-                </div>
-                <div class="header-status">
-                    <div class="status-indicator"></div>
-                    <span>Corvus v2.0</span>
-                </div>
-            </div>
-            <div class="header-glow"></div>
-        </header>
+<!-- BACKGROUND ORBS -->
+<div class="background-container" aria-hidden="true">
+  <div class="gradient-orb orb-1"></div>
+  <div class="gradient-orb orb-2"></div>
+  <div class="gradient-orb orb-3"></div>
+</div>
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Sidebar Simplificada -->
-            <aside class="sidebar" id="sidebar">
-  <div class="sidebar-content">
-    <!-- Info do usuário logado -->
-    <div class="sidebar-user-info" id="sidebarUserInfo" style="display:none;">
-      <div class="sui-avatar" id="suiAvatar">?</div>
-      <div class="sui-details">
-        <span class="sui-name" id="suiName">—</span>
-        <span class="sui-cargo" id="suiCargo">—</span>
+<!-- APP CONTAINER -->
+<div class="app-container">
+
+  <!-- HEADER -->
+  <header class="header" role="banner">
+    <div class="header-content">
+      <button class="menu-toggle" id="menuToggle" aria-label="Abrir menu" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+
+      <div class="logo">
+        <img src="corvuslogo.png" alt="Corvus Logo" class="logo-icon" id="headerLogo" />
+        <div class="logo-text">
+          <h1>CORVUS</h1>
+          <span>Agente oficial da MSY</span>
+        </div>
       </div>
-      <button class="sui-logout" id="logoutBtn" title="Sair">↪</button>
-    </div>
-    <button class="btn-new-chat" id="newChatBtn">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 5v14M5 12h14"/>
-      </svg>
-      Novo Chat
-    </button>
 
-    <!-- HISTÓRICO NA SIDEBAR -->
-    <div class="sidebar-history" aria-label="Histórico de conversas">
-      <div class="sidebar-history-header">
-        <span class="sidebar-history-title">Conversas</span>
-        <button class="btn-clear-history" id="clearAllChatsBtn" type="button" title="Limpar todo o histórico">
-          Limpar
+      <div class="header-status">
+        <div class="status-indicator" aria-hidden="true"></div>
+        <span>Corvus v2.0</span>
+      </div>
+    </div>
+    <div class="header-glow" aria-hidden="true"></div>
+  </header>
+
+  <!-- MAIN -->
+  <div class="main-content">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Histórico de conversas">
+      <div class="sidebar-content">
+
+        <!-- Perfil do usuário -->
+        <div class="sidebar-user-info" id="sidebarUserInfo" style="display:none;" role="status">
+          <div class="sui-avatar" id="suiAvatar" aria-hidden="true">?</div>
+          <div class="sui-details">
+            <span class="sui-name" id="suiName">—</span>
+            <span class="sui-cargo" id="suiCargo">—</span>
+          </div>
+          <button class="sui-logout" id="logoutBtn" title="Sair" aria-label="Sair da conta">↪</button>
+        </div>
+
+        <!-- Novo chat (redesenhado) -->
+        <button class="btn-new-chat" id="newChatBtn" aria-label="Iniciar nova conversa">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          Novo Chat
         </button>
+
+        <!-- Histórico -->
+        <div class="sidebar-history" aria-label="Conversas anteriores">
+          <div class="sidebar-history-header">
+            <span class="sidebar-history-title">Conversas</span>
+            <button class="btn-clear-history" id="clearAllChatsBtn" type="button" aria-label="Limpar todo o histórico">
+              Limpar
+            </button>
+          </div>
+          <!-- Busca -->
+          <div class="sidebar-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+            </svg>
+            <input
+              type="search"
+              id="searchInput"
+              class="sidebar-search-input"
+              placeholder="Buscar conversa..."
+              autocomplete="off"
+              aria-label="Buscar conversa"
+            />
+          </div>
+          <!-- Lista de conversas (preenchida via JS) -->
+          <div class="sidebar-history-list" id="chatList" role="list"></div>
+        </div>
+
+        <!-- Rodapé da sidebar -->
+        <div class="sidebar-info">
+          <div class="info-divider"></div>
+          <div class="info-item info-institution">
+            <span class="info-label">Desenvolvido pela</span>
+            <span class="info-value">Ordem Masayoshi</span>
+          </div>
+          <button class="btn-conta" id="btnConta" aria-label="Configurações da conta">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span id="btnContaNome">Minha conta</span>
+          </button>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- Overlay mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
+    <!-- CHAT -->
+    <main class="chat-container" role="main">
+
+      <!-- Banner convidado -->
+      <div id="guestBanner" role="alert"></div>
+
+      <!-- Mensagens -->
+      <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-label="Conversa"></div>
+
+      <!-- Input -->
+      <div class="input-container">
+        <div class="input-wrapper">
+
+          <!-- Seletor de modo (Corvus / Fenrir) -->
+          <div class="model-selector" id="modelSelector">
+            <button class="model-selector-btn" id="modelSelectorBtn" aria-haspopup="listbox" aria-expanded="false">
+              <span class="model-selector-icon corvus-icon" id="modelIcon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 8v4l3 3"/>
+                </svg>
+              </span>
+              <span class="model-selector-name" id="modelName">Corvus</span>
+              <svg class="model-selector-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </button>
+
+            <!-- Dropdown -->
+            <div class="model-dropdown" id="modelDropdown" role="listbox" aria-label="Selecionar modo">
+              <div class="model-dropdown-header">Modo de resposta</div>
+
+              <button class="model-option active" data-mode="corvus" role="option" aria-selected="true">
+                <div class="model-option-icon corvus-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 8v4l3 3"/>
+                  </svg>
+                </div>
+                <div class="model-option-info">
+                  <span class="model-option-name">Corvus</span>
+                  <span class="model-option-desc">Preciso e institucional</span>
+                </div>
+                <div class="model-option-check">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M20 6L9 17l-5-5"/>
+                  </svg>
+                </div>
+              </button>
+
+              <button class="model-option" data-mode="fenrir" role="option" aria-selected="false">
+                <div class="model-option-icon fenrir-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                  </svg>
+                </div>
+                <div class="model-option-info">
+                  <span class="model-option-name">Fenrir</span>
+                  <span class="model-option-desc">Criativo e expansivo</span>
+                </div>
+                <div class="model-option-check">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M20 6L9 17l-5-5"/>
+                  </svg>
+                </div>
+              </button>
+
+            </div>
+          </div>
+
+          <!-- Textarea -->
+          <textarea
+            id="messageInput"
+            placeholder="Faça sua pergunta ao Corvus..."
+            rows="1"
+            aria-label="Mensagem"
+            autocomplete="off"
+            spellcheck="true"
+          ></textarea>
+
+          <!-- Enviar -->
+          <button id="sendBtn" class="btn-send" aria-label="Enviar mensagem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+
+        <p class="input-hint">© 2026 Masayoshi — Todos os direitos reservados.</p>
       </div>
 
-      <!-- Itens injetados pelo JS -->
-      <div class="sidebar-history-list" id="chatList"></div>
-    </div>
-    <!-- /HISTÓRICO -->
-
-    <div class="sidebar-info">
-  <div class="info-divider"></div>
-
-  <div class="info-item info-institution">
-    <span class="info-label">Desenvolvido pela</span>
-    <span class="info-value">Ordem Masayoshi</span>
-  </div>
-
-  <div class="info-item info-credits">
-    <span class="info-label">Arquitetura</span>
-    <span class="info-value">T4 Masayoshi • Xitter</span>
+    </main>
   </div>
 </div>
 
-</aside>
+<!-- Container para notificações flutuantes -->
+<div id="notificationContainer" class="notification-container"></div>
 
-
-            <!-- Overlay for mobile -->
-            <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-            <!-- Chat Area -->
-            <main class="chat-container">
-            <!-- Banner convidado (injetado por JS) -->
-            <div id="guestBanner"></div>
-            <div class="chat-messages" id="chatMessages">
-                    <!-- Welcome + Suggestions injected by JS -->
-                </div>
-
-                <!-- Input Area -->
-                <div class="input-container">
-                    <div class="input-wrapper">
-                        <textarea 
-                            id="messageInput" 
-                            placeholder="Faça sua pergunta ao Corvus..."
-                            rows="1"
-                        ></textarea>
-                        <button id="fenrirToggle" class="btn-fenrir" title="Ativar modo Fenrir — Criatividade">
-                            <span class="fenrir-icon">⚡</span>
-                            <span class="fenrir-label">Fenrir</span>
-                        </button>
-                        <button id="sendBtn" class="btn-send" aria-label="Enviar mensagem">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="22" y1="2" x2="11" y2="13"/>
-                                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-                            </svg>
-                        </button>
-                    </div>
-                    <p class="input-hint"> © 2026 Masayoshi - Todos os direitos reservados. </p>
-                </div>
-            </main>
-        </div>
-    </div>
-
-    <script src="app.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

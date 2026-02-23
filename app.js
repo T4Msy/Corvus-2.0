@@ -6,19 +6,78 @@ const SUPABASE_URL = "https://bjqarrswkxkgfdbxjuuj.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJqcWFycnN3a3hrZ2ZkYnhqdXVqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg2OTc4OTQsImV4cCI6MjA4NDI3Mzg5NH0.3nv-46Q-NrxSXLblCmako_4APF5qeKS4L_IjRN2nOjk";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ===== ESTADO DO USUÁRIO =====
+// ===== ESTADO DO USUÁRIO E TEMA =====
 let USER_ID = "web-user";
 let USUARIO_PERFIL = null;
 let IS_CONVIDADO = false;
-
-// ===== MODO FENRIR =====
 let MODO_FENRIR = false;
+let CURRENT_THEME = localStorage.getItem('corvus_theme') || 'dark';
 
 // ===== CHATS =====
 const STORAGE_KEY = "corvus_conversations_v1";
 const ACTIVE_CHAT_KEY = "corvus_active_conversation_id";
 let conversations = [];
 let activeConversationId = null;
+
+// ===== UTILITÁRIOS =====
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+function mostrarNotificacao(mensagem, tipo = 'erro') {
+  const container = document.getElementById('notificationContainer') || (() => {
+    const div = document.createElement('div');
+    div.id = 'notificationContainer';
+    div.className = 'notification-container';
+    document.body.appendChild(div);
+    return div;
+  })();
+
+  const notif = document.createElement('div');
+  notif.className = `notificacao ${tipo}`;
+  notif.textContent = mensagem;
+  container.appendChild(notif);
+
+  requestAnimationFrame(() => notif.classList.add('visible'));
+
+  setTimeout(() => {
+    notif.classList.remove('visible');
+    setTimeout(() => notif.remove(), 300);
+  }, 4000);
+}
+
+// ===== FUNÇÕES DE TEMA E LOGO =====
+function applyTheme() {
+  document.body.setAttribute('data-theme', CURRENT_THEME);
+  // Trocar logo
+  const logoSrc = CURRENT_THEME === 'light' ? 'corvuslogolight.png' : 'corvuslogo.png';
+  const headerLogo = document.getElementById('headerLogo');
+  const loginLogo = document.getElementById('loginLogo');
+  if (headerLogo) headerLogo.src = logoSrc;
+  if (loginLogo) loginLogo.src = logoSrc;
+}
+
+function toggleTheme() {
+  CURRENT_THEME = CURRENT_THEME === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('corvus_theme', CURRENT_THEME);
+  applyTheme();
+  // Se o modal de conta estiver aberto, atualizar o texto do botão
+  const themeBtn = document.getElementById('toggleThemeBtn');
+  if (themeBtn) {
+    themeBtn.textContent = CURRENT_THEME === 'dark' ? 'Mudar para Claro' : 'Mudar para Escuro';
+  }
+}
+
+// Aplica tema inicial
+applyTheme();
 
 // ===== AUTENTICAÇÃO =====
 async function initAuth() {
@@ -47,7 +106,14 @@ async function loginComSucesso(user) {
   document.getElementById("suiCargo").textContent = cargo;
   document.getElementById("suiAvatar").textContent = nome.charAt(0).toUpperCase();
   document.getElementById("sidebarUserInfo").style.display = "flex";
+  const btnContaNome = document.getElementById("btnContaNome");
+  if (btnContaNome) btnContaNome.textContent = perfil?.nome_interno || perfil?.nome || user.email;
   esconderTelaLogin();
+
+  if (!localStorage.getItem('tour_visto')) {
+    setTimeout(mostrarTour, 1000);
+    localStorage.setItem('tour_visto', 'true');
+  }
 }
 
 function entrarComoConvidado() {
@@ -61,6 +127,11 @@ function entrarComoConvidado() {
   document.getElementById("sidebarUserInfo").style.display = "flex";
   document.getElementById("guestBanner").innerHTML = '<div class="guest-banner">Você está como <span>convidado</span>. Algumas informações são restritas.</div>';
   esconderTelaLogin();
+
+  if (!localStorage.getItem('tour_visto')) {
+    setTimeout(mostrarTour, 1000);
+    localStorage.setItem('tour_visto', 'true');
+  }
 }
 
 async function fazerLogout() {
@@ -71,67 +142,110 @@ async function fazerLogout() {
 
 // ===== SUPABASE: OPERAÇÕES DE CONVERSA =====
 async function sbCarregarConversas() {
-  const { data } = await sb
-    .from("msy_conversas")
-    .select("id, titulo, session_id, updated_at")
-    .eq("usuario_id", USER_ID)
-    .order("updated_at", { ascending: false })
-    .limit(50);
-  return (data || []).map(c => ({
-    id: c.id,
-    title: c.titulo,
-    sessionId: c.session_id,
-    updatedAt: new Date(c.updated_at).getTime(),
-    createdAt: new Date(c.updated_at).getTime(),
-    messages: []
-  }));
+  const chatList = document.getElementById("chatList");
+  if (chatList) {
+    chatList.innerHTML = '<div class="skeleton-chat-item"></div><div class="skeleton-chat-item"></div><div class="skeleton-chat-item"></div>';
+  }
+
+  try {
+    const { data } = await sb
+      .from("msy_conversas")
+      .select("id, titulo, session_id, updated_at")
+      .eq("usuario_id", USER_ID)
+      .order("updated_at", { ascending: false })
+      .limit(50);
+    return (data || []).map(c => ({
+      id: c.id,
+      title: c.titulo,
+      sessionId: c.session_id,
+      updatedAt: new Date(c.updated_at).getTime(),
+      createdAt: new Date(c.updated_at).getTime(),
+      messages: []
+    }));
+  } catch (error) {
+    mostrarNotificacao("Erro ao carregar conversas: " + error.message, "erro");
+    return [];
+  }
 }
 
 async function sbCriarConversa(conv) {
-  await sb.from("msy_conversas").insert({
-    id: conv.id,
-    usuario_id: USER_ID,
-    titulo: conv.title,
-    session_id: conv.sessionId,
-    updated_at: new Date(conv.updatedAt).toISOString()
-  });
+  try {
+    await sb.from("msy_conversas").insert({
+      id: conv.id,
+      usuario_id: USER_ID,
+      titulo: conv.title,
+      session_id: conv.sessionId,
+      updated_at: new Date(conv.updatedAt).toISOString()
+    });
+  } catch (error) {
+    mostrarNotificacao("Erro ao criar conversa: " + error.message, "erro");
+  }
 }
 
 async function sbAtualizarConversa(chatId, titulo, updatedAt) {
-  await sb.from("msy_conversas").update({
-    titulo,
-    updated_at: new Date(updatedAt).toISOString()
-  }).eq("id", chatId);
+  try {
+    await sb.from("msy_conversas").update({
+      titulo,
+      updated_at: new Date(updatedAt).toISOString()
+    }).eq("id", chatId);
+  } catch (error) {
+    mostrarNotificacao("Erro ao atualizar conversa: " + error.message, "erro");
+  }
 }
 
 async function sbDeletarConversa(chatId) {
-  await sb.from("msy_conversas").delete().eq("id", chatId);
+  try {
+    await sb.from("msy_conversas").delete().eq("id", chatId);
+  } catch (error) {
+    mostrarNotificacao("Erro ao deletar conversa: " + error.message, "erro");
+  }
 }
 
 async function sbCarregarMensagens(chatId) {
-  const { data } = await sb
-    .from("msy_mensagens")
-    .select("role, texto, created_at")
-    .eq("conversa_id", chatId)
-    .order("created_at", { ascending: true });
-  return (data || []).map(m => ({
-    role: m.role,
-    text: m.texto,
-    timestamp: new Date(m.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
-    createdAt: new Date(m.created_at).getTime()
-  }));
+  try {
+    const { data } = await sb
+      .from("msy_mensagens")
+      .select("role, texto, created_at")
+      .eq("conversa_id", chatId)
+      .order("created_at", { ascending: true });
+    return (data || []).map(m => ({
+      role: m.role,
+      text: m.texto,
+      timestamp: new Date(m.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+      createdAt: new Date(m.created_at).getTime()
+    }));
+  } catch (error) {
+    mostrarNotificacao("Erro ao carregar mensagens: " + error.message, "erro");
+    return [];
+  }
 }
 
 async function sbSalvarMensagem(chatId, role, texto) {
-  await sb.from("msy_mensagens").insert({ conversa_id: chatId, role, texto });
+  try {
+    await sb.from("msy_mensagens").insert({ conversa_id: chatId, role, texto });
+  } catch (error) {
+    mostrarNotificacao("Erro ao salvar mensagem: " + error.message, "erro");
+  }
+}
+
+async function gerarTituloSeNecessario(conv) {
+  if (!conv || conv.title !== "Nova conversa") return;
+  const msgs = await sbCarregarMensagens(conv.id);
+  const firstUser = msgs.find(m => m.role === "user");
+  if (!firstUser) return;
+  const plain = stripHtml(firstUser.text || "").replace(/\s+/g, " ").trim();
+  if (!plain) return;
+  conv.title = plain.length > 40 ? plain.slice(0, 40).trim() + "…" : plain;
+  conv.messages = msgs;
+  conv.updatedAt = Date.now();
+  await sbAtualizarConversa(conv.id, conv.title, conv.updatedAt);
+  renderChatList(document.getElementById("searchInput")?.value?.trim() || "");
 }
 
 // ===== INICIALIZAÇÃO =====
 document.addEventListener("DOMContentLoaded", () => {
-  // Ocultar tela de login até verificar sessão
   document.getElementById("loginScreen").style.display = "none";
 
-  // Botões de login
   document.getElementById("loginBtn")?.addEventListener("click", async () => {
     const email = document.getElementById("loginEmail").value.trim();
     const senha = document.getElementById("loginPassword").value;
@@ -157,10 +271,41 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.key === "Enter") document.getElementById("loginBtn")?.click();
   });
 
-  // Verificar sessão existente
   initAuth().then(async (autenticado) => {
     if (autenticado) await inicializarApp();
   });
+
+  // Atalhos de teclado globais
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'k') {
+      e.preventDefault();
+      document.getElementById('searchInput')?.focus();
+    }
+    if (e.ctrlKey && e.key === 'n') {
+      e.preventDefault();
+      createNewConversation(true);
+    }
+    if (e.key === 'Escape') {
+      const modal = document.getElementById('corvusModal');
+      if (modal) modal.remove();
+      document.getElementById('modelDropdown')?.classList.remove('open');
+    }
+  });
+
+  // Gestos na sidebar (mobile)
+  const sidebar = document.getElementById('sidebar');
+  let touchStartX = 0;
+  sidebar.addEventListener('touchstart', (e) => {
+    touchStartX = e.touches[0].clientX;
+  }, { passive: true });
+
+  sidebar.addEventListener('touchmove', (e) => {
+    if (touchStartX > 20) return;
+    const diff = e.touches[0].clientX - touchStartX;
+    if (diff < -30) {
+      closeMobileMenu();
+    }
+  }, { passive: true });
 });
 
 async function inicializarApp() {
@@ -187,40 +332,77 @@ function initializeApp() {
   const newChatBtn = document.getElementById("newChatBtn");
   const clearAllBtn = document.getElementById("clearAllChatsBtn");
 
-  // Event Listeners
-  // Toggle Fenrir
-  const fenrirToggle = document.getElementById("fenrirToggle");
-  fenrirToggle?.addEventListener("click", () => {
-    MODO_FENRIR = !MODO_FENRIR;
-    fenrirToggle.classList.toggle("active", MODO_FENRIR);
-    fenrirToggle.title = MODO_FENRIR ? "Desativar modo Fenrir" : "Ativar modo Fenrir — Criatividade";
-    const input = document.getElementById("messageInput");
-    if (input) input.placeholder = MODO_FENRIR ? "Modo Fenrir ativo — criatividade da MSY..." : "Faça sua pergunta ao Corvus...";
+  // Model Selector
+  const modelSelectorBtn = document.getElementById("modelSelectorBtn");
+  const modelDropdown = document.getElementById("modelDropdown");
+  const modelOptions = document.querySelectorAll(".model-option");
+
+  modelSelectorBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = modelDropdown.classList.contains("open");
+    modelDropdown.classList.toggle("open", !isOpen);
+    modelSelectorBtn.setAttribute("aria-expanded", String(!isOpen));
+  });
+
+  document.addEventListener("click", () => {
+    modelDropdown?.classList.remove("open");
+    modelSelectorBtn?.setAttribute("aria-expanded", "false");
+  });
+
+  modelOptions.forEach((option) => {
+    option.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const mode = option.getAttribute("data-mode");
+      const isFenrir = mode === "fenrir";
+
+      MODO_FENRIR = isFenrir;
+
+      modelOptions.forEach((o) => {
+        o.classList.toggle("active", o.getAttribute("data-mode") === mode);
+        o.setAttribute("aria-selected", String(o.getAttribute("data-mode") === mode));
+      });
+
+      const modelName = document.getElementById("modelName");
+      const modelIcon = document.getElementById("modelIcon");
+      if (modelName) modelName.textContent = isFenrir ? "Fenrir" : "Corvus";
+      if (modelIcon) {
+        modelIcon.className = isFenrir ? "model-selector-icon fenrir-icon" : "model-selector-icon corvus-icon";
+        modelIcon.innerHTML = isFenrir
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>'
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>';
+      }
+      if (modelSelectorBtn) modelSelectorBtn.classList.toggle("fenrir-active", isFenrir);
+
+      const input = document.getElementById("messageInput");
+      if (input) input.placeholder = isFenrir ? "Modo Fenrir — criatividade da MSY..." : "Faça sua pergunta ao Corvus...";
+
+      modelDropdown.classList.remove("open");
+      modelSelectorBtn?.setAttribute("aria-expanded", "false");
+    });
   });
 
   sendBtn?.addEventListener("click", () => sendMessage());
   messageInput?.addEventListener("keydown", handleKeyDown);
 
-  // "Novo Chat" agora cria nova conversa (não apaga tudo)
+  const btnConta = document.getElementById("btnConta");
+  btnConta?.addEventListener("click", () => {
+    if (!IS_CONVIDADO) mostrarModalConta();
+  });
+
   newChatBtn?.addEventListener("click", async () => createNewConversation(true));
 
-  // Botão "Limpar" (apaga TODAS as conversas e reseta)
   clearAllBtn?.addEventListener("click", async () => {
     const ok = await mostrarModal("Limpar todo o histórico?", "Todas as conversas serão apagadas. Isso não pode ser desfeito.", "Limpar tudo", "danger");
     if (!ok) return;
 
-    // Limpa storage
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(ACTIVE_CHAT_KEY);
 
-    // Reseta estado em memória
     conversations = [];
     activeConversationId = null;
 
-    // Recria uma conversa limpa
     ensureActiveConversation();
 
-    // Limpa UI
     const chatMessages = document.getElementById("chatMessages");
     if (chatMessages) chatMessages.innerHTML = "";
 
@@ -229,24 +411,20 @@ function initializeApp() {
     closeMobileMenu();
   });
 
-  // Auto-resize textarea
   messageInput?.addEventListener("input", () => {
     messageInput.style.height = "auto";
     messageInput.style.height = Math.min(messageInput.scrollHeight, 150) + "px";
   });
 
-  // Delegação de eventos na lista de chats (abrir/renomear/excluir)
   const chatList = document.getElementById("chatList");
   chatList?.addEventListener("click", (e) => {
     const target = e.target;
-
     const item = target.closest?.(".chat-item");
     if (!item) return;
 
     const chatId = item.getAttribute("data-chat-id");
     if (!chatId) return;
 
-    // Clique em botões de ação
     if (target.closest(".chat-action-btn.rename")) {
       e.preventDefault();
       e.stopPropagation();
@@ -260,17 +438,15 @@ function initializeApp() {
       return;
     }
 
-    // Clique no item: abrir conversa
     setActiveConversation(chatId, true);
   });
 
-  // (Opcional) busca, se existir input
   const searchInput = document.getElementById("searchInput");
-  searchInput?.addEventListener("input", () => {
-    renderChatList(searchInput.value.trim());
+  const debouncedRender = debounce((term) => renderChatList(term), 200);
+  searchInput?.addEventListener("input", (e) => {
+    debouncedRender(e.target.value.trim());
   });
 
-  // Sugestões (se existir bloco de sugestões fora do welcome)
   const suggestionCards = document.querySelectorAll(".suggestion-card");
   suggestionCards.forEach((card) => {
     card.addEventListener("click", () => {
@@ -279,11 +455,11 @@ function initializeApp() {
         messageInput.value = prompt;
         messageInput.focus();
         closeMobileMenu();
+        sendMessage();
       }
     });
   });
 }
-
 
 // ===== MOBILE MENU =====
 function initializeMobileMenu() {
@@ -410,7 +586,7 @@ function showWelcomeMessage() {
     const cardsHTML = sugestoes.map((s, i) => `
       <div class="suggestion-card welcome-card" data-prompt="${s.prompt}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          ${icones[i] || icones[0]}
+          ${icones[i % icones.length]}
         </svg>
         <p>${s.label}</p>
       </div>
@@ -448,30 +624,24 @@ async function sendMessage() {
 
   if (!message) return;
   if (!WEBHOOK_URL || WEBHOOK_URL === "COLOQUE_AQUI_A_URL_DO_WEBHOOK_DO_N8N") {
-    appendMessage("corvus", "Erro: URL do webhook não configurada. Configure a variável WEBHOOK_URL no arquivo app.js.", false);
+    mostrarNotificacao("Erro: URL do webhook não configurada.", "erro");
     return;
   }
 
-  // Garantir conversa ativa
   ensureActiveConversation();
   const conv = getActiveConversation();
   if (!conv) return;
 
-  // Limpar input e desabilitar botão
   messageInput.value = "";
   messageInput.style.height = "auto";
   setLoading(true);
 
-  // Remover welcome ao começar conversa
   removeWelcomeIfPresent();
 
-  // Mostrar mensagem do usuário
   await appendMessage("user", message);
 
-  // Atualizar título automático (apenas se for a 1ª mensagem do usuário)
   autoTitleConversationIfNeeded(conv.id);
 
-  // Mostrar indicador de digitação
   showTypingIndicator();
 
   try {
@@ -479,18 +649,18 @@ async function sendMessage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-  message: message,
-  userId: USER_ID,
-  sessionId: conv.sessionId,
-  conversationId: conv.id,
-  modo: MODO_FENRIR ? "fenrir" : "corvus",
-  userContext: {
-    nome: USUARIO_PERFIL?.nome_interno || USUARIO_PERFIL?.nome || "Convidado",
-    cargo: USUARIO_PERFIL?.cargo || "",
-    sigla: USUARIO_PERFIL?.sigla_cargo || "",
-    tipo: IS_CONVIDADO ? "convidado" : (USUARIO_PERFIL?.tipo || "membro")
-  }
-}),
+        message: message,
+        userId: USER_ID,
+        sessionId: conv.sessionId,
+        conversationId: conv.id,
+        modo: MODO_FENRIR ? "fenrir" : "corvus",
+        userContext: {
+          nome: USUARIO_PERFIL?.nome_interno || USUARIO_PERFIL?.nome || "Convidado",
+          cargo: USUARIO_PERFIL?.cargo || "",
+          sigla: USUARIO_PERFIL?.sigla_cargo || "",
+          tipo: IS_CONVIDADO ? "convidado" : (USUARIO_PERFIL?.tipo || "membro")
+        }
+      }),
     });
 
     if (!response.ok) throw new Error("Falha na comunicação com o servidor");
@@ -520,7 +690,7 @@ async function sendMessage() {
     await appendMessage("corvus", reply);
   } catch (error) {
     removeTypingIndicator();
-    await appendMessage("corvus", "Corvus está indisponível no momento. Erro: " + error.message);
+    mostrarNotificacao("Corvus está indisponível: " + error.message, "erro");
   } finally {
     setLoading(false);
   }
@@ -531,7 +701,6 @@ async function appendMessage(role, text, saveToHistory = true) {
   if (!chatMessages) return;
 
   const rawText = normalizeForStorage(text);
-  // Markdown para corvus, texto puro para user
   const displayText = role === "corvus"
     ? (typeof marked !== "undefined" ? marked.parse(rawText) : sanitizeForDisplay(rawText))
     : sanitizeForDisplay(rawText);
@@ -544,12 +713,12 @@ async function appendMessage(role, text, saveToHistory = true) {
     minute: "2-digit",
   });
 
-  // Avatar: Corvus = imagem, User = inicial do nome
   const nomeUsuario = USUARIO_PERFIL?.nome_interno || USUARIO_PERFIL?.nome || "U";
   const inicialUsuario = nomeUsuario.charAt(0).toUpperCase();
+  const logoSrc = CURRENT_THEME === 'light' ? 'corvuslogolight.png' : 'corvuslogo.png';
   const avatarHTML =
     role === "corvus"
-      ? `<img src="corvuslogo.png" alt="Corvus" class="avatar-image" />`
+      ? `<img src="${logoSrc}" alt="Corvus" class="avatar-image" loading="lazy" />`
       : `<span>${inicialUsuario}</span>`;
 
   const fenrirTagHTML = (role === "corvus" && MODO_FENRIR)
@@ -593,12 +762,10 @@ async function appendMessage(role, text, saveToHistory = true) {
   }
 }
 
-
 function showTypingIndicator() {
   const chatMessages = document.getElementById("chatMessages");
   if (!chatMessages) return;
 
-  // Evita duplicar caso chame duas vezes
   const existing = document.getElementById("typingIndicator");
   if (existing) existing.remove();
 
@@ -606,7 +773,8 @@ function showTypingIndicator() {
   typingDiv.className = "typing-indicator";
   typingDiv.id = "typingIndicator";
 
-  const avatarHTML = `<img src="corvuslogo.png" alt="Corvus" class="avatar-image" />`;
+  const logoSrc = CURRENT_THEME === 'light' ? 'corvuslogolight.png' : 'corvuslogo.png';
+  const avatarHTML = `<img src="${logoSrc}" alt="Corvus" class="avatar-image" />`;
 
   typingDiv.innerHTML = `
     <div class="message-avatar">${avatarHTML}</div>
@@ -626,7 +794,6 @@ function showTypingIndicator() {
   scrollToBottom();
 }
 
-
 function removeTypingIndicator() {
   const typingIndicator = document.getElementById("typingIndicator");
   if (typingIndicator) typingIndicator.remove();
@@ -637,30 +804,28 @@ function removeWelcomeIfPresent() {
   if (welcome) welcome.remove();
 }
 
-function copyMessage(button) {
+window.copyMessage = function(button) {
   const messageText = button.closest(".message-content").querySelector(".message-bubble").innerText;
   navigator.clipboard.writeText(messageText).then(() => {
     const originalText = button.innerHTML;
     button.innerHTML = '<span style="color: var(--color-primary);">✓ Copiado</span>';
+    if (navigator.vibrate) navigator.vibrate(20);
     setTimeout(() => {
       button.innerHTML = originalText;
     }, 2000);
   });
-}
+};
 
 // ===== UTILIDADES =====
-// Para exibir no HTML (converte quebra de linha em <br> e evita XSS)
 function sanitizeForDisplay(text) {
   const div = document.createElement("div");
   div.textContent = text ?? "";
   return div.innerHTML.replace(/\n/g, "<br>");
 }
 
-// Para salvar no storage (texto puro, sem <br>)
 function normalizeForStorage(text) {
   return (text ?? "").toString();
 }
-
 
 function setLoading(isLoading) {
   const sendBtn = document.getElementById("sendBtn");
@@ -681,13 +846,11 @@ function generateSessionId() {
   return "session_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
 }
 
-// ===== HISTÓRICO / CONVERSAS (LOCALSTORAGE) =====
+// ===== HISTÓRICO / CONVERSAS =====
 function ensureHistoryContainer() {
-  // Se seu HTML já tem <div id="chatList">, ok.
   let chatList = document.getElementById("chatList");
   if (chatList) return;
 
-  // Caso não tenha, cria abaixo do botão Novo Chat
   const sidebar = document.getElementById("sidebar");
   const sidebarContent = sidebar?.querySelector(".sidebar-content");
   const newChatBtn = document.getElementById("newChatBtn");
@@ -696,21 +859,18 @@ function ensureHistoryContainer() {
 
   chatList = document.createElement("div");
   chatList.id = "chatList";
-  // Classe opcional: se seu CSS já estiliza, ok; caso contrário, não quebra.
   chatList.className = "chat-list";
 
-  // Inserir logo após o botão
   newChatBtn.insertAdjacentElement("afterend", chatList);
 }
 
 async function loadConversationsFromStorage() {
   if (!IS_CONVIDADO) {
-    // Membro: carregar do Supabase
     conversations = await sbCarregarConversas();
     const active = localStorage.getItem(ACTIVE_CHAT_KEY + "_" + USER_ID);
     activeConversationId = active || null;
+    await Promise.all(conversations.map(c => gerarTituloSeNecessario(c)));
   } else {
-    // Convidado: localStorage
     const raw = localStorage.getItem(STORAGE_KEY);
     conversations = raw ? safeJsonParse(raw, []) : [];
     const active = localStorage.getItem(ACTIVE_CHAT_KEY);
@@ -723,7 +883,6 @@ function persistConversationsToStorage() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
     if (activeConversationId) localStorage.setItem(ACTIVE_CHAT_KEY, activeConversationId);
   } else {
-    // Membro: salvar ID ativo localmente, dados vão pro Supabase via funções específicas
     if (activeConversationId) localStorage.setItem(ACTIVE_CHAT_KEY + "_" + USER_ID, activeConversationId);
   }
 }
@@ -738,7 +897,6 @@ function safeJsonParse(raw, fallback) {
 }
 
 function ensureActiveConversation() {
-  // Se não tem conversas, cria a primeira
   if (!Array.isArray(conversations) || conversations.length === 0) {
     const first = makeConversation("Nova conversa");
     conversations = [first];
@@ -747,7 +905,6 @@ function ensureActiveConversation() {
     return;
   }
 
-  // Se id ativo não existe mais, seta a mais recente
   const exists = conversations.some((c) => c.id === activeConversationId);
   if (!activeConversationId || !exists) {
     const mostRecent = [...conversations].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))[0];
@@ -779,7 +936,6 @@ async function setActiveConversation(chatId, closeMenuOnMobile = false) {
   activeConversationId = chatId;
   persistConversationsToStorage();
 
-  // Para membros, carregar mensagens do Supabase
   if (!IS_CONVIDADO) {
     const msgs = await sbCarregarMensagens(chatId);
     conv.messages = msgs;
@@ -820,7 +976,6 @@ async function deleteConversation(chatId) {
 
   conversations = conversations.filter((c) => c.id !== chatId);
 
-  // Se apagar a ativa, escolher outra; se não sobrar nenhuma, criar nova
   if (activeConversationId === chatId) {
     if (conversations.length === 0) {
       const fresh = makeConversation("Nova conversa");
@@ -846,7 +1001,7 @@ async function renameConversation(chatId) {
   if (!conv) return;
 
   const next = prompt("Novo nome da conversa:", conv.title);
-  if (next === null) return; // cancelou
+  if (next === null) return;
 
   const trimmed = next.trim();
   if (!trimmed) return;
@@ -862,10 +1017,8 @@ function autoTitleConversationIfNeeded(chatId) {
   const conv = conversations.find((c) => c.id === chatId);
   if (!conv) return;
 
-  // Se já foi renomeada / já tem título diferente, não mexe
   if (conv.title && conv.title !== "Nova conversa") return;
 
-  // Pega a primeira msg do usuário na conversa
   const firstUser = (conv.messages || []).find((m) => m.role === "user");
   if (!firstUser) return;
 
@@ -875,7 +1028,9 @@ function autoTitleConversationIfNeeded(chatId) {
   conv.title = plain.length > 32 ? plain.slice(0, 32).trim() + "…" : plain;
   conv.updatedAt = Date.now();
   persistConversationsToStorage();
-  if (!IS_CONVIDADO) sbAtualizarConversa(conv.id, conv.title, conv.updatedAt);
+  if (!IS_CONVIDADO) {
+    sbAtualizarConversa(conv.id, conv.title, conv.updatedAt).catch(e => mostrarNotificacao("Erro ao atualizar título", "erro"));
+  }
   renderChatList(document.getElementById("searchInput")?.value?.trim() || "");
 }
 
@@ -913,7 +1068,6 @@ function loadActiveConversationMessages() {
 
   chatMessages.innerHTML = "";
 
-  // Render das mensagens sem re-salvar
   (conv.messages || []).forEach((m) => {
     const text =
       typeof m.text === "string" && m.text.includes("<br")
@@ -924,50 +1078,70 @@ function loadActiveConversationMessages() {
   });
 }
 
+function getDateGroup(ts) {
+  const now = new Date();
+  const d = new Date(ts);
+  const diffDays = Math.floor((now - d) / 86400000);
+  const todayStr = now.toDateString();
+  const dStr = d.toDateString();
+
+  if (dStr === todayStr) return "Hoje";
+  if (diffDays === 1) return "Ontem";
+  if (diffDays <= 7) return "Últimos 7 dias";
+  if (diffDays <= 30) return "Últimos 30 dias";
+  const month = d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  return month.charAt(0).toUpperCase() + month.slice(1);
+}
 
 function renderChatList(filterText = "") {
   const chatList = document.getElementById("chatList");
   if (!chatList) return;
 
-  const q = (filterText || "").toLowerCase();
-
+  const q = (filterText || "").toLowerCase().trim();
   const list = [...conversations].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
   const filtered = q
     ? list.filter((c) => (c.title || "").toLowerCase().includes(q))
     : list;
 
   if (filtered.length === 0) {
-    chatList.innerHTML = `<div class="chat-list-empty">Nenhuma conversa encontrada.</div>`;
+    chatList.innerHTML = `<div class="chat-list-empty">${q ? "Nenhuma conversa encontrada." : "Nenhuma conversa ainda."}</div>`;
     return;
   }
 
-  chatList.innerHTML = filtered
-    .map((c) => {
-      const isActive = c.id === activeConversationId;
-      const title = escapeHtml(c.title || "Nova conversa");
-      const time = formatUpdatedAt(c.updatedAt);
+  const groups = {};
+  const groupOrder = [];
+  filtered.forEach(c => {
+    const group = getDateGroup(c.updatedAt);
+    if (!groups[group]) { groups[group] = []; groupOrder.push(group); }
+    groups[group].push(c);
+  });
 
-      return `
-        <div class="chat-item ${isActive ? "active" : ""}" data-chat-id="${c.id}" title="${title}">
-          <div class="chat-item-main">
-            <div class="chat-item-title">${title}</div>
-            <div class="chat-item-meta">${time}</div>
-          </div>
-          <div class="chat-item-actions">
-            <button class="chat-action-btn rename" aria-label="Renomear">✎</button>
-            <button class="chat-action-btn delete" aria-label="Excluir">🗑</button>
-          </div>
+  const renderItem = (c) => {
+    const isActive = c.id === activeConversationId;
+    const title = escapeHtml(c.title || "Nova conversa");
+    return `
+      <div class="chat-item ${isActive ? "active" : ""}" data-chat-id="${c.id}" title="${title}">
+        <div class="chat-item-main">
+          <div class="chat-item-title">${title}</div>
         </div>
-      `;
-    })
-    .join("");
-}
+        <div class="chat-item-actions">
+          <button class="chat-action-btn rename" aria-label="Renomear">✎</button>
+          <button class="chat-action-btn delete" aria-label="Excluir">🗑</button>
+        </div>
+      </div>
+    `;
+  };
 
-function formatUpdatedAt(ts) {
-  if (!ts) return "";
-  const d = new Date(ts);
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) + " " +
-         d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  if (q || groupOrder.length === 1) {
+    chatList.innerHTML = filtered.map(renderItem).join("");
+  } else {
+    chatList.innerHTML = groupOrder.map(group => `
+      <div class="chat-group">
+        <div class="chat-group-label">${group}</div>
+        ${groups[group].map(renderItem).join("")}
+      </div>
+    `).join("");
+  }
 }
 
 function escapeHtml(str) {
@@ -976,14 +1150,10 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-
 // ===== MODAL CUSTOMIZADO =====
 function mostrarModal(titulo, mensagem, btnConfirmar = "Confirmar", tipo = "default") {
   return new Promise((resolve) => {
-    // Remove modal existente se houver
     document.getElementById("corvusModal")?.remove();
-
-    const corBtn = tipo === "danger" ? "var(--color-primary)" : "var(--color-primary)";
 
     const modal = document.createElement("div");
     modal.id = "corvusModal";
@@ -1030,4 +1200,81 @@ function mostrarFeedbackSalvo() {
     el.classList.remove("visible");
     setTimeout(() => el.remove(), 300);
   }, 2000);
+}
+
+// ===== MODAL DE CONTA (conforme print) =====
+function mostrarModalConta() {
+  document.getElementById("corvusModal")?.remove();
+
+  const nome = USUARIO_PERFIL?.nome_interno || USUARIO_PERFIL?.nome || "—";
+  const cargo = USUARIO_PERFIL?.cargo || USUARIO_PERFIL?.sigla_cargo || "—";
+  const tipo = USUARIO_PERFIL?.tipo || "membro";
+  const tipoDisplay = tipo.charAt(0).toUpperCase() + tipo.slice(1);
+
+  const modal = document.createElement("div");
+  modal.id = "corvusModal";
+  modal.className = "corvus-modal-overlay";
+  modal.innerHTML = `
+    <div class="corvus-modal conta-modal">
+      <div class="conta-modal-header">
+        <div class="conta-avatar">${nome.charAt(0).toUpperCase()}</div>
+        <div class="conta-info">
+          <div class="conta-nome">${escapeHtml(nome)}</div>
+          <div class="conta-cargo">${escapeHtml(cargo)}</div>
+        </div>
+      </div>
+      <div class="conta-divider"></div>
+      <div class="conta-campo">
+        <span class="conta-label">Acesso</span>
+        <span class="conta-valor tipo-${tipo}">${tipoDisplay}</span>
+      </div>
+      <div class="conta-campo">
+        <span class="conta-label">Aparência</span>
+        <button id="toggleThemeBtn" class="theme-toggle-btn">
+          ${CURRENT_THEME === 'dark' ? 'Mudar para Claro' : 'Mudar para Escuro'}
+        </button>
+      </div>
+      <div class="conta-divider"></div>
+      <div class="corvus-modal-actions" style="justify-content:space-between">
+        <button class="corvus-modal-btn cancel" id="modalCancel">Fechar</button>
+        <button class="corvus-modal-btn confirm logout-btn" id="modalLogout">Sair da conta</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  requestAnimationFrame(() => modal.classList.add("visible"));
+
+  document.getElementById("toggleThemeBtn").addEventListener("click", toggleTheme);
+
+  document.getElementById("modalCancel").addEventListener("click", () => {
+    modal.classList.remove("visible");
+    setTimeout(() => modal.remove(), 200);
+  });
+
+  document.getElementById("modalLogout").addEventListener("click", () => {
+    modal.remove();
+    fazerLogout();
+  });
+
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) {
+      modal.classList.remove("visible");
+      setTimeout(() => modal.remove(), 200);
+    }
+  });
+}
+
+// ===== TOUR INICIAL =====
+function mostrarTour() {
+  const btnNovo = document.getElementById("newChatBtn");
+  if (btnNovo) {
+    btnNovo.style.transition = 'box-shadow 0.2s';
+    btnNovo.style.boxShadow = '0 0 0 4px rgba(220,38,38,0.3)';
+    setTimeout(() => {
+      btnNovo.style.boxShadow = '';
+    }, 3000);
+  }
+
+  mostrarNotificacao("Dica: use Ctrl+N para novo chat, Ctrl+K para buscar", "sucesso");
 }
