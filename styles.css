@@ -36,21 +36,40 @@
 }
 
 /* TEMA CLARO — completamente reformulado */
+/* ===== TEMA CLARO ===== */
 [data-theme="light"] {
-  --color-bg: #f9fafb;
+  --color-bg: #f4f4f5;
   --color-surface: #ffffff;
-  --color-surface-2: #f1f5f9;
-  --color-surface-hover: #e2e8f0;
-  --color-border: #cbd5e1;
-  --color-border-subtle: #e2e8f0;
-  --color-text: #0f172a;
-  --color-text-secondary: #334155;
-  --color-text-tertiary: #64748b;
+  --color-surface-2: #f0f0f0;
+  --color-surface-hover: #e8e8e8;
+  --color-border: #d4d4d4;
+  --color-border-subtle: #e4e4e4;
+  --color-text: #111111;
+  --color-text-secondary: #444444;
+  --color-text-tertiary: #888888;
   --color-primary: #dc2626;
   --color-primary-hover: #b91c1c;
-  --color-primary-glow: rgba(220, 38, 38, 0.1);
-  --color-user-msg: #f1f5f9;
+  --color-primary-glow: rgba(220, 38, 38, 0.12);
+  --color-user-msg: #efefef;
   --color-corvus-msg: #ffffff;
+}
+
+/* ===== TEMA CINZA ===== */
+[data-theme="gray"] {
+  --color-bg: #1e1e1e;
+  --color-surface: #2a2a2a;
+  --color-surface-2: #323232;
+  --color-surface-hover: #3a3a3a;
+  --color-border: #404040;
+  --color-border-subtle: #383838;
+  --color-text: #e8e8e8;
+  --color-text-secondary: #a0a0a0;
+  --color-text-tertiary: #666666;
+  --color-primary: #dc2626;
+  --color-primary-hover: #b91c1c;
+  --color-primary-glow: rgba(220, 38, 38, 0.18);
+  --color-user-msg: #303030;
+  --color-corvus-msg: #252525;
 }
 
 *,
@@ -861,6 +880,24 @@ button {
   background: rgba(255, 255, 255, 0.9);
 }
 
+/* ===== OVERRIDES TEMA CINZA ===== */
+[data-theme="gray"] .header {
+  background: rgba(26, 26, 26, 0.92);
+}
+
+[data-theme="gray"] .sidebar {
+  background: rgba(28, 28, 28, 0.85);
+}
+
+[data-theme="gray"] .input-container {
+  background: rgba(26, 26, 26, 0.95);
+}
+
+[data-theme="gray"] .gradient-orb {
+  opacity: 0.08;
+}
+
+
 .input-wrapper {
   display: flex;
   align-items: flex-end;
@@ -1615,4 +1652,95 @@ button {
 }
 .logout-btn:hover {
   background: rgba(220, 38, 38, 0.2) !important;
+}
+/* ===== SELETOR DE TEMA (3 botões) ===== */
+.theme-switcher {
+  display: flex;
+  gap: 6px;
+}
+
+.theme-opt {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-border);
+  background: var(--color-surface-hover);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.theme-opt:hover {
+  border-color: var(--color-primary);
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.theme-opt.active {
+  border-color: var(--color-primary);
+  background: rgba(220, 38, 38, 0.12);
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
+}
+
+/* ===== META DOS CHATS (hora/data) ===== */
+.chat-item-meta {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+/* ===== OVERRIDES TEMA CLARO — melhorias visuais ===== */
+[data-theme="light"] .message.corvus .message-bubble {
+  background: #f8f8f8;
+  border-color: #e0e0e0;
+}
+
+[data-theme="light"] .message.user .message-bubble {
+  background: #efefef;
+  border-color: #d8d8d8;
+}
+
+[data-theme="light"] .chat-item.active {
+  background: rgba(220, 38, 38, 0.06);
+  border-color: rgba(220, 38, 38, 0.3);
+}
+
+[data-theme="light"] .btn-new-chat {
+  color: #444;
+}
+
+[data-theme="light"] .welcome-title {
+  color: #111;
+}
+
+[data-theme="light"] .input-wrapper {
+  background: #ffffff;
+  border-color: #d4d4d4;
+}
+
+[data-theme="light"] #messageInput {
+  color: #111;
+}
+
+[data-theme="light"] .model-selector-btn {
+  color: #555;
+}
+
+[data-theme="light"] .corvus-modal {
+  background: #ffffff;
+}
+
+[data-theme="light"] .model-dropdown {
+  background: #ffffff;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+[data-theme="light"] .gradient-orb {
+  opacity: 0.06;
 }

@@ -57,7 +57,7 @@ function mostrarNotificacao(mensagem, tipo = 'erro') {
 // ===== FUNÇÕES DE TEMA E LOGO =====
 function applyTheme() {
   document.body.setAttribute('data-theme', CURRENT_THEME);
-  // Trocar logo
+  // Logo claro para tema light, escuro para dark e gray
   const logoSrc = CURRENT_THEME === 'light' ? 'corvuslogolight.png' : 'corvuslogo.png';
   const headerLogo = document.getElementById('headerLogo');
   const loginLogo = document.getElementById('loginLogo');
@@ -65,14 +65,26 @@ function applyTheme() {
   if (loginLogo) loginLogo.src = logoSrc;
 }
 
+function getThemeLabel(theme) {
+  if (theme === 'dark') return 'Escuro';
+  if (theme === 'light') return 'Claro';
+  if (theme === 'gray') return 'Cinza';
+  return theme;
+}
+
+function getNextTheme(current) {
+  const cycle = ['dark', 'light', 'gray'];
+  const idx = cycle.indexOf(current);
+  return cycle[(idx + 1) % cycle.length];
+}
+
 function toggleTheme() {
-  CURRENT_THEME = CURRENT_THEME === 'dark' ? 'light' : 'dark';
+  CURRENT_THEME = getNextTheme(CURRENT_THEME);
   localStorage.setItem('corvus_theme', CURRENT_THEME);
   applyTheme();
-  // Se o modal de conta estiver aberto, atualizar o texto do botão
   const themeBtn = document.getElementById('toggleThemeBtn');
   if (themeBtn) {
-    themeBtn.textContent = CURRENT_THEME === 'dark' ? 'Mudar para Claro' : 'Mudar para Escuro';
+    themeBtn.textContent = getThemeLabel(CURRENT_THEME);
   }
 }
 
@@ -195,7 +207,10 @@ async function sbAtualizarConversa(chatId, titulo, updatedAt) {
 
 async function sbDeletarConversa(chatId) {
   try {
-    await sb.from("msy_conversas").delete().eq("id", chatId);
+    // Deletar mensagens primeiro (caso não haja cascade)
+    await sb.from("msy_mensagens").delete().eq("conversa_id", chatId);
+    const { error } = await sb.from("msy_conversas").delete().eq("id", chatId);
+    if (error) mostrarNotificacao("Erro ao deletar: " + error.message, "erro");
   } catch (error) {
     mostrarNotificacao("Erro ao deletar conversa: " + error.message, "erro");
   }
@@ -915,8 +930,9 @@ function ensureActiveConversation() {
 
 function makeConversation(title) {
   const now = Date.now();
+  const rand = Math.random().toString(36).slice(2, 10);
   return {
-    id: "chat_" + now + "_" + Math.random().toString(36).slice(2, 10),
+    id: "chat_" + now + "_" + rand,
     title: title || "Nova conversa",
     createdAt: now,
     updatedAt: now,
@@ -1098,7 +1114,11 @@ function renderChatList(filterText = "") {
   if (!chatList) return;
 
   const q = (filterText || "").toLowerCase().trim();
-  const list = [...conversations].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  const list = [...conversations].sort((a, b) => {
+    const aTime = b.updatedAt || b.createdAt || 0;
+    const bTime = a.updatedAt || a.createdAt || 0;
+    return aTime - bTime;
+  });
   const filtered = q
     ? list.filter((c) => (c.title || "").toLowerCase().includes(q))
     : list;
@@ -1119,10 +1139,12 @@ function renderChatList(filterText = "") {
   const renderItem = (c) => {
     const isActive = c.id === activeConversationId;
     const title = escapeHtml(c.title || "Nova conversa");
+    const meta = formatChatMeta(c.updatedAt || c.createdAt);
     return `
       <div class="chat-item ${isActive ? "active" : ""}" data-chat-id="${c.id}" title="${title}">
         <div class="chat-item-main">
           <div class="chat-item-title">${title}</div>
+          <div class="chat-item-meta">${meta}</div>
         </div>
         <div class="chat-item-actions">
           <button class="chat-action-btn rename" aria-label="Renomear">✎</button>
@@ -1142,6 +1164,32 @@ function renderChatList(filterText = "") {
       </div>
     `).join("");
   }
+}
+
+function formatChatMeta(ts) {
+  if (!ts || ts <= 0) return "";
+  const now = new Date();
+  const d = new Date(ts);
+  // Verificar se é uma data válida
+  if (isNaN(d.getTime())) return "";
+  const diffMs = now - d;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHrs = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMin < 1) return "Agora";
+  if (diffMin < 60) return `${diffMin}min atrás`;
+  if (diffHrs < 24 && d.toDateString() === now.toDateString()) {
+    return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  }
+  if (diffDays === 1) {
+    return "Ontem " + d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  }
+  if (diffDays < 7) {
+    return d.toLocaleDateString("pt-BR", { weekday: "short" }) + " " +
+           d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  }
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
 }
 
 function escapeHtml(str) {
@@ -1230,9 +1278,11 @@ function mostrarModalConta() {
       </div>
       <div class="conta-campo">
         <span class="conta-label">Aparência</span>
-        <button id="toggleThemeBtn" class="theme-toggle-btn">
-          ${CURRENT_THEME === 'dark' ? 'Mudar para Claro' : 'Mudar para Escuro'}
-        </button>
+        <div class="theme-switcher">
+          <button class="theme-opt ${CURRENT_THEME === 'dark' ? 'active' : ''}" data-t="dark" title="Escuro">🌑</button>
+          <button class="theme-opt ${CURRENT_THEME === 'light' ? 'active' : ''}" data-t="light" title="Claro">☀️</button>
+          <button class="theme-opt ${CURRENT_THEME === 'gray' ? 'active' : ''}" data-t="gray" title="Cinza">🌫️</button>
+        </div>
       </div>
       <div class="conta-divider"></div>
       <div class="corvus-modal-actions" style="justify-content:space-between">
@@ -1245,7 +1295,17 @@ function mostrarModalConta() {
   document.body.appendChild(modal);
   requestAnimationFrame(() => modal.classList.add("visible"));
 
-  document.getElementById("toggleThemeBtn").addEventListener("click", toggleTheme);
+  document.querySelectorAll(".theme-opt").forEach(btn => {
+    btn.addEventListener("click", () => {
+      CURRENT_THEME = btn.getAttribute("data-t");
+      localStorage.setItem('corvus_theme', CURRENT_THEME);
+      applyTheme();
+      // Atualizar botões ativos
+      document.querySelectorAll(".theme-opt").forEach(b => {
+        b.classList.toggle("active", b.getAttribute("data-t") === CURRENT_THEME);
+      });
+    });
+  });
 
   document.getElementById("modalCancel").addEventListener("click", () => {
     modal.classList.remove("visible");
