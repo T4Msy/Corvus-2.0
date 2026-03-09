@@ -611,6 +611,7 @@ button {
 /* ===== CHAT CONTAINER ===== */
 .chat-container {
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -632,6 +633,7 @@ button {
 
 .chat-messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   padding: clamp(1rem, 3vw, 2rem) clamp(1rem, 3vw, 2rem);

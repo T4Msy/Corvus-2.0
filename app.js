@@ -322,19 +322,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }, { passive: true });
 
-  // iOS keyboard fix: ajustar altura do app com visualViewport
-  if (window.visualViewport) {
+  // iOS keyboard fix: mantém o layout correto quando teclado abre
+  (function () {
     const appContainer = document.querySelector('.app-container');
-    const updateAppHeight = () => {
-      if (appContainer) {
-        const h = window.visualViewport.height;
-        appContainer.style.height = h + 'px';
-      }
-    };
-    window.visualViewport.addEventListener('resize', updateAppHeight);
-    // Não precisa de scroll listener — resize é suficiente no iOS
-    updateAppHeight();
-  }
+    if (!appContainer) return;
+
+    function updateHeight() {
+      const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      appContainer.style.height = h + 'px';
+    }
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateHeight);
+    }
+    window.addEventListener('resize', updateHeight);
+    updateHeight();
+  })();
 });
 
 async function inicializarApp() {
