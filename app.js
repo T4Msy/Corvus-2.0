@@ -327,11 +327,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const appContainer = document.querySelector('.app-container');
     const updateAppHeight = () => {
       if (appContainer) {
-        appContainer.style.height = window.visualViewport.height + 'px';
+        const h = window.visualViewport.height;
+        appContainer.style.height = h + 'px';
       }
     };
     window.visualViewport.addEventListener('resize', updateAppHeight);
-    window.visualViewport.addEventListener('scroll', updateAppHeight);
+    // Não precisa de scroll listener — resize é suficiente no iOS
     updateAppHeight();
   }
 });
