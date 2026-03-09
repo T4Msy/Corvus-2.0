@@ -321,6 +321,19 @@ document.addEventListener("DOMContentLoaded", () => {
       closeMobileMenu();
     }
   }, { passive: true });
+
+  // iOS keyboard fix: ajustar altura do app com visualViewport
+  if (window.visualViewport) {
+    const appContainer = document.querySelector('.app-container');
+    const updateAppHeight = () => {
+      if (appContainer) {
+        appContainer.style.height = window.visualViewport.height + 'px';
+      }
+    };
+    window.visualViewport.addEventListener('resize', updateAppHeight);
+    window.visualViewport.addEventListener('scroll', updateAppHeight);
+    updateAppHeight();
+  }
 });
 
 async function inicializarApp() {
@@ -1279,9 +1292,9 @@ function mostrarModalConta() {
       <div class="conta-campo">
         <span class="conta-label">Aparência</span>
         <div class="theme-switcher">
-          <button class="theme-opt ${CURRENT_THEME === 'dark' ? 'active' : ''}" data-t="dark" title="Escuro">🌑</button>
-          <button class="theme-opt ${CURRENT_THEME === 'light' ? 'active' : ''}" data-t="light" title="Claro">☀️</button>
-          <button class="theme-opt ${CURRENT_THEME === 'gray' ? 'active' : ''}" data-t="gray" title="Cinza">🌫️</button>
+          <button class="theme-opt ${CURRENT_THEME === 'dark' ? 'active' : ''}" data-t="dark">Escuro</button>
+          <button class="theme-opt ${CURRENT_THEME === 'light' ? 'active' : ''}" data-t="light">Claro</button>
+          <button class="theme-opt ${CURRENT_THEME === 'gray' ? 'active' : ''}" data-t="gray">Cinza</button>
         </div>
       </div>
       <div class="conta-divider"></div>

@@ -160,10 +160,12 @@ button {
 }
 
 .app-container {
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 1;
-  height: 100vh;
-  height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -1660,18 +1662,23 @@ button {
 }
 
 .theme-opt {
-  width: 32px;
+  padding: 5px 10px;
+  min-width: 58px;
   height: 32px;
   border-radius: var(--radius-sm);
   border: 1.5px solid var(--color-border);
   background: var(--color-surface-hover);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-main);
+  color: var(--color-text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all var(--transition);
   -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
 }
 
 .theme-opt:hover {
