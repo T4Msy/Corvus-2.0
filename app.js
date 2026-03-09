@@ -322,21 +322,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }, { passive: true });
 
-  // iOS keyboard fix: mantém o layout correto quando teclado abre
+  // iOS teclado: ajusta app-container usando visualViewport
   (function () {
-    const appContainer = document.querySelector('.app-container');
-    if (!appContainer) return;
+    const app = document.querySelector('.app-container');
+    if (!app || !window.visualViewport) return;
 
-    function updateHeight() {
-      const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-      appContainer.style.height = h + 'px';
+    function applyViewport() {
+      requestAnimationFrame(function () {
+        app.style.top    = window.visualViewport.offsetTop + 'px';
+        app.style.left   = window.visualViewport.offsetLeft + 'px';
+        app.style.width  = window.visualViewport.width + 'px';
+        app.style.height = window.visualViewport.height + 'px';
+      });
     }
 
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', updateHeight);
-    }
-    window.addEventListener('resize', updateHeight);
-    updateHeight();
+    window.visualViewport.addEventListener('resize', applyViewport);
+    window.visualViewport.addEventListener('scroll', applyViewport);
   })();
 });
 

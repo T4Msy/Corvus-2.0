@@ -89,8 +89,7 @@ body {
   font-family: var(--font-main);
   background: var(--color-bg);
   color: var(--color-text);
-  height: 100vh;
-  height: 100dvh;
+  height: 100%;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -164,8 +163,7 @@ button {
   top: 0;
   left: 0;
   right: 0;
-  height: 100vh;
-  height: 100dvh;
+  bottom: 0;
   z-index: 1;
   display: flex;
   flex-direction: column;
@@ -1440,8 +1438,8 @@ button {
     position: fixed;
     top: var(--header-height);
     left: 0;
-    height: calc(100vh - var(--header-height));
-    height: calc(100dvh - var(--header-height));
+    bottom: 0;
+    height: auto;
     transform: translateX(-100%);
     box-shadow: 4px 0 20px rgba(0,0,0,0.4);
     pointer-events: none;
@@ -1666,7 +1664,7 @@ button {
 
 .theme-opt {
   padding: 5px 10px;
-  min-width: 58px;
+  min-width: 56px;
   height: 32px;
   border-radius: var(--radius-sm);
   border: 1.5px solid var(--color-border);
