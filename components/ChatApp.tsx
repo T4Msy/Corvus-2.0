@@ -4,19 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  BarChart3,
-  Bell,
   Bot,
   Brain,
-  Database,
-  Folder,
   LogOut,
   Menu,
   MessageSquare,
   Moon,
   Plus,
   Search,
-  Settings,
   ShieldCheck,
   Sun,
   Trash2,
@@ -331,24 +326,15 @@ export function ChatApp() {
           ))}
         </div>
 
-        <div className="sidebar-section folders">
-          <p>Arquitetura</p>
-          <button>
-            <Folder size={16} />
-            <span>Pastas</span>
-          </button>
-          <button>
-            <Database size={16} />
-            <span>Memoria</span>
-          </button>
-          <button>
-            <BarChart3 size={16} />
-            <span>Analytics</span>
-          </button>
-          <button>
-            <Bell size={16} />
-            <span>Eventos</span>
-          </button>
+        <div className="sidebar-insights">
+          <div>
+            <span>Conversas</span>
+            <strong>{conversations.conversations.length}</strong>
+          </div>
+          <div>
+            <span>Agente</span>
+            <strong>{mode === "fenrir" ? "Fenrir" : "Corvus"}</strong>
+          </div>
         </div>
 
         <div className="sidebar-footer">
@@ -413,14 +399,6 @@ export function ChatApp() {
               onClick={toggle}
             >
               {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
-            </button>
-            <button
-              type="button"
-              className="icon-button"
-              title="Ajustes"
-              aria-label="Ajustes"
-            >
-              <Settings size={18} />
             </button>
           </div>
         </header>

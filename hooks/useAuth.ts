@@ -5,6 +5,7 @@ import type { Session } from "@supabase/supabase-js";
 import {
   getBrowserSupabase,
   getBrowserSupabaseStatus,
+  hydrateBrowserSupabaseConfig,
 } from "@/integrations/supabase/client";
 import { loadUserProfile } from "@/integrations/supabase/auth";
 import type { UserProfile } from "@/lib/types";
@@ -38,92 +39,102 @@ export function useAuth() {
 
   useEffect(() => {
     let cancelled = false;
-    const runtime = getBrowserSupabaseStatus();
 
-    if (!runtime.configured) {
-      const guest = readGuestState(runtime.configured);
-      setState(
-        guest ?? {
-          status: "anon",
-          userId: "",
-          profile: null,
-          session: null,
-          accessToken: null,
-          supabaseReady: false,
-          error: `Supabase publico ausente: ${runtime.missing.join(", ")}`,
-        }
-      );
-      return;
-    }
+    let unsubscribe: (() => void) | null = null;
 
-    const supabase = getBrowserSupabase();
+    async function boot() {
+      const runtime = await hydrateBrowserSupabaseConfig();
 
-    async function applySession(session: Session | null) {
-      if (!session?.user) {
+      if (!runtime.configured) {
         const guest = readGuestState(runtime.configured);
-        if (!cancelled) {
-          setState(
-            guest ?? {
-              status: "anon",
-              userId: "",
-              profile: null,
-              session: null,
-              accessToken: null,
-              supabaseReady: true,
-              error: null,
-            }
-          );
-        }
+        if (cancelled) return;
+        setState(
+          guest ?? {
+            status: "anon",
+            userId: "",
+            profile: null,
+            session: null,
+            accessToken: null,
+            supabaseReady: false,
+            error: supabaseSetupMessage(runtime.missing),
+          }
+        );
         return;
       }
 
-      const { profile, error } = await loadUserProfile(supabase, session.user);
-      if (cancelled) return;
-      setState({
-        status: "authed",
-        userId: session.user.id,
-        profile,
-        session,
-        accessToken: session.access_token,
-        supabaseReady: true,
-        error,
+      const supabase = getBrowserSupabase();
+
+      async function applySession(session: Session | null) {
+        if (!session?.user) {
+          const guest = readGuestState(runtime.configured);
+          if (!cancelled) {
+            setState(
+              guest ?? {
+                status: "anon",
+                userId: "",
+                profile: null,
+                session: null,
+                accessToken: null,
+                supabaseReady: true,
+                error: null,
+              }
+            );
+          }
+          return;
+        }
+
+        const { profile, error } = await loadUserProfile(supabase, session.user);
+        if (cancelled) return;
+        setState({
+          status: "authed",
+          userId: session.user.id,
+          profile,
+          session,
+          accessToken: session.access_token,
+          supabaseReady: true,
+          error,
+        });
+      }
+
+      void supabase.auth.getSession().then(({ data, error }) => {
+        if (error && !cancelled) {
+          setState({
+            status: "anon",
+            userId: "",
+            profile: null,
+            session: null,
+            accessToken: null,
+            supabaseReady: true,
+            error: error.message,
+          });
+          return;
+        }
+        void applySession(data.session);
       });
+
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        window.setTimeout(() => {
+          void applySession(session);
+        }, 0);
+      });
+
+      unsubscribe = () => subscription.unsubscribe();
     }
 
-    void supabase.auth.getSession().then(({ data, error }) => {
-      if (error && !cancelled) {
-        setState({
-          status: "anon",
-          userId: "",
-          profile: null,
-          session: null,
-          accessToken: null,
-          supabaseReady: true,
-          error: error.message,
-        });
-        return;
-      }
-      void applySession(data.session);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      window.setTimeout(() => {
-        void applySession(session);
-      }, 0);
-    });
+    void boot();
 
     return () => {
       cancelled = true;
-      subscription.unsubscribe();
+      unsubscribe?.();
     };
   }, []);
 
   const loginEmail = useCallback(async (email: string, password: string) => {
-    const runtime = getBrowserSupabaseStatus();
+    const runtime = await hydrateBrowserSupabaseConfig();
     if (!runtime.configured) {
-      throw new Error(`Supabase publico ausente: ${runtime.missing.join(", ")}`);
+      throw new Error(supabaseSetupMessage(runtime.missing));
     }
 
     const supabase = getBrowserSupabase();
@@ -175,11 +186,17 @@ export function useAuth() {
       supabaseReady: runtime.configured,
       error: runtime.configured
         ? null
-        : `Supabase publico ausente: ${runtime.missing.join(", ")}`,
+        : supabaseSetupMessage(runtime.missing),
     });
   }, []);
 
   return { ...state, loginEmail, loginGuest, logout };
+}
+
+function supabaseSetupMessage(missing: string[]): string {
+  return `Supabase sem configuracao publica no deploy. Configure ${missing.join(
+    ", "
+  )} na Vercel e publique novamente.`;
 }
 
 function createGuestState(supabaseReady: boolean): AuthState {

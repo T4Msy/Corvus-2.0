@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Bot,
   ChevronDown,
-  Mic,
   Paperclip,
   Send,
   Sparkles,
@@ -152,25 +151,17 @@ export function ChatInput({
         />
 
         <div className="composer-actions">
-          <button
-            type="button"
-            className="icon-button ghost"
-            title="Anexar arquivo"
-            aria-label="Anexar arquivo"
-            disabled={!onAttachFile}
-            onClick={() => fileRef.current?.click()}
-          >
-            <Paperclip size={18} />
-          </button>
-          <button
-            type="button"
-            className="icon-button ghost"
-            title="Voz"
-            aria-label="Voz"
-            disabled
-          >
-            <Mic size={18} />
-          </button>
+          {onAttachFile && (
+            <button
+              type="button"
+              className="icon-button ghost"
+              title="Anexar arquivo"
+              aria-label="Anexar arquivo"
+              onClick={() => fileRef.current?.click()}
+            >
+              <Paperclip size={18} />
+            </button>
+          )}
           <button
             type="button"
             className="send-button"

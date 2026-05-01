@@ -8,13 +8,17 @@ import type {
 } from "@/integrations/supabase/types";
 
 let cached: CorvusSupabaseClient | null = null;
+let runtimeUrl = "";
+let runtimeAnonKey = "";
 
 function publicUrl(): string {
-  return process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
+  return runtimeUrl || process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || "";
 }
 
 function publicAnonKey(): string {
-  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
+  return (
+    runtimeAnonKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || ""
+  );
 }
 
 export function getBrowserSupabaseStatus(): SupabaseRuntimeStatus {
@@ -61,4 +65,40 @@ export function getBrowserSupabase(): CorvusSupabaseClient {
   });
 
   return cached;
+}
+
+export function setBrowserSupabaseConfig(url: string, anonKey: string): void {
+  if (cached) return;
+  runtimeUrl = url.trim();
+  runtimeAnonKey = anonKey.trim();
+}
+
+export async function hydrateBrowserSupabaseConfig(): Promise<SupabaseRuntimeStatus> {
+  const current = getBrowserSupabaseStatus();
+  if (current.configured) return current;
+
+  try {
+    const response = await fetch("/api/public-config", {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    const data = (await response.json().catch(() => null)) as
+      | {
+          supabase?: {
+            url?: string;
+            anonKey?: string;
+          };
+        }
+      | null;
+
+    const url = data?.supabase?.url?.trim() ?? "";
+    const anonKey = data?.supabase?.anonKey?.trim() ?? "";
+    if (url && anonKey) {
+      setBrowserSupabaseConfig(url, anonKey);
+    }
+  } catch {
+    /* Mantem o status original para a UI de erro. */
+  }
+
+  return getBrowserSupabaseStatus();
 }
