@@ -16,7 +16,10 @@ alter table if exists public.msy_usuarios
 alter table if exists public.msy_usuarios
   add column if not exists preferences jsonb default '{}'::jsonb;
 
--- 3. Trigger updated_at automatico
+-- 3. Coluna/trigger updated_at automatico
+alter table if exists public.msy_usuarios
+  add column if not exists updated_at timestamptz default now();
+
 create or replace function public.msy_usuarios_touch_updated_at()
 returns trigger
 language plpgsql
