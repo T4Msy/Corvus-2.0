@@ -190,7 +190,18 @@ export function useAuth() {
     });
   }, []);
 
-  return { ...state, loginEmail, loginGuest, logout };
+  /**
+   * Permite que usePreferences (ou qualquer fluxo de update de perfil)
+   * mantenha o snapshot do useAuth sincronizado.
+   */
+  const mergeProfile = useCallback((profile: UserProfile) => {
+    setState((current) => {
+      if (current.status !== "authed") return current;
+      return { ...current, profile };
+    });
+  }, []);
+
+  return { ...state, loginEmail, loginGuest, logout, mergeProfile };
 }
 
 function supabaseSetupMessage(missing: string[]): string {

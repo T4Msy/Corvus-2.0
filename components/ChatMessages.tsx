@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, Check, Copy, RefreshCcw, Shield, Sparkles } from "lucide-react";
+import { AlertTriangle, Check, Copy, RefreshCcw, Sparkles } from "lucide-react";
 import { marked } from "marked";
 import type { ChatMessage, UserProfile } from "@/lib/types";
 
@@ -16,21 +16,22 @@ interface Props {
   logoSrc: string;
   showWelcome: boolean;
   welcomeName: string;
+  welcomeSubtitle?: string;
   onSuggest: (prompt: string) => void;
 }
 
 const SUGGESTIONS = [
   {
-    label: "Estrutura MSY",
+    label: "Estrutura",
     prompt: "Sintetize a estrutura da Ordem Masayoshi em blocos objetivos.",
   },
   {
     label: "Prioridades",
-    prompt: "Quais prioridades devo observar na operacao atual da MSY?",
+    prompt: "Quais prioridades devo observar na operação atual da MSY?",
   },
   {
-    label: "Agentes",
-    prompt: "Explique como organizar agentes de IA para a MSY/Britannia.",
+    label: "Valores",
+    prompt: "Quais são os valores fundamentais da Ordem Masayoshi?",
   },
 ];
 
@@ -43,23 +44,23 @@ export function ChatMessages({
   logoSrc,
   showWelcome,
   welcomeName,
+  welcomeSubtitle,
   onSuggest,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    container.scrollTo({
-      top: container.scrollHeight,
-      behavior: messages.length > 1 ? "smooth" : "auto",
-    });
+    const c = containerRef.current;
+    if (!c) return;
+    c.scrollTo({ top: c.scrollHeight, behavior: messages.length > 1 ? "smooth" : "auto" });
   }, [messages, pending, error]);
 
-  const initial = useMemo(() => {
+  const userInitial = useMemo(() => {
     const name = profile?.nome_interno || profile?.nome || "U";
     return name.charAt(0).toUpperCase();
   }, [profile]);
+
+  const empty = showWelcome && messages.length === 0 && !pending;
 
   return (
     <div
@@ -69,31 +70,32 @@ export function ChatMessages({
       aria-live="polite"
       aria-label="Conversa"
     >
-      {showWelcome && messages.length === 0 && !pending && (
+      {empty && (
         <motion.section
           className="welcome-panel"
-          initial={{ opacity: 0, y: 18 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.44, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="welcome-mark">
-            <Image src={logoSrc} alt="" width={54} height={54} priority />
+            <Image src={logoSrc} alt="" width={36} height={36} priority />
           </div>
-          <p className="eyebrow">MSY / Britannia</p>
+          <p className="eyebrow">MSY · Corvus</p>
           <h1>{welcomeName}</h1>
+          {welcomeSubtitle && (
+            <p className="welcome-subtitle">{welcomeSubtitle}</p>
+          )}
           <div className="suggestion-row">
-            {SUGGESTIONS.map((suggestion) => (
-              <motion.button
-                key={suggestion.prompt}
+            {SUGGESTIONS.map((s) => (
+              <button
+                key={s.prompt}
                 type="button"
                 className="suggestion-pill"
-                onClick={() => onSuggest(suggestion.prompt)}
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.98 }}
+                onClick={() => onSuggest(s.prompt)}
               >
-                <Sparkles size={15} />
-                <span>{suggestion.label}</span>
-              </motion.button>
+                <Sparkles size={13} />
+                <span>{s.label}</span>
+              </button>
             ))}
           </div>
         </motion.section>
@@ -105,7 +107,7 @@ export function ChatMessages({
             key={message.id ?? `${message.createdAt}-${index}`}
             message={message}
             logoSrc={logoSrc}
-            userInitial={initial}
+            userInitial={userInitial}
           />
         ))}
       </AnimatePresence>
@@ -116,15 +118,16 @@ export function ChatMessages({
         {error && (
           <motion.div
             className="error-state"
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 12 }}
+            exit={{ opacity: 0, y: 8 }}
+            role="alert"
           >
-            <AlertTriangle size={18} />
+            <AlertTriangle size={16} />
             <span>{error.message}</span>
             {error.retryable && (
               <button type="button" onClick={onRetry}>
-                <RefreshCcw size={15} />
+                <RefreshCcw size={13} />
                 <span>Repetir</span>
               </button>
             )}
@@ -146,6 +149,7 @@ function MessageBubble({
 }) {
   const [copied, setCopied] = useState(false);
   const isCorvus = message.role === "corvus";
+
   const timestamp = useMemo(
     () =>
       new Date(message.createdAt).toLocaleTimeString("pt-BR", {
@@ -173,21 +177,21 @@ function MessageBubble({
   return (
     <motion.article
       className={`message-row ${isCorvus ? "corvus" : "user"}`}
-      initial={{ opacity: 0, y: 16, filter: "blur(8px)" }}
-      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
     >
       <div className="message-avatar" aria-hidden="true">
         {isCorvus ? (
-          <Image src={logoSrc} alt="" width={30} height={30} />
+          <Image src={logoSrc} alt="" width={20} height={20} />
         ) : (
           <span>{userInitial}</span>
         )}
       </div>
       <div className="message-card">
         <div className="message-meta">
-          <span>{isCorvus ? "Corvus" : "Voce"}</span>
+          <span>{isCorvus ? "Corvus" : "Você"}</span>
           <time>{timestamp}</time>
         </div>
         {isCorvus ? (
@@ -198,23 +202,19 @@ function MessageBubble({
         ) : (
           <p className="message-text">{message.text}</p>
         )}
-        <div className="message-tools">
-          {isCorvus && (
-            <span className="trust-chip">
-              <Shield size={13} />
-              MSY
-            </span>
-          )}
-          <button
-            type="button"
-            className="copy-button"
-            title="Copiar"
-            aria-label="Copiar"
-            onClick={copyMessage}
-          >
-            {copied ? <Check size={14} /> : <Copy size={14} />}
-          </button>
-        </div>
+        {isCorvus && (
+          <div className="message-tools">
+            <button
+              type="button"
+              className="copy-button"
+              title={copied ? "Copiado" : "Copiar"}
+              aria-label="Copiar resposta"
+              onClick={copyMessage}
+            >
+              {copied ? <Check size={13} /> : <Copy size={13} />}
+            </button>
+          </div>
+        )}
       </div>
     </motion.article>
   );
@@ -224,16 +224,18 @@ function TypingIndicator({ logoSrc }: { logoSrc: string }) {
   return (
     <motion.div
       className="message-row corvus"
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
     >
       <div className="message-avatar" aria-hidden="true">
-        <Image src={logoSrc} alt="" width={30} height={30} />
+        <Image src={logoSrc} alt="" width={20} height={20} />
       </div>
-      <div className="typing-card">
-        <span />
-        <span />
-        <span />
+      <div className="message-card">
+        <div className="typing-card">
+          <span />
+          <span />
+          <span />
+        </div>
       </div>
     </motion.div>
   );
@@ -258,6 +260,10 @@ function renderSafeMarkdown(text: string): string {
       if ((name === "href" || name === "src") && value.startsWith("javascript:")) {
         element.removeAttribute(attribute.name);
       }
+    }
+    if (element.tagName === "A") {
+      element.setAttribute("target", "_blank");
+      element.setAttribute("rel", "noopener noreferrer");
     }
   });
 

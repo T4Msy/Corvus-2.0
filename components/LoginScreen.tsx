@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, LockKeyhole, Mail, Shield, UserRound } from "lucide-react";
+import { ArrowRight, LockKeyhole, Mail, ShieldAlert, UserRound } from "lucide-react";
 
 interface Props {
   logoSrc: string;
@@ -12,12 +12,7 @@ interface Props {
   supabaseError?: string | null;
 }
 
-export function LoginScreen({
-  logoSrc,
-  onLogin,
-  onGuest,
-  supabaseError,
-}: Props) {
+export function LoginScreen({ logoSrc, onLogin, onGuest, supabaseError }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -29,14 +24,11 @@ export function LoginScreen({
       setError("Preencha email e senha.");
       return;
     }
-
     setBusy(true);
     try {
       await onLogin(email.trim(), password);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Credenciais invalidas."
-      );
+      setError(err instanceof Error ? err.message : "Credenciais inválidas.");
     } finally {
       setBusy(false);
     }
@@ -44,29 +36,23 @@ export function LoginScreen({
 
   return (
     <main className="login-screen">
-      <div className="cinema-bg" aria-hidden="true" />
+      <div className="login-bg" aria-hidden="true" />
       <motion.section
         className="login-panel"
-        initial={{ opacity: 0, y: 22, filter: "blur(12px)" }}
-        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-        transition={{ duration: 0.56, ease: [0.22, 1, 0.36, 1] }}
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
       >
         <div className="login-brand">
-          <Image
-            src={logoSrc}
-            alt="Corvus"
-            width={72}
-            height={72}
-            priority
-          />
-          <p className="eyebrow">MSY / Britannia</p>
-          <h1>CORVUS</h1>
-          <span>V3 Intelligence Core</span>
+          <Image src={logoSrc} alt="Corvus" width={56} height={56} priority />
+          <p className="eyebrow">MSY · Corvus</p>
+          <h1>Acesso</h1>
+          <span>Inteligência institucional</span>
         </div>
 
         {(error || supabaseError) && (
           <div className="login-alert" role="alert">
-            <Shield size={16} />
+            <ShieldAlert size={15} />
             <span>{error || supabaseError}</span>
           </div>
         )}
@@ -75,14 +61,17 @@ export function LoginScreen({
           <label className="login-field" htmlFor="login-email">
             <span>Email</span>
             <div>
-              <Mail size={17} />
+              <Mail size={15} />
               <input
                 id="login-email"
                 type="email"
                 autoComplete="email"
-                placeholder="voce@msy.ai"
+                placeholder="você@msy.ai"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") void submit();
+                }}
               />
             </div>
           </label>
@@ -90,12 +79,12 @@ export function LoginScreen({
           <label className="login-field" htmlFor="login-password">
             <span>Senha</span>
             <div>
-              <LockKeyhole size={17} />
+              <LockKeyhole size={15} />
               <input
                 id="login-password"
                 type="password"
                 autoComplete="current-password"
-                placeholder="********"
+                placeholder="••••••••"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 onKeyDown={(event) => {
@@ -111,8 +100,8 @@ export function LoginScreen({
             disabled={busy}
             onClick={submit}
           >
-            <span>{busy ? "Validando" : "Acessar"}</span>
-            <ArrowRight size={17} />
+            <span>{busy ? "Validando…" : "Entrar"}</span>
+            <ArrowRight size={15} />
           </button>
 
           <button
@@ -121,8 +110,8 @@ export function LoginScreen({
             disabled={busy}
             onClick={onGuest}
           >
-            <UserRound size={17} />
-            <span>Convidado</span>
+            <UserRound size={15} />
+            <span>Continuar como convidado</span>
           </button>
         </div>
       </motion.section>

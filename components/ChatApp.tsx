@@ -4,41 +4,56 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Bot,
-  Brain,
-  LogOut,
+  AlertCircle,
   Menu,
   MessageSquare,
-  Moon,
   Plus,
   Search,
-  ShieldCheck,
-  Sun,
+  Settings,
   Trash2,
-  UserRound,
-  Wifi,
-  WifiOff,
   X,
 } from "lucide-react";
 import { ChatInput } from "@/components/ChatInput";
 import { ChatMessages } from "@/components/ChatMessages";
 import { LoginScreen } from "@/components/LoginScreen";
+import { SettingsDialog } from "@/components/SettingsDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useChat } from "@/hooks/useChat";
 import { useConversations } from "@/hooks/useConversations";
+import { usePreferences } from "@/hooks/usePreferences";
 import { useTheme } from "@/hooks/useTheme";
-import type { AgentMode, Conversation, UserContext } from "@/lib/types";
+import type { AgentMode, Conversation, UserContext, UserProfile } from "@/lib/types";
 
 export function ChatApp() {
-  const { theme, toggle, label, logoSrc } = useTheme();
+  const { preference, setPreference, logoSrc } = useTheme();
   const auth = useAuth();
   const chat = useChat();
   const conversations = useConversations(auth);
   const [mode, setMode] = useState<AgentMode>("corvus");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const loadedConversationRef = useRef<string | null>(null);
   const creatingConversationRef = useRef(false);
+
+  // Sincroniza profile vindo do server com o snapshot do useAuth.
+  // Também aplica o tema preferido do usuário ao carregar.
+  const handleProfileChange = useCallback(
+    (profile: UserProfile) => {
+      auth.mergeProfile(profile);
+      if (profile.theme_preference) {
+        setPreference(profile.theme_preference);
+      }
+    },
+    [auth, setPreference]
+  );
+
+  const preferences = usePreferences({
+    accessToken: auth.accessToken,
+    enabled: auth.status === "authed",
+    fallbackName: auth.profile?.nome ?? auth.profile?.nome_interno ?? "Membro",
+    onProfile: handleProfileChange,
+  });
 
   const userName =
     auth.profile?.nome_interno ||
@@ -51,13 +66,12 @@ export function ChatApp() {
       cargo: auth.profile?.cargo ?? "",
       sigla: auth.profile?.sigla_cargo ?? "",
       tipo:
-        auth.status === "guest"
-          ? "convidado"
-          : auth.profile?.tipo ?? "membro",
+        auth.status === "guest" ? "convidado" : auth.profile?.tipo ?? "membro",
     }),
     [auth.profile, auth.status, userName]
   );
 
+  // Reset chat ao deslogar
   useEffect(() => {
     if (auth.status === "anon") {
       chat.reset();
@@ -65,6 +79,7 @@ export function ChatApp() {
     }
   }, [auth.status, chat.reset]);
 
+  // Garante uma conversa ativa quando o usuário entra
   useEffect(() => {
     if (
       (auth.status === "authed" || auth.status === "guest") &&
@@ -93,12 +108,12 @@ export function ChatApp() {
     conversations.loading,
   ]);
 
+  // Carrega histórico quando a conversa ativa muda
   useEffect(() => {
     if (auth.status !== "authed" && auth.status !== "guest") return;
     if (conversations.loading || !conversations.activeConversationId) return;
-    if (loadedConversationRef.current === conversations.activeConversationId) {
+    if (loadedConversationRef.current === conversations.activeConversationId)
       return;
-    }
 
     const id = conversations.activeConversationId;
     loadedConversationRef.current = id;
@@ -205,8 +220,6 @@ export function ChatApp() {
 
   return (
     <div className="corvus-shell">
-      <div className="cinema-bg" aria-hidden="true" />
-
       <AnimatePresence>
         {sidebarOpen && (
           <motion.button
@@ -221,24 +234,17 @@ export function ChatApp() {
         )}
       </AnimatePresence>
 
-      <motion.aside
-        className={`corvus-sidebar${sidebarOpen ? " open" : ""}`}
-        initial={false}
-      >
+      <aside className={`corvus-sidebar${sidebarOpen ? " open" : ""}`}>
         <div className="sidebar-brand">
-          <Image src={logoSrc} alt="Corvus" width={42} height={42} priority />
-          <div>
-            <strong>CORVUS</strong>
-            <span>MSY Intelligence</span>
-          </div>
+          <Image src={logoSrc} alt="Corvus" width={26} height={26} priority />
+          <strong>Corvus</strong>
           <button
             type="button"
             className="icon-button mobile-only"
             aria-label="Fechar menu"
-            title="Fechar"
             onClick={() => setSidebarOpen(false)}
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
@@ -247,43 +253,33 @@ export function ChatApp() {
           className="new-chat-button"
           onClick={createConversation}
         >
-          <Plus size={18} />
+          <Plus size={15} />
           <span>Novo chat</span>
         </button>
 
         <label className="sidebar-search" htmlFor="conversation-search">
-          <Search size={16} />
+          <Search size={14} />
           <input
             id="conversation-search"
             type="search"
-            placeholder="Buscar"
+            placeholder="Buscar conversa"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
         </label>
 
-        <div className="sidebar-section compact">
-          <p>Agentes</p>
-          <button className={mode === "corvus" ? "active" : ""} onClick={() => setMode("corvus")}>
-            <Bot size={16} />
-            <span>Corvus</span>
-          </button>
-          <button className={mode === "fenrir" ? "active" : ""} onClick={() => setMode("fenrir")}>
-            <Brain size={16} />
-            <span>Fenrir</span>
-          </button>
-        </div>
-
         <div className="conversation-stack">
-          <div className="stack-header">
-            <span>Conversas</span>
-            {conversations.loading && <span className="mini-loader" />}
-          </div>
-
-          {filteredConversations.length === 0 && (
+          {conversations.loading && conversations.conversations.length === 0 && (
             <div className="empty-list">
-              <MessageSquare size={17} />
-              <span>Nenhuma conversa</span>
+              <span className="mini-loader" />
+              <span>Carregando…</span>
+            </div>
+          )}
+
+          {!conversations.loading && filteredConversations.length === 0 && (
+            <div className="empty-list">
+              <MessageSquare size={16} />
+              <span>{query ? "Nada encontrado" : "Nenhuma conversa ainda"}</span>
             </div>
           )}
 
@@ -304,7 +300,7 @@ export function ChatApp() {
                     className="conversation-open"
                     onClick={() => void selectConversation(conversation.id)}
                   >
-                    <MessageSquare size={16} />
+                    <MessageSquare size={14} />
                     <span>{conversation.title}</span>
                     <small>{formatRelative(conversation.updatedAt)}</small>
                   </button>
@@ -318,7 +314,7 @@ export function ChatApp() {
                       void deleteConversation(conversation.id);
                     }}
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={13} />
                   </button>
                 </div>
               ))}
@@ -326,45 +322,32 @@ export function ChatApp() {
           ))}
         </div>
 
-        <div className="sidebar-insights">
-          <div>
-            <span>Conversas</span>
-            <strong>{conversations.conversations.length}</strong>
-          </div>
-          <div>
-            <span>Agente</span>
-            <strong>{mode === "fenrir" ? "Fenrir" : "Corvus"}</strong>
-          </div>
-        </div>
-
         <div className="sidebar-footer">
-          <div className="system-line">
-            {auth.supabaseReady ? <Wifi size={15} /> : <WifiOff size={15} />}
-            <span>{auth.supabaseReady ? "Supabase ativo" : "Supabase env"}</span>
-          </div>
           {conversations.error && (
             <p className="sidebar-error">{conversations.error}</p>
           )}
-          <div className="profile-row">
-            <div className="profile-avatar">
-              <UserRound size={17} />
-            </div>
+          <button
+            type="button"
+            className="profile-button"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Abrir configurações"
+          >
+            <span className="profile-avatar">
+              {auth.profile?.avatar_url ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={auth.profile.avatar_url} alt="" />
+              ) : (
+                userName.charAt(0).toUpperCase()
+              )}
+            </span>
             <div>
               <strong>{userName}</strong>
-              <span>{auth.status === "guest" ? "Convidado" : "MSY"}</span>
+              <span>{auth.status === "guest" ? "Convidado" : auth.profile?.cargo || "Membro MSY"}</span>
             </div>
-            <button
-              type="button"
-              className="icon-button"
-              title="Sair"
-              aria-label="Sair"
-              onClick={auth.logout}
-            >
-              <LogOut size={17} />
-            </button>
-          </div>
+            <Settings size={15} className="profile-button-icon" />
+          </button>
         </div>
-      </motion.aside>
+      </aside>
 
       <section className="workspace">
         <header className="topbar">
@@ -372,43 +355,28 @@ export function ChatApp() {
             type="button"
             className="icon-button desktop-hidden"
             title="Menu"
-            aria-label="Menu"
+            aria-label="Abrir menu"
             onClick={() => setSidebarOpen(true)}
           >
-            <Menu size={19} />
+            <Menu size={18} />
           </button>
 
           <div className="topbar-title">
-            <span className="status-dot" />
-            <div>
-              <strong>{conversations.activeConversation?.title ?? "Corvus"}</strong>
-              <span>{mode === "fenrir" ? "Fenrir mode" : "Corvus core"}</span>
-            </div>
-          </div>
-
-          <div className="topbar-actions">
-            <div className="engine-pill">
-              <ShieldCheck size={15} />
-              <span>{chat.pending ? "Processando" : "Pronto"}</span>
-            </div>
-            <button
-              type="button"
-              className="icon-button"
-              title={`Tema: ${label}`}
-              aria-label="Trocar tema"
-              onClick={toggle}
-            >
-              {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
-            </button>
+            <strong>
+              {conversations.activeConversation?.title ?? "Nova conversa"}
+            </strong>
           </div>
         </header>
 
-        {auth.status === "guest" && (
-          <div className="guest-ribbon">Sessao convidada</div>
-        )}
-
         {auth.error && auth.status === "authed" && (
-          <div className="guest-ribbon warning">{auth.error}</div>
+          <div
+            className="persistence-banner"
+            role="alert"
+            style={{ margin: "8px auto 0", maxWidth: "var(--content-max)" }}
+          >
+            <AlertCircle size={14} />
+            <span>{auth.error}</span>
+          </div>
         )}
 
         <main className="chat-stage">
@@ -421,8 +389,11 @@ export function ChatApp() {
             logoSrc={logoSrc}
             showWelcome
             welcomeName={
-              auth.status === "guest" ? "Corvus online" : `Ola, ${userName}`
+              auth.status === "guest"
+                ? "Olá. Sou Corvus."
+                : `Olá, ${userName}`
             }
+            welcomeSubtitle="Pergunte algo. Ou escolha uma sugestão."
             onSuggest={send}
           />
           <ChatInput
@@ -433,6 +404,20 @@ export function ChatApp() {
           />
         </main>
       </section>
+
+      <SettingsDialog
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        profile={auth.profile}
+        loading={preferences.loading}
+        saving={preferences.saving}
+        error={preferences.error}
+        themePreference={preference}
+        isGuest={auth.status === "guest"}
+        onSetTheme={setPreference}
+        onUpdateProfile={preferences.updateProfile}
+        onLogout={auth.logout}
+      />
     </div>
   );
 }
@@ -440,24 +425,24 @@ export function ChatApp() {
 function BootScreen({ logoSrc }: { logoSrc: string }) {
   return (
     <main className="boot-screen">
-      <div className="cinema-bg" aria-hidden="true" />
       <motion.div
         className="boot-mark"
-        initial={{ opacity: 0, scale: 0.94 }}
+        initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4 }}
       >
-        <Image src={logoSrc} alt="Corvus" width={70} height={70} priority />
+        <Image src={logoSrc} alt="Corvus" width={50} height={50} priority />
         <span />
       </motion.div>
     </main>
   );
 }
 
-function groupConversations(conversations: Conversation[]) {
-  return conversations.reduce<Array<{ label: string; items: Conversation[] }>>(
+function groupConversations(items: Conversation[]) {
+  return items.reduce<Array<{ label: string; items: Conversation[] }>>(
     (groups, conversation) => {
       const label = groupLabel(conversation.updatedAt);
-      const group = groups.find((item) => item.label === label);
+      const group = groups.find((g) => g.label === label);
       if (group) group.items.push(conversation);
       else groups.push({ label, items: [conversation] });
       return groups;
@@ -469,11 +454,15 @@ function groupConversations(conversations: Conversation[]) {
 function groupLabel(time: number): string {
   const now = new Date();
   const date = new Date(time);
-  const diff = now.getTime() - date.getTime();
   const day = 24 * 60 * 60 * 1000;
+  const diff = now.getTime() - date.getTime();
   if (date.toDateString() === now.toDateString()) return "Hoje";
-  if (diff < day * 7) return "Semana";
-  return "Arquivo";
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return "Ontem";
+  if (diff < day * 7) return "Esta semana";
+  if (diff < day * 30) return "Este mês";
+  return "Anteriores";
 }
 
 function formatRelative(time: number): string {

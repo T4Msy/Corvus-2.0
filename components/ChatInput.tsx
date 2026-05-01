@@ -2,14 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  Bot,
-  ChevronDown,
-  Paperclip,
-  Send,
-  Sparkles,
-  Zap,
-} from "lucide-react";
+import { Bot, ChevronDown, Send, Sparkles, Zap } from "lucide-react";
 import type { AgentMode } from "@/lib/types";
 
 interface Props {
@@ -17,38 +10,29 @@ interface Props {
   onModeChange: (m: AgentMode) => void;
   onSend: (text: string) => void;
   disabled: boolean;
-  onAttachFile?: (file: File) => void;
 }
 
-const MAX_HEIGHT = 164;
+const MAX_HEIGHT = 200;
 
-export function ChatInput({
-  mode,
-  onModeChange,
-  onSend,
-  disabled,
-  onAttachFile,
-}: Props) {
+export function ChatInput({ mode, onModeChange, onSend, disabled }: Props) {
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const selectorRef = useRef<HTMLDivElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
-      if (!selectorRef.current?.contains(event.target as Node)) setOpen(false);
+      if (!pickerRef.current?.contains(event.target as Node)) setOpen(false);
     }
-
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, []);
 
   useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    textarea.style.height = "auto";
-    textarea.style.height = `${Math.min(textarea.scrollHeight, MAX_HEIGHT)}px`;
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = `${Math.min(ta.scrollHeight, MAX_HEIGHT)}px`;
   }, [value]);
 
   function commitSend() {
@@ -59,7 +43,9 @@ export function ChatInput({
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
+    // Enter: nova linha (default do textarea)
+    // Ctrl+Enter ou Cmd+Enter: envia
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
       event.preventDefault();
       commitSend();
     }
@@ -68,12 +54,12 @@ export function ChatInput({
   return (
     <motion.footer
       className="composer-shell"
-      initial={{ opacity: 0, y: 18 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
     >
       <div className="composer">
-        <div className="agent-picker" ref={selectorRef}>
+        <div className="agent-picker" ref={pickerRef}>
           <button
             type="button"
             className="agent-picker-button"
@@ -85,9 +71,9 @@ export function ChatInput({
               setOpen((current) => !current);
             }}
           >
-            {mode === "fenrir" ? <Zap size={17} /> : <Bot size={17} />}
+            {mode === "fenrir" ? <Zap size={15} /> : <Bot size={15} />}
             <span>{mode === "fenrir" ? "Fenrir" : "Corvus"}</span>
-            <ChevronDown size={15} />
+            <ChevronDown size={13} />
           </button>
 
           <AnimatePresence>
@@ -95,16 +81,16 @@ export function ChatInput({
               <motion.div
                 className="agent-menu"
                 role="listbox"
-                initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                initial={{ opacity: 0, y: 6, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 8, scale: 0.98 }}
-                transition={{ duration: 0.16 }}
+                exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                transition={{ duration: 0.14 }}
               >
                 <ModeOption
                   active={mode === "corvus"}
-                  icon={<Bot size={18} />}
+                  icon={<Bot size={15} />}
                   label="Corvus"
-                  description="Institucional"
+                  description="Institucional · preciso"
                   onClick={() => {
                     onModeChange("corvus");
                     setOpen(false);
@@ -112,9 +98,9 @@ export function ChatInput({
                 />
                 <ModeOption
                   active={mode === "fenrir"}
-                  icon={<Zap size={18} />}
+                  icon={<Zap size={15} />}
                   label="Fenrir"
-                  description="Criativo"
+                  description="Criativo · expansivo"
                   onClick={() => {
                     onModeChange("fenrir");
                     setOpen(false);
@@ -130,7 +116,9 @@ export function ChatInput({
           rows={1}
           className="composer-textarea"
           placeholder={
-            mode === "fenrir" ? "Acione Fenrir..." : "Pergunte ao Corvus..."
+            mode === "fenrir"
+              ? "Acione Fenrir..."
+              : "Pergunte ao Corvus..."
           }
           aria-label="Mensagem"
           spellCheck
@@ -139,41 +127,23 @@ export function ChatInput({
           onKeyDown={handleKeyDown}
         />
 
-        <input
-          ref={fileRef}
-          type="file"
-          className="sr-only"
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file && onAttachFile) onAttachFile(file);
-            event.currentTarget.value = "";
-          }}
-        />
-
         <div className="composer-actions">
-          {onAttachFile && (
-            <button
-              type="button"
-              className="icon-button ghost"
-              title="Anexar arquivo"
-              aria-label="Anexar arquivo"
-              onClick={() => fileRef.current?.click()}
-            >
-              <Paperclip size={18} />
-            </button>
-          )}
           <button
             type="button"
             className="send-button"
             aria-label="Enviar"
-            title="Enviar"
+            title="Enviar (Ctrl+Enter)"
             disabled={disabled || !value.trim()}
             onClick={commitSend}
           >
-            {disabled ? <Sparkles size={18} /> : <Send size={18} />}
+            {disabled ? <Sparkles size={16} /> : <Send size={16} />}
           </button>
         </div>
       </div>
+
+      <p className="composer-hint">
+        Enter quebra linha · Ctrl+Enter (ou botão) envia
+      </p>
     </motion.footer>
   );
 }

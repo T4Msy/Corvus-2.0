@@ -78,6 +78,8 @@ export interface Conversation {
   messages: ChatMessage[];
 }
 
+export type ThemePreference = "dark" | "light" | "system";
+
 export interface UserProfile {
   id: string;
   nome?: string;
@@ -85,4 +87,6 @@ export interface UserProfile {
   cargo?: string;
   sigla_cargo?: string;
   tipo?: "membro" | "convidado" | string;
+  avatar_url?: string;
+  theme_preference?: ThemePreference;
 }

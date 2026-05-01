@@ -25,6 +25,8 @@ export type MessageRow = {
   created_at: string | null;
 };
 
+export type ThemePreference = "dark" | "light" | "system";
+
 export type UserProfileRow = {
   id: string;
   nome: string | null;
@@ -32,6 +34,9 @@ export type UserProfileRow = {
   cargo: string | null;
   sigla_cargo: string | null;
   tipo: string | null;
+  avatar_url: string | null;
+  theme_preference: ThemePreference | null;
+  preferences: Json | null;
   created_at?: string | null;
   updated_at?: string | null;
 };
