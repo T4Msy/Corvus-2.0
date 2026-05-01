@@ -1,16 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getBrowserSupabase } from "@/integrations/supabase/client";
 import {
   createLocalConversation,
-  deleteConversationRecord,
   deriveConversationTitle,
-  listConversations,
-  loadMessages,
-  saveMessage,
-  updateConversationMeta,
-  upsertConversation,
 } from "@/integrations/supabase/conversations";
 import type { ChatMessage, Conversation } from "@/lib/types";
 
@@ -18,6 +11,7 @@ type AuthLike = {
   status: "loading" | "anon" | "authed" | "guest";
   userId: string;
   supabaseReady: boolean;
+  accessToken?: string | null;
 };
 
 const LOCAL_KEY = "corvus_guest_conversations";
@@ -56,8 +50,10 @@ export function useConversations(auth: AuthLike) {
     setError(null);
     try {
       if (auth.status === "authed" && auth.supabaseReady) {
-        const supabase = getBrowserSupabase();
-        const remote = await listConversations(supabase, auth.userId);
+        const result = await conversationsApi<{
+          conversations: Conversation[];
+        }>("/api/conversations", auth.accessToken);
+        const remote = result.conversations;
         setConversations(remote);
         setActiveConversationId((current) => current ?? remote[0]?.id ?? null);
         return;
@@ -77,7 +73,7 @@ export function useConversations(auth: AuthLike) {
     } finally {
       setLoading(false);
     }
-  }, [auth.status, auth.supabaseReady, auth.userId]);
+  }, [auth.accessToken, auth.status, auth.supabaseReady]);
 
   useEffect(() => {
     void refresh();
@@ -94,11 +90,10 @@ export function useConversations(auth: AuthLike) {
 
     if (auth.status === "authed" && auth.supabaseReady) {
       try {
-        await upsertConversation(
-          getBrowserSupabase(),
-          conversation,
-          auth.userId
-        );
+        await conversationsApi("/api/conversations", auth.accessToken, {
+          method: "POST",
+          body: conversation,
+        });
       } catch (err) {
         setError(
           err instanceof Error
@@ -109,7 +104,7 @@ export function useConversations(auth: AuthLike) {
     }
 
     return conversation;
-  }, [auth.status, auth.supabaseReady, auth.userId, persistLocal]);
+  }, [auth.accessToken, auth.status, auth.supabaseReady, persistLocal]);
 
   const selectConversation = useCallback(
     async (conversationId: string): Promise<ChatMessage[]> => {
@@ -118,7 +113,11 @@ export function useConversations(auth: AuthLike) {
 
       try {
         if (auth.status === "authed" && auth.supabaseReady) {
-          return await loadMessages(getBrowserSupabase(), conversationId);
+          const result = await conversationsApi<{ messages: ChatMessage[] }>(
+            `/api/conversations/${encodeURIComponent(conversationId)}/messages`,
+            auth.accessToken
+          );
+          return result.messages;
         }
 
         return (
@@ -134,7 +133,7 @@ export function useConversations(auth: AuthLike) {
         return [];
       }
     },
-    [auth.status, auth.supabaseReady, conversations]
+    [auth.accessToken, auth.status, auth.supabaseReady, conversations]
   );
 
   const persistMessage = useCallback(
@@ -171,9 +170,18 @@ export function useConversations(auth: AuthLike) {
       if (auth.status !== "authed" || !auth.supabaseReady) return;
 
       try {
-        const supabase = getBrowserSupabase();
-        await saveMessage(supabase, conversationId, message);
-        await updateConversationMeta(supabase, conversationId, nextTitle, now);
+        await conversationsApi(
+          `/api/conversations/${encodeURIComponent(conversationId)}/messages`,
+          auth.accessToken,
+          {
+            method: "POST",
+            body: {
+              message,
+              title: nextTitle,
+              updatedAt: now,
+            },
+          }
+        );
       } catch (err) {
         setError(
           err instanceof Error
@@ -182,7 +190,13 @@ export function useConversations(auth: AuthLike) {
         );
       }
     },
-    [auth.status, auth.supabaseReady, conversations, persistLocal]
+    [
+      auth.accessToken,
+      auth.status,
+      auth.supabaseReady,
+      conversations,
+      persistLocal,
+    ]
   );
 
   const deleteConversation = useCallback(
@@ -198,7 +212,11 @@ export function useConversations(auth: AuthLike) {
 
       if (auth.status === "authed" && auth.supabaseReady) {
         try {
-          await deleteConversationRecord(getBrowserSupabase(), conversationId);
+          await conversationsApi(
+            `/api/conversations/${encodeURIComponent(conversationId)}`,
+            auth.accessToken,
+            { method: "DELETE" }
+          );
         } catch (err) {
           setError(
             err instanceof Error
@@ -212,6 +230,7 @@ export function useConversations(auth: AuthLike) {
     },
     [
       activeConversationId,
+      auth.accessToken,
       auth.status,
       auth.supabaseReady,
       conversations,
@@ -231,6 +250,42 @@ export function useConversations(auth: AuthLike) {
     persistMessage,
     deleteConversation,
   };
+}
+
+async function conversationsApi<T = unknown>(
+  path: string,
+  accessToken: string | null | undefined,
+  init: { method?: string; body?: unknown } = {}
+): Promise<T> {
+  if (!accessToken) {
+    throw new Error("Sessao Supabase ausente.");
+  }
+
+  const response = await fetch(path, {
+    method: init.method ?? "GET",
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/json",
+      ...(init.body ? { "Content-Type": "application/json" } : {}),
+    },
+    body: init.body ? JSON.stringify(init.body) : undefined,
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | (T & {
+        ok?: boolean;
+        error?: { message?: string };
+      })
+    | null;
+
+  if (!response.ok || data?.ok === false) {
+    throw new Error(
+      data?.error?.message || `Falha HTTP ${response.status} no Supabase.`
+    );
+  }
+
+  return data as T;
 }
 
 function readLocalConversations(): Conversation[] {

@@ -45,7 +45,7 @@ export async function listConversations(
 ): Promise<Conversation[]> {
   const { data, error } = await supabase
     .from("msy_conversas")
-    .select("id,titulo,session_id,created_at,updated_at")
+    .select("id,titulo,session_id,updated_at")
     .eq("usuario_id", userId)
     .order("updated_at", { ascending: false })
     .limit(60);
@@ -58,7 +58,7 @@ export async function listConversations(
       id: row.id,
       title: row.titulo || DEFAULT_TITLE,
       sessionId: row.session_id || makeSessionId(),
-      createdAt: toTime(row.created_at, updatedAt),
+      createdAt: updatedAt,
       updatedAt,
       messages: [],
     };
@@ -98,6 +98,71 @@ export async function updateConversationMeta(
   if (error) throw error;
 }
 
+export async function updateOwnedConversationMeta(
+  supabase: CorvusSupabaseClient,
+  conversationId: string,
+  userId: string,
+  title: string,
+  updatedAt: number
+): Promise<void> {
+  const { error } = await supabase
+    .from("msy_conversas")
+    .update({
+      titulo: title,
+      updated_at: new Date(updatedAt).toISOString(),
+    })
+    .eq("id", conversationId)
+    .eq("usuario_id", userId);
+
+  if (error) throw error;
+}
+
+export async function userCanAccessConversation(
+  supabase: CorvusSupabaseClient,
+  conversationId: string,
+  userId: string
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("msy_conversas")
+    .select("id")
+    .eq("id", conversationId)
+    .eq("usuario_id", userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return Boolean(data);
+}
+
+export async function deleteOwnedConversationRecord(
+  supabase: CorvusSupabaseClient,
+  conversationId: string,
+  userId: string
+): Promise<void> {
+  const allowed = await userCanAccessConversation(
+    supabase,
+    conversationId,
+    userId
+  );
+  if (!allowed) {
+    throw new Error("Conversa nao encontrada para este usuario.");
+  }
+
+  const messageDelete = await supabase
+    .from("msy_mensagens")
+    .delete()
+    .eq("conversa_id", conversationId);
+
+  if (messageDelete.error) throw messageDelete.error;
+
+  const conversationDelete = await supabase
+    .from("msy_conversas")
+    .delete()
+    .eq("id", conversationId)
+    .eq("usuario_id", userId);
+
+  if (conversationDelete.error) throw conversationDelete.error;
+}
+
 export async function deleteConversationRecord(
   supabase: CorvusSupabaseClient,
   conversationId: string
@@ -123,14 +188,13 @@ export async function loadMessages(
 ): Promise<ChatMessage[]> {
   const { data, error } = await supabase
     .from("msy_mensagens")
-    .select("id,role,texto,created_at")
+    .select("role,texto,created_at")
     .eq("conversa_id", conversationId)
     .order("created_at", { ascending: true });
 
   if (error) throw error;
 
   return (data ?? []).map((row) => ({
-    id: row.id,
     role: normalizeRole(row.role),
     text: row.texto,
     createdAt: toTime(row.created_at),

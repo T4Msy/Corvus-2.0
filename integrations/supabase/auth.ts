@@ -23,7 +23,7 @@ export async function loadUserProfile(
 
   const { data, error } = await supabase
     .from("msy_usuarios")
-    .select("id,nome,nome_interno,cargo,sigla_cargo,tipo,avatar_url")
+    .select("id,nome,nome_interno,cargo,sigla_cargo,tipo")
     .eq("id", user.id)
     .maybeSingle();
 

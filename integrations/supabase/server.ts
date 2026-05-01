@@ -27,6 +27,10 @@ function readServiceRoleKey(): string {
   return (process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").trim();
 }
 
+export function hasServerSupabaseServiceRole(): boolean {
+  return Boolean(readServiceRoleKey());
+}
+
 export function getServerSupabaseStatus(): SupabaseRuntimeStatus {
   const url = readUrl();
   const anonKey = readAnonKey();

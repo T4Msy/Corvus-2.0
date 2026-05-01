@@ -126,6 +126,8 @@ function friendlyError(code: string, fallback: string): string {
       return "O Corvus respondeu em formato inesperado.";
     case "validation":
       return fallback;
+    case "internal":
+      return fallback || "Configuracao do Corvus indisponivel.";
     default:
       return fallback || "Falha desconhecida.";
   }

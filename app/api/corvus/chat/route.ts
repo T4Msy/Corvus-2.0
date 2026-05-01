@@ -53,6 +53,8 @@ function statusForError(err: ChatErrorResponse): number {
     case "upstream_timeout":
     case "upstream_invalid_response":
       return 502;
+    case "internal":
+      return 500;
     default:
       return 500;
   }
@@ -108,7 +110,22 @@ export async function POST(req: Request) {
     userContext: parseUserContext(b.userContext),
   };
 
-  const result: ChatResponse = await sendChatToN8n(payload);
+  let result: ChatResponse;
+  try {
+    result = await sendChatToN8n(payload);
+  } catch (err) {
+    result = {
+      ok: false,
+      error: {
+        code: "internal",
+        message:
+          err instanceof Error
+            ? err.message
+            : "Falha interna ao acionar o motor do Corvus.",
+        retryable: false,
+      },
+    };
+  }
 
   if (!result.ok) {
     return NextResponse.json<ChatErrorResponse>(result, {

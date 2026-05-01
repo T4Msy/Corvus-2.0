@@ -28,6 +28,7 @@ interface N8nEnvelope {
   message?: string;
   meta?: ChatSuccessResponse["meta"];
   error?: string;
+  json?: unknown;
 }
 
 function buildError(
@@ -64,10 +65,18 @@ async function callOnce(
 }
 
 function normalizeBody(raw: unknown): ChatSuccessResponse | null {
+  if (typeof raw === "string") {
+    const reply = raw.trim();
+    return reply ? { ok: true, reply } : null;
+  }
+
   // n8n pode retornar item único ou array.
-  const item: N8nEnvelope | undefined = Array.isArray(raw)
-    ? (raw[0] as N8nEnvelope)
-    : (raw as N8nEnvelope);
+  const itemRaw: unknown = Array.isArray(raw) ? raw[0] : raw;
+  const itemWithJson = itemRaw as N8nEnvelope;
+  const item: N8nEnvelope | undefined =
+    itemWithJson && typeof itemWithJson === "object" && "json" in itemWithJson
+      ? (itemWithJson.json as N8nEnvelope)
+      : (itemRaw as N8nEnvelope);
   if (!item || typeof item !== "object") return null;
 
   const reply =
@@ -90,7 +99,18 @@ function normalizeBody(raw: unknown): ChatSuccessResponse | null {
 export async function sendChatToN8n(
   payload: ChatRequestBody
 ): Promise<ChatSuccessResponse | ChatErrorResponse> {
-  const { n8n } = getServerConfig();
+  let n8n: ReturnType<typeof getServerConfig>["n8n"];
+  try {
+    n8n = getServerConfig().n8n;
+  } catch (err) {
+    return buildError(
+      "internal",
+      err instanceof Error
+        ? err.message
+        : "Configuracao do webhook n8n indisponivel.",
+      false
+    );
+  }
   const { webhookUrl, webhookSecret, timeoutMs, maxRetries } = n8n;
 
   let lastError: ChatErrorResponse | null = null;
@@ -100,17 +120,49 @@ export async function sendChatToN8n(
       const res = await callOnce(webhookUrl, payload, timeoutMs, webhookSecret);
 
       if (res.ok) {
+        if (res.status === 204 || res.status === 205) {
+          return buildError(
+            "upstream_invalid_response",
+            "Workflow respondeu sem conteudo.",
+            false
+          );
+        }
+
         const text = await res.text();
+        if (!text.trim()) {
+          return buildError(
+            "upstream_invalid_response",
+            "Workflow respondeu com corpo vazio.",
+            false
+          );
+        }
+
         let parsed: unknown;
         try {
           parsed = JSON.parse(text);
         } catch {
+          const normalizedText = normalizeBody(text);
+          if (normalizedText) return normalizedText;
           return buildError(
             "upstream_invalid_response",
-            "Workflow respondeu em formato inválido (não-JSON).",
+            "Workflow respondeu em formato invalido.",
             false
           );
         }
+
+        if (
+          parsed &&
+          typeof parsed === "object" &&
+          !Array.isArray(parsed) &&
+          (parsed as N8nEnvelope).ok === false
+        ) {
+          return buildError(
+            "upstream_5xx",
+            (parsed as N8nEnvelope).error || "Workflow retornou erro.",
+            true
+          );
+        }
+
         const normalized = normalizeBody(parsed);
         if (!normalized) {
           return buildError(
