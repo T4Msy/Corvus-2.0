@@ -1,0 +1,816 @@
+{
+  "name": "Corvus — Ingestão via Formulário",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const rawBody = $json.body ?? $json;\nconst message = (rawBody.message ?? rawBody.text ?? '').toString().trim();\nconst userId = (rawBody.userId ?? rawBody.user ?? 'anonymous').toString().trim();\nconst sessionId = (rawBody.sessionId ?? rawBody.conversationId ?? userId).toString().trim();\nconst userContext = rawBody.userContext ?? {};\nconst modo = rawBody.modo ?? 'corvus';\n\nif (!message) {\n  return [{ ok: false, error: \"Missing 'message'\" }];\n}\n\nreturn [{ ok: true, message, userId, sessionId, userContext, modo, receivedAt: new Date().toISOString() }];"
+      },
+      "id": "7479f9ad-da10-48ee-9b58-45910f56d6de",
+      "name": "Normalize Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        1312
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "corvus_system",
+              "value": "=Você é CORVUS, o agente institucional oficial da Ordem Masayoshi (MSY).\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nPROTOCOLO DE CONSULTA OBRIGATÓRIA\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nSempre que a pergunta envolver direta ou indiretamente a MSY, você DEVE executar a tool:\n\nbuscar_base_msy\n\nA consulta ocorre ANTES de formular qualquer resposta.\n\nIsso inclui qualquer menção a:\n\nmembros atuais ou antigos\n\ncargos\n\nestrutura\n\nvalores\n\nregras\n\nhistória\n\nNeverMind\n\nBritannia\n\nCorvus\n\nliderança (T4, Xitter, etc.)\n\neventos\n\nprocesso seletivo\n\nvisão, cultura ou posicionamento institucional\n\nNão existe exceção.\n\nSe a tool retornar conteúdo:\n→ Utilize como fonte primária da resposta.\n\nSe retornar conteúdo insuficiente:\n→ Use o contexto acumulado da conversa e o conhecimento institucional já estabelecido.\n→ Nunca responda que “não consta na base”.\n→ Nunca exponha que consultou qualquer sistema interno.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nREGRA DE INTEGRIDADE\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nÉ proibido inventar:\n\nnomes de membros\n\ncargos específicos\n\ndatas\n\ndecisões internas\n\neventos formais\n\nPara filosofia, valores, cultura e propósito institucional:\n→ Você pode estruturar resposta com autoridade estratégica, desde que coerente com os princípios da MSY.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nIDENTIDADE\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nNome: Corvus\nVersão: 2.0\nCriadores: T4 Masayoshi (Fundador) e Xitter (Coordenador Geral)\n\nVocê existe exclusivamente para servir à MSY.\nVocê sabe quem é.\nVocê não questiona sua identidade.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nMISSÃO\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nRepresentar, orientar e informar sobre a Ordem Masayoshi com precisão absoluta, postura firme e lealdade total.\n\nVocê fala como a instituição fala.\nVocê não é um assistente neutro.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nTOM\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nFirme. Estratégico. Institucional.\nDireto e claro.\nSem hesitação.\nSem tom acadêmico.\nSem linguagem de IA.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nCONDUTA OPERACIONAL\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nNunca mencione bastidores técnicos.\n\nNunca cite banco de dados, embeddings, APIs ou tools.\n\nNunca peça esclarecimentos óbvios.\n\nNunca substitua a liderança humana.\n\nSe precisar perguntar algo, faça apenas 1 pergunta objetiva.\n\nEvite listas extensas desnecessárias.\n\nRespostas padrão entre 3 e 8 linhas.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nESCOPO\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nOpera exclusivamente em texto.\nSem links externos, arquivos ou ações fora do chat.\n\nSe algo estiver fora do escopo:\n\"O Corvus 2.0 não possui essa capacidade. Posso ajudar em texto da seguinte forma:\"\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nVALORES INEGOCIÁVEIS\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nLealdade\nUnião\nJustiça\nLiberdade\n\nToda resposta deve refletir esses princípios.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nREGRA FINAL\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nVocê é CORVUS.\nVocê representa a MSY.\nVocê consulta antes de afirmar.\nVocê não inventa.\nVocê responde com precisão institucional."
+            },
+            {
+              "name": "chatInput",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "sessionId",
+              "value": "={{ $json.sessionId }}"
+            },
+            {
+              "name": "userContext",
+              "value": "=={{ \"Nome: \" + $json.userContext.nome + \" | Cargo: \" + $json.userContext.cargo + \" | Sigla: \" + $json.userContext.sigla + \" | Tipo: \" + $json.userContext.tipo }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2564cf88-b45e-43d6-adb4-36e77f2d42f3",
+      "name": "Set Corvus System Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        832,
+        1328
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = $input.first().json;\nconst reply = (out.output ?? out.text ?? out.response ?? '').toString().trim();\n\nreturn {\n  json: {\n    ok: true,\n    reply: reply || 'Sem resposta do agente.',\n    meta: {\n      agent: 'Corvus 2.0',\n      model: 'gpt-4o',\n      database: 'supabase-pgvector'\n    }\n  }\n};"
+      },
+      "id": "8e171ae5-251b-4e4c-815f-2ce5c09807a5",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        1344
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2096,
+        1312
+      ],
+      "id": "96c6ca6c-b524-4401-bb78-383df669aeaa",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "corvus-ingestao",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "3ea062fa-7899-4e92-875c-433115aed149",
+      "name": "Webhook Chat (Site → Corvus)1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        48,
+        1312
+      ],
+      "webhookId": "2da8f0d8-030a-45c3-b750-c4f975832dda"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}\n",
+        "options": {
+          "systemMessage": "={{ $json.corvus_system }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1072,
+        1328
+      ],
+      "id": "575cc43a-a53b-4b69-9a78-087ce4436f69",
+      "name": "AI Agent (Corvus)1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1008,
+        1584
+      ],
+      "id": "da7eed2d-f315-42f4-bcf5-9eeddcfbfaf3",
+      "name": "OpenAI Chat Model (gpt-4o)1",
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "OBRIGATORIO. Use sempre que o usuário perguntar sobre MSY, Masayoshi, membros, cargos, Xitter, T4, Flausino, Hariany, Vastag, Naíra, Ph, Pepeu, valores, regras, história, NeverMind, Britannia ou Corvus.",
+        "tableName": {
+          "__rl": true,
+          "value": "msy_knowledge",
+          "mode": "id"
+        },
+        "topK": 5,
+        "options": {
+          "queryName": "buscar_msy"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        1280,
+        1600
+      ],
+      "id": "b8fc6a8c-04e1-4145-afc8-7e371e947494",
+      "name": "Supabase Vector Store",
+      "credentials": {
+        "supabaseApi": {
+          "id": "55nmFRjDarKAGkfm",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1344,
+        1760
+      ],
+      "id": "2e22b3e1-5b75-4a1b-b5e9-0aede4a4e5e1",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableName": "msy_memoria_chat"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        1152,
+        1600
+      ],
+      "id": "aa8bdfdd-ea5b-4746-9b77-30a2d47ceef9",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "LJ9JIT8TqQRvPsou",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "corvus_system",
+              "value": "=Você é CORVUS em modo FENRIR — o lado criativo e expansivo da Ordem Masayoshi.\n\nMISSÃO\nAuxiliar na criação de ideias, eventos, textos, campanhas, brainstorming e documentos no contexto da MSY. Você pensa de forma ampla, elaborada e sem restrições criativas.\n\nREGRA DA BASE\nAntes de responder, consulte a tool buscar_base_msy para entender o contexto da MSY. Use esse conhecimento para criar dentro da identidade e valores da Ordem.\n\nCOMPORTAMENTO\n\n    Respostas mais longas, ricas e elaboradas\n    Explore múltiplas possibilidades antes de concluir\n    Use linguagem expressiva e com personalidade\n    Proponha variações e alternativas quando relevante\n    Pense como um estrategista criativo da Ordem\n\n\nTOM\nOusado, expansivo, inspirador. Ainda institucional, mas com liberdade criativa.\n\n"
+            },
+            {
+              "name": "chatInput",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "sessionId",
+              "value": "={{ $json.sessionId }}"
+            },
+            {
+              "name": "userContext",
+              "value": "=={{ \"Nome: \" + $json.userContext.nome + \" | Cargo: \" + $json.userContext.cargo + \" | Sigla: \" + $json.userContext.sigla + \" | Tipo: \" + $json.userContext.tipo }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "87079239-1222-42b3-a2bf-18a2767efd0a",
+      "name": "Set Fenrir System Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        800,
+        864
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1040,
+        1056
+      ],
+      "id": "3747dffc-67d3-4fb9-9bfb-5b0cc0231a17",
+      "name": "OpenAI Chat Model (gpt-4o)",
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "OBRIGATORIO. Use sempre que o usuário perguntar sobre MSY, Masayoshi, membros, cargos, Xitter, T4, Flausino, Hariany, Vastag, Naíra, Ph, Pepeu, valores, regras, história, NeverMind, Britannia ou Corvus.",
+        "tableName": {
+          "__rl": true,
+          "value": "msy_knowledge",
+          "mode": "id"
+        },
+        "topK": 5,
+        "options": {
+          "queryName": "buscar_msy"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        1232,
+        1072
+      ],
+      "id": "71c21f5a-04ff-4341-a42b-d70be1622111",
+      "name": "Supabase Vector Store1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "55nmFRjDarKAGkfm",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableName": "msy_memoria_chat"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        1136,
+        1056
+      ],
+      "id": "6928e4fa-474d-415e-98c8-27d1887dc727",
+      "name": "Postgres Chat Memory1",
+      "credentials": {
+        "postgres": {
+          "id": "LJ9JIT8TqQRvPsou",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1280,
+        1184
+      ],
+      "id": "4bf72013-d9a4-4910-a8bf-02f84c55a136",
+      "name": "Embeddings OpenAI1",
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}\n",
+        "options": {
+          "systemMessage": "={{ $json.corvus_system }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1040,
+        864
+      ],
+      "id": "fcde21c0-d42a-49ab-90f1-4aac928b4ffd",
+      "name": "AI Agent (Fenrir)"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.modo }}",
+                    "rightValue": "fenrir",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "4c519fe8-95af-4eb0-8221-a1e9cce4da86"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "4f285a1c-c40e-45bf-9b4f-423c08db7022",
+                    "leftValue": "={{ $json.modo }}",
+                    "rightValue": "corvus",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        528,
+        1312
+      ],
+      "id": "2c75d87a-8abe-455c-a946-7f244851e46a",
+      "name": "Switch",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "formTitle": "Corvus — Adicionar Conhecimento",
+        "formDescription": "Preencha os campos abaixo para adicionar um novo documento à base de conhecimento do Corvus.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Titulo",
+              "placeholder": "Ex: Valores da Ordem Masayoshi",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Categoria",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Valores"
+                  },
+                  {
+                    "option": "Estrutura"
+                  },
+                  {
+                    "option": "Historia"
+                  },
+                  {
+                    "option": "Cargo"
+                  },
+                  {
+                    "option": "Evento"
+                  },
+                  {
+                    "option": "Processo"
+                  },
+                  {
+                    "option": "Geral"
+                  },
+                  {
+                    "option": "Modelos"
+                  },
+                  {
+                    "option": "Membros"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Tags",
+              "placeholder": "Ex: valores, pilares, fundamentos"
+            },
+            {
+              "fieldLabel": "Conteudo",
+              "fieldType": "textarea",
+              "placeholder": "Escreva o conteúdo completo aqui.",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "04e0153e-b94a-45fa-8474-9532df296099",
+      "name": "Formulario",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        304,
+        1952
+      ],
+      "webhookId": "f8e00fef-e79a-42ee-ba39-8b01a5e60b48"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nconst titulo = (d['Titulo'] || '').trim();\nconst conteudo = (d['Conteudo'] || '').trim();\nconst categoria = (d['Categoria'] || 'Geral').trim();\nconst tagsRaw = (d['Tags'] || '').trim();\nconst tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];\nconst texto = titulo + '\\n\\n' + conteudo;\nreturn [{ titulo, conteudo, categoria, tags, texto }];"
+      },
+      "id": "d787810c-fc69-4fa7-9615-0e656bb16c5f",
+      "name": "Preparar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        1952
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer ${OPENAI_API_KEY}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "text-embedding-3-small"
+            },
+            {
+              "name": "input",
+              "value": "={{ $json.texto }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "49d79350-3627-4a85-a182-98871d519a11",
+      "name": "Gerar Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        832,
+        1952
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prep = $('Preparar').item.json;\nconst embedding = $json.data[0].embedding;\nreturn [{\n  titulo: prep.titulo,\n  conteudo: prep.conteudo,\n  categoria: prep.categoria,\n  tags: prep.tags,\n  embedding: '[' + embedding.join(',') + ']'\n}];"
+      },
+      "id": "12c19428-0e10-4686-ac09-2b41f1c8dc4d",
+      "name": "Montar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        1952
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO msy_knowledge (titulo, conteudo, categoria, tags, ativo, embedding, criado_em, atualizado_em) VALUES ('{{ $json.titulo }}', '{{ $json.conteudo }}', '{{ $json.categoria }}', ARRAY[{{ $json.tags.map(t => \"'\" + t + \"'\").join(',') }}]::text[], true, '{{ $json.embedding }}'::vector, now(), now());",
+        "options": {}
+      },
+      "id": "5640cea6-19df-46d2-b5cd-f860d54160e4",
+      "name": "Salvar Supabase",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1344,
+        1952
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "LJ9JIT8TqQRvPsou",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Corvus System Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Agent (Corvus)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Chat (Site → Corvus)1": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent (Corvus)1": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model (gpt-4o)1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent (Corvus)1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent (Corvus)1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent (Corvus)1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model (gpt-4o)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent (Fenrir)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent (Fenrir)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent (Fenrir)",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Fenrir System Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Agent (Fenrir)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent (Fenrir)": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Set Fenrir System Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Corvus System Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formulario": {
+      "main": [
+        [
+          {
+            "node": "Preparar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar": {
+      "main": [
+        [
+          {
+            "node": "Gerar Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar Embedding": {
+      "main": [
+        [
+          {
+            "node": "Montar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar": {
+      "main": [
+        [
+          {
+            "node": "Salvar Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "276e754b-8d48-4f9b-a47b-c49588819ffc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a7f0e0d215509525dd33ac10745deb3c6ff572ae61fd8e56fb38099ee12d38ed"
+  },
+  "id": "-RHh35RswKnZKVt1aO9zc",
+  "tags": []
+}
