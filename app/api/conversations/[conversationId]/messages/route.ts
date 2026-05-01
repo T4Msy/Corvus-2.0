@@ -10,9 +10,10 @@ import {
   saveMessage,
   touchOwnedConversation,
   updateOwnedConversationMeta,
+  upsertConversation,
   userCanAccessConversation,
 } from "@/integrations/supabase/conversations";
-import type { ChatMessage, MessageRole } from "@/lib/types";
+import type { ChatMessage, Conversation, MessageRole } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,6 +27,43 @@ function parseRole(value: unknown): MessageRole {
 }
 
 const DEFAULT_TITLE = "Nova conversa";
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : "Erro desconhecido.";
+}
+
+function asNumber(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : fallback;
+}
+
+function parseConversation(
+  raw: unknown,
+  conversationId: string,
+  title: string,
+  updatedAt: number
+): Conversation | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Record<string, unknown>;
+  const sessionId =
+    typeof value.sessionId === "string" && value.sessionId.trim()
+      ? value.sessionId.trim()
+      : "";
+  if (!sessionId) return null;
+
+  return {
+    id: conversationId,
+    title:
+      typeof value.title === "string" && value.title.trim()
+        ? value.title.trim()
+        : title || DEFAULT_TITLE,
+    sessionId,
+    createdAt: asNumber(value.createdAt, updatedAt),
+    updatedAt,
+    messages: [],
+  };
+}
 
 export async function GET(req: Request, { params }: RouteContext) {
   const context = await getSupabaseRequestContext(req);
@@ -90,33 +128,75 @@ export async function POST(req: Request, { params }: RouteContext) {
     typeof body.updatedAt === "number" && Number.isFinite(body.updatedAt)
       ? body.updatedAt
       : Date.now();
+  const fallbackConversation = parseConversation(
+    body.conversation,
+    conversationId,
+    title,
+    updatedAt
+  );
 
   try {
-    const allowed = await userCanAccessConversation(
+    let allowed = await userCanAccessConversation(
       context.db,
       conversationId,
       context.userId
     );
+    if (!allowed && fallbackConversation) {
+      try {
+        await upsertConversation(
+          context.db,
+          fallbackConversation,
+          context.userId
+        );
+      } catch (err) {
+        return apiError(
+          "conversation_upsert_failed",
+          `Falha ao criar conversa antes da mensagem: ${errorMessage(err)}`,
+          500
+        );
+      }
+      allowed = await userCanAccessConversation(
+        context.db,
+        conversationId,
+        context.userId
+      );
+    }
     if (!allowed) return apiError("not_found", "Conversa nao encontrada.", 404);
 
-    if (message.role === "corvus" && (!title || title === DEFAULT_TITLE)) {
-      await touchOwnedConversation(
-        context.db,
-        conversationId,
-        context.userId,
-        updatedAt
-      );
-    } else {
-      await updateOwnedConversationMeta(
-        context.db,
-        conversationId,
-        context.userId,
-        title || DEFAULT_TITLE,
-        updatedAt
+    try {
+      if (message.role === "corvus" && (!title || title === DEFAULT_TITLE)) {
+        await touchOwnedConversation(
+          context.db,
+          conversationId,
+          context.userId,
+          updatedAt
+        );
+      } else {
+        await updateOwnedConversationMeta(
+          context.db,
+          conversationId,
+          context.userId,
+          title || DEFAULT_TITLE,
+          updatedAt
+        );
+      }
+    } catch (err) {
+      return apiError(
+        "conversation_meta_update_failed",
+        `Falha ao atualizar conversa: ${errorMessage(err)}`,
+        500
       );
     }
 
-    await saveMessage(context.db, conversationId, message);
+    try {
+      await saveMessage(context.db, conversationId, message);
+    } catch (err) {
+      return apiError(
+        "message_insert_failed",
+        `Falha ao inserir mensagem: ${errorMessage(err)}`,
+        500
+      );
+    }
 
     return NextResponse.json({ ok: true, message }, { status: 201 });
   } catch (err) {

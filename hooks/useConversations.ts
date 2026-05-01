@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createLocalConversation,
   deriveConversationTitle,
@@ -24,11 +24,16 @@ export function useConversations(auth: AuthLike) {
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const conversationsRef = useRef<Conversation[]>([]);
 
   const activeConversation = useMemo(
     () => conversations.find((item) => item.id === activeConversationId) ?? null,
     [activeConversationId, conversations]
   );
+
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
 
   const persistLocal = useCallback((next: Conversation[]) => {
     try {
@@ -41,6 +46,7 @@ export function useConversations(auth: AuthLike) {
   const refresh = useCallback(async () => {
     if (auth.status === "loading" || auth.status === "anon") {
       setConversations([]);
+      conversationsRef.current = [];
       setActiveConversationId(null);
       setLoading(false);
       return;
@@ -54,12 +60,14 @@ export function useConversations(auth: AuthLike) {
           conversations: Conversation[];
         }>("/api/conversations", auth.accessToken);
         const remote = result.conversations;
+        conversationsRef.current = remote;
         setConversations(remote);
         setActiveConversationId((current) => current ?? remote[0]?.id ?? null);
         return;
       }
 
       const local = readLocalConversations();
+      conversationsRef.current = local;
       setConversations(local);
       setActiveConversationId((current) => current ?? local[0]?.id ?? null);
     } catch (err) {
@@ -69,6 +77,7 @@ export function useConversations(auth: AuthLike) {
           : "Nao foi possivel carregar conversas."
       );
       setConversations([]);
+      conversationsRef.current = [];
       setActiveConversationId(null);
     } finally {
       setLoading(false);
@@ -83,6 +92,7 @@ export function useConversations(auth: AuthLike) {
     const conversation = createLocalConversation();
     setConversations((current) => {
       const next = [conversation, ...current];
+      conversationsRef.current = next;
       if (auth.status === "guest") persistLocal(next);
       return next;
     });
@@ -139,20 +149,27 @@ export function useConversations(auth: AuthLike) {
   const persistMessage = useCallback(
     async (conversationId: string, message: ChatMessage): Promise<void> => {
       const now = Date.now();
-      let titleForPersist = DEFAULT_TITLE;
+      const currentConversation = conversationsRef.current.find(
+        (item) => item.id === conversationId
+      );
+      const titleForPersist =
+        currentConversation?.title === DEFAULT_TITLE && message.role === "user"
+          ? deriveConversationTitle(message.text)
+          : currentConversation?.title || DEFAULT_TITLE;
+      const conversationForPersist: Conversation = {
+        ...(currentConversation ?? createLocalConversation()),
+        id: conversationId,
+        title: titleForPersist,
+        updatedAt: now,
+      };
 
       setConversations((current) => {
         const next = current
           .map((item) => {
             if (item.id !== conversationId) return item;
-            const nextTitle =
-              item.title === DEFAULT_TITLE && message.role === "user"
-                ? deriveConversationTitle(message.text)
-                : item.title || DEFAULT_TITLE;
-            titleForPersist = nextTitle;
             return {
               ...item,
-              title: nextTitle,
+              title: titleForPersist,
               updatedAt: now,
               messages:
                 auth.status === "guest"
@@ -162,6 +179,7 @@ export function useConversations(auth: AuthLike) {
           })
           .sort((a, b) => b.updatedAt - a.updatedAt);
 
+        conversationsRef.current = next;
         if (auth.status === "guest") persistLocal(next);
         return next;
       });
@@ -169,12 +187,17 @@ export function useConversations(auth: AuthLike) {
       if (auth.status !== "authed" || !auth.supabaseReady) return;
 
       try {
+        await conversationsApi("/api/conversations", auth.accessToken, {
+          method: "POST",
+          body: conversationForPersist,
+        });
         await conversationsApi(
           `/api/conversations/${encodeURIComponent(conversationId)}/messages`,
           auth.accessToken,
           {
             method: "POST",
             body: {
+              conversation: conversationForPersist,
               message,
               title: titleForPersist,
               updatedAt: now,
@@ -205,6 +228,7 @@ export function useConversations(auth: AuthLike) {
           ? next[0]?.id ?? null
           : activeConversationId;
       setConversations(next);
+      conversationsRef.current = next;
       setActiveConversationId(nextActive);
       if (auth.status === "guest") persistLocal(next);
 
