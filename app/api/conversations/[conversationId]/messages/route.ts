@@ -77,7 +77,7 @@ export async function GET(req: Request, { params }: RouteContext) {
       conversationId,
       context.userId
     );
-    if (!allowed) return apiError("not_found", "Conversa nao encontrada.", 404);
+    if (!allowed) return NextResponse.json({ ok: true, messages: [] });
 
     const messages = await loadMessages(context.db, conversationId);
     return NextResponse.json({ ok: true, messages });
@@ -136,11 +136,20 @@ export async function POST(req: Request, { params }: RouteContext) {
   );
 
   try {
-    let allowed = await userCanAccessConversation(
-      context.db,
-      conversationId,
-      context.userId
-    );
+    let allowed: boolean;
+    try {
+      allowed = await userCanAccessConversation(
+        context.db,
+        conversationId,
+        context.userId
+      );
+    } catch (err) {
+      return apiError(
+        "conversation_access_check_failed",
+        `Falha ao verificar conversa: ${errorMessage(err)}`,
+        500
+      );
+    }
     if (!allowed && fallbackConversation) {
       try {
         await upsertConversation(
@@ -155,11 +164,19 @@ export async function POST(req: Request, { params }: RouteContext) {
           500
         );
       }
-      allowed = await userCanAccessConversation(
-        context.db,
-        conversationId,
-        context.userId
-      );
+      try {
+        allowed = await userCanAccessConversation(
+          context.db,
+          conversationId,
+          context.userId
+        );
+      } catch (err) {
+        return apiError(
+          "conversation_access_recheck_failed",
+          `Falha ao verificar conversa criada: ${errorMessage(err)}`,
+          500
+        );
+      }
     }
     if (!allowed) return apiError("not_found", "Conversa nao encontrada.", 404);
 
