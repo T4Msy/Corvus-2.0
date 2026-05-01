@@ -127,24 +127,22 @@ export function ChatApp() {
               </button>
               <div className="status-indicator" aria-hidden="true" />
               <span>Corvus v3.0</span>
-              {auth.status !== "anon" && (
-                <button
-                  type="button"
-                  onClick={auth.logout}
-                  style={{
-                    marginLeft: 12,
-                    background: "transparent",
-                    border: "1px solid currentColor",
-                    borderRadius: 6,
-                    padding: "4px 10px",
-                    cursor: "pointer",
-                    color: "inherit",
-                    fontSize: 12,
-                  }}
-                >
-                  Sair
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={auth.logout}
+                style={{
+                  marginLeft: 12,
+                  background: "transparent",
+                  border: "1px solid currentColor",
+                  borderRadius: 6,
+                  padding: "4px 10px",
+                  cursor: "pointer",
+                  color: "inherit",
+                  fontSize: 12,
+                }}
+              >
+                Sair
+              </button>
             </div>
           </div>
           <div className="header-glow" aria-hidden="true" />
