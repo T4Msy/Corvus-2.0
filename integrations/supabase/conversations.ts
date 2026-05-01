@@ -117,6 +117,23 @@ export async function updateOwnedConversationMeta(
   if (error) throw error;
 }
 
+export async function touchOwnedConversation(
+  supabase: CorvusSupabaseClient,
+  conversationId: string,
+  userId: string,
+  updatedAt: number
+): Promise<void> {
+  const { error } = await supabase
+    .from("msy_conversas")
+    .update({
+      updated_at: new Date(updatedAt).toISOString(),
+    })
+    .eq("id", conversationId)
+    .eq("usuario_id", userId);
+
+  if (error) throw error;
+}
+
 export async function userCanAccessConversation(
   supabase: CorvusSupabaseClient,
   conversationId: string,

@@ -700,12 +700,7 @@ async function sendMessage() {
 
     const rawData = await response.text();
 
-    let data;
-    try {
-      data = JSON.parse(rawData);
-    } catch (e) {
-      throw new Error("Resposta inválida do servidor");
-    }
+    const data = parseWebhookResponse(rawData);
 
     removeTypingIndicator();
 
@@ -926,6 +921,27 @@ function safeJsonParse(raw, fallback) {
     return parsed ?? fallback;
   } catch {
     return fallback;
+  }
+}
+
+function parseWebhookResponse(rawData) {
+  const raw = (rawData || "").trim();
+  if (!raw) throw new Error("Resposta vazia do servidor");
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const normalized = raw
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .replace(/,\s*([}\]])/g, "$1")
+      .trim();
+
+    try {
+      return JSON.parse(normalized);
+    } catch {
+      return { reply: raw };
+    }
   }
 }
 

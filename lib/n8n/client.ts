@@ -96,6 +96,20 @@ function normalizeBody(raw: unknown): ChatSuccessResponse | null {
   };
 }
 
+function parseResponseText(text: string): unknown {
+  const trimmed = text.trim();
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    const unfenced = trimmed
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+    const withoutTrailingCommas = unfenced.replace(/,\s*([}\]])/g, "$1");
+    return JSON.parse(withoutTrailingCommas);
+  }
+}
+
 export async function sendChatToN8n(
   payload: ChatRequestBody
 ): Promise<ChatSuccessResponse | ChatErrorResponse> {
@@ -139,7 +153,7 @@ export async function sendChatToN8n(
 
         let parsed: unknown;
         try {
-          parsed = JSON.parse(text);
+          parsed = parseResponseText(text);
         } catch {
           const normalizedText = normalizeBody(text);
           if (normalizedText) return normalizedText;

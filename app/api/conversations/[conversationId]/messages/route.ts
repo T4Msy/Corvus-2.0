@@ -8,6 +8,7 @@ import {
   deriveConversationTitle,
   loadMessages,
   saveMessage,
+  touchOwnedConversation,
   updateOwnedConversationMeta,
   userCanAccessConversation,
 } from "@/integrations/supabase/conversations";
@@ -23,6 +24,8 @@ type RouteContext = {
 function parseRole(value: unknown): MessageRole {
   return value === "corvus" || value === "assistant" ? "corvus" : "user";
 }
+
+const DEFAULT_TITLE = "Nova conversa";
 
 export async function GET(req: Request, { params }: RouteContext) {
   const context = await getSupabaseRequestContext(req);
@@ -73,12 +76,16 @@ export async function POST(req: Request, { params }: RouteContext) {
     createdAt,
   };
 
-  const title =
+  const requestedTitle =
     typeof body.title === "string" && body.title.trim()
       ? body.title.trim()
+      : "";
+  const title =
+    requestedTitle && requestedTitle !== DEFAULT_TITLE
+      ? requestedTitle
       : message.role === "user"
         ? deriveConversationTitle(message.text)
-        : "Nova conversa";
+        : "";
   const updatedAt =
     typeof body.updatedAt === "number" && Number.isFinite(body.updatedAt)
       ? body.updatedAt
@@ -93,13 +100,22 @@ export async function POST(req: Request, { params }: RouteContext) {
     if (!allowed) return apiError("not_found", "Conversa nao encontrada.", 404);
 
     await saveMessage(context.db, conversationId, message);
-    await updateOwnedConversationMeta(
-      context.db,
-      conversationId,
-      context.userId,
-      title,
-      updatedAt
-    );
+    if (message.role === "corvus" && (!title || title === DEFAULT_TITLE)) {
+      await touchOwnedConversation(
+        context.db,
+        conversationId,
+        context.userId,
+        updatedAt
+      );
+    } else {
+      await updateOwnedConversationMeta(
+        context.db,
+        conversationId,
+        context.userId,
+        title || DEFAULT_TITLE,
+        updatedAt
+      );
+    }
 
     return NextResponse.json({ ok: true, message }, { status: 201 });
   } catch (err) {

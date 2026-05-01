@@ -139,18 +139,17 @@ export function useConversations(auth: AuthLike) {
   const persistMessage = useCallback(
     async (conversationId: string, message: ChatMessage): Promise<void> => {
       const now = Date.now();
-      const currentConversation = conversations.find(
-        (item) => item.id === conversationId
-      );
-      const nextTitle =
-        currentConversation?.title === DEFAULT_TITLE && message.role === "user"
-          ? deriveConversationTitle(message.text)
-          : currentConversation?.title ?? DEFAULT_TITLE;
+      let titleForPersist = DEFAULT_TITLE;
 
       setConversations((current) => {
         const next = current
           .map((item) => {
             if (item.id !== conversationId) return item;
+            const nextTitle =
+              item.title === DEFAULT_TITLE && message.role === "user"
+                ? deriveConversationTitle(message.text)
+                : item.title || DEFAULT_TITLE;
+            titleForPersist = nextTitle;
             return {
               ...item,
               title: nextTitle,
@@ -177,7 +176,7 @@ export function useConversations(auth: AuthLike) {
             method: "POST",
             body: {
               message,
-              title: nextTitle,
+              title: titleForPersist,
               updatedAt: now,
             },
           }
@@ -194,7 +193,6 @@ export function useConversations(auth: AuthLike) {
       auth.accessToken,
       auth.status,
       auth.supabaseReady,
-      conversations,
       persistLocal,
     ]
   );
