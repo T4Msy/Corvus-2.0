@@ -99,7 +99,6 @@ export async function POST(req: Request, { params }: RouteContext) {
     );
     if (!allowed) return apiError("not_found", "Conversa nao encontrada.", 404);
 
-    await saveMessage(context.db, conversationId, message);
     if (message.role === "corvus" && (!title || title === DEFAULT_TITLE)) {
       await touchOwnedConversation(
         context.db,
@@ -116,6 +115,8 @@ export async function POST(req: Request, { params }: RouteContext) {
         updatedAt
       );
     }
+
+    await saveMessage(context.db, conversationId, message);
 
     return NextResponse.json({ ok: true, message }, { status: 201 });
   } catch (err) {

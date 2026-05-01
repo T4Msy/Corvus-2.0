@@ -13,6 +13,10 @@ function normalizeRole(role: string): MessageRole {
   return role === "assistant" || role === "corvus" ? "corvus" : "user";
 }
 
+function serializeRole(role: MessageRole): string {
+  return role === "corvus" ? "assistant" : role;
+}
+
 export function makeSessionId(): string {
   return `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -225,7 +229,7 @@ export async function saveMessage(
 ): Promise<void> {
   const { error } = await supabase.from("msy_mensagens").insert({
     conversa_id: conversationId,
-    role: message.role,
+    role: serializeRole(message.role),
     texto: message.text,
     created_at: new Date(message.createdAt).toISOString(),
   });
