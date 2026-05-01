@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import { marked } from "marked";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertTriangle, Check, Copy, RefreshCcw, Shield, Sparkles } from "lucide-react";
+import { marked } from "marked";
 import type { ChatMessage, UserProfile } from "@/lib/types";
 
 interface Props {
@@ -17,10 +19,19 @@ interface Props {
   onSuggest: (prompt: string) => void;
 }
 
-const SUGESTOES_PADRAO: { prompt: string; label: string }[] = [
-  { prompt: "O que é a Ordem Masayoshi?", label: "O que é a MSY?" },
-  { prompt: "Quais são os valores da Ordem Masayoshi?", label: "Valores da MSY" },
-  { prompt: "Como funciona a estrutura da MSY?", label: "Estrutura da MSY" },
+const SUGGESTIONS = [
+  {
+    label: "Estrutura MSY",
+    prompt: "Sintetize a estrutura da Ordem Masayoshi em blocos objetivos.",
+  },
+  {
+    label: "Prioridades",
+    prompt: "Quais prioridades devo observar na operacao atual da MSY?",
+  },
+  {
+    label: "Agentes",
+    prompt: "Explique como organizar agentes de IA para a MSY/Britannia.",
+  },
 ];
 
 export function ChatMessages({
@@ -37,88 +48,89 @@ export function ChatMessages({
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
+    const container = containerRef.current;
+    if (!container) return;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: messages.length > 1 ? "smooth" : "auto",
+    });
   }, [messages, pending, error]);
 
-  const inicialUsuario = useMemo(() => {
-    const nome = profile?.nome_interno || profile?.nome || "U";
-    return nome.charAt(0).toUpperCase();
+  const initial = useMemo(() => {
+    const name = profile?.nome_interno || profile?.nome || "U";
+    return name.charAt(0).toUpperCase();
   }, [profile]);
 
   return (
     <div
       ref={containerRef}
-      className="chat-messages"
+      className="message-stream"
       role="log"
       aria-live="polite"
       aria-label="Conversa"
     >
       {showWelcome && messages.length === 0 && !pending && (
-        <div className="welcome-section">
-          <h2 className="welcome-title">{welcomeName}</h2>
-          <p className="welcome-subtitle">
-            Agente oficial da MSY. Posso te ajudar com informações sobre a Ordem
-            Masayoshi, estrutura, valores e muito mais.
-          </p>
-          <div className="suggestions-grid">
-            {SUGESTOES_PADRAO.map((s) => (
-              <div
-                key={s.prompt}
-                className="suggestion-card welcome-card"
-                onClick={() => onSuggest(s.prompt)}
+        <motion.section
+          className="welcome-panel"
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.44, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div className="welcome-mark">
+            <Image src={logoSrc} alt="" width={54} height={54} priority />
+          </div>
+          <p className="eyebrow">MSY / Britannia</p>
+          <h1>{welcomeName}</h1>
+          <div className="suggestion-row">
+            {SUGGESTIONS.map((suggestion) => (
+              <motion.button
+                key={suggestion.prompt}
+                type="button"
+                className="suggestion-pill"
+                onClick={() => onSuggest(suggestion.prompt)}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 6v6l4 2" />
-                </svg>
-                <p>{s.label}</p>
-              </div>
+                <Sparkles size={15} />
+                <span>{suggestion.label}</span>
+              </motion.button>
             ))}
           </div>
-        </div>
+        </motion.section>
       )}
 
-      {messages.map((m, i) => (
-        <MessageBubble
-          key={`${m.createdAt}-${i}`}
-          message={m}
-          logoSrc={logoSrc}
-          inicialUsuario={inicialUsuario}
-        />
-      ))}
+      <AnimatePresence initial={false}>
+        {messages.map((message, index) => (
+          <MessageBubble
+            key={message.id ?? `${message.createdAt}-${index}`}
+            message={message}
+            logoSrc={logoSrc}
+            userInitial={initial}
+          />
+        ))}
+      </AnimatePresence>
 
       {pending && <TypingIndicator logoSrc={logoSrc} />}
 
-      {error && (
-        <div className="message corvus" data-error="true">
-          <div className="message-content">
-            <div className="message-error">
-              <strong>Falha no envio.</strong> {error.message}
-              {error.retryable && (
-                <button
-                  type="button"
-                  className="retry-btn"
-                  onClick={onRetry}
-                  style={{
-                    marginLeft: 8,
-                    padding: "4px 10px",
-                    cursor: "pointer",
-                  }}
-                >
-                  Tentar novamente
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            className="error-state"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+          >
+            <AlertTriangle size={18} />
+            <span>{error.message}</span>
+            {error.retryable && (
+              <button type="button" onClick={onRetry}>
+                <RefreshCcw size={15} />
+                <span>Repetir</span>
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -126,12 +138,14 @@ export function ChatMessages({
 function MessageBubble({
   message,
   logoSrc,
-  inicialUsuario,
+  userInitial,
 }: {
   message: ChatMessage;
   logoSrc: string;
-  inicialUsuario: string;
+  userInitial: string;
 }) {
+  const [copied, setCopied] = useState(false);
+  const isCorvus = message.role === "corvus";
   const timestamp = useMemo(
     () =>
       new Date(message.createdAt).toLocaleTimeString("pt-BR", {
@@ -141,53 +155,111 @@ function MessageBubble({
     [message.createdAt]
   );
 
-  const isCorvus = message.role === "corvus";
   const html = useMemo(() => {
-    if (!isCorvus) return null;
-    try {
-      return marked.parse(message.text, { async: false }) as string;
-    } catch {
-      return message.text;
-    }
+    if (!isCorvus) return "";
+    return renderSafeMarkdown(message.text);
   }, [isCorvus, message.text]);
 
+  async function copyMessage() {
+    try {
+      await navigator.clipboard.writeText(message.text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    } catch {
+      setCopied(false);
+    }
+  }
+
   return (
-    <div className={`message ${message.role}`}>
+    <motion.article
+      className={`message-row ${isCorvus ? "corvus" : "user"}`}
+      initial={{ opacity: 0, y: 16, filter: "blur(8px)" }}
+      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+    >
       <div className="message-avatar" aria-hidden="true">
         {isCorvus ? (
-          <Image src={logoSrc} alt="" width={28} height={28} />
+          <Image src={logoSrc} alt="" width={30} height={30} />
         ) : (
-          <span>{inicialUsuario}</span>
+          <span>{userInitial}</span>
         )}
       </div>
-      <div className="message-content">
-        {isCorvus && html ? (
+      <div className="message-card">
+        <div className="message-meta">
+          <span>{isCorvus ? "Corvus" : "Voce"}</span>
+          <time>{timestamp}</time>
+        </div>
+        {isCorvus ? (
           <div
-            className="message-text"
+            className="message-text markdown"
             dangerouslySetInnerHTML={{ __html: html }}
           />
         ) : (
-          <div className="message-text">{message.text}</div>
+          <p className="message-text">{message.text}</p>
         )}
-        <span className="message-timestamp">{timestamp}</span>
+        <div className="message-tools">
+          {isCorvus && (
+            <span className="trust-chip">
+              <Shield size={13} />
+              MSY
+            </span>
+          )}
+          <button
+            type="button"
+            className="copy-button"
+            title="Copiar"
+            aria-label="Copiar"
+            onClick={copyMessage}
+          >
+            {copied ? <Check size={14} /> : <Copy size={14} />}
+          </button>
+        </div>
       </div>
-    </div>
+    </motion.article>
   );
 }
 
 function TypingIndicator({ logoSrc }: { logoSrc: string }) {
   return (
-    <div className="message corvus typing">
+    <motion.div
+      className="message-row corvus"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
       <div className="message-avatar" aria-hidden="true">
-        <Image src={logoSrc} alt="" width={28} height={28} />
+        <Image src={logoSrc} alt="" width={30} height={30} />
       </div>
-      <div className="message-content">
-        <div className="typing-indicator">
-          <span />
-          <span />
-          <span />
-        </div>
+      <div className="typing-card">
+        <span />
+        <span />
+        <span />
       </div>
-    </div>
+    </motion.div>
   );
+}
+
+function renderSafeMarkdown(text: string): string {
+  const raw = marked.parse(text, { async: false }) as string;
+  if (typeof window === "undefined") return raw;
+
+  const document = new DOMParser().parseFromString(raw, "text/html");
+  document
+    .querySelectorAll("script,style,iframe,object,embed,link,meta")
+    .forEach((node) => node.remove());
+
+  document.body.querySelectorAll("*").forEach((element) => {
+    for (const attribute of Array.from(element.attributes)) {
+      const name = attribute.name.toLowerCase();
+      const value = attribute.value.trim().toLowerCase();
+      if (name.startsWith("on") || name === "srcdoc") {
+        element.removeAttribute(attribute.name);
+      }
+      if ((name === "href" || name === "src") && value.startsWith("javascript:")) {
+        element.removeAttribute(attribute.name);
+      }
+    }
+  });
+
+  return document.body.innerHTML;
 }

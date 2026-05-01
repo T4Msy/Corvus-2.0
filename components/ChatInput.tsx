@@ -1,6 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Bot,
+  ChevronDown,
+  Mic,
+  Paperclip,
+  Send,
+  Sparkles,
+  Zap,
+} from "lucide-react";
 import type { AgentMode } from "@/lib/types";
 
 interface Props {
@@ -8,206 +18,201 @@ interface Props {
   onModeChange: (m: AgentMode) => void;
   onSend: (text: string) => void;
   disabled: boolean;
+  onAttachFile?: (file: File) => void;
 }
 
-const MAX_HEIGHT = 150;
+const MAX_HEIGHT = 164;
 
-export function ChatInput({ mode, onModeChange, onSend, disabled }: Props) {
+export function ChatInput({
+  mode,
+  onModeChange,
+  onSend,
+  disabled,
+  onAttachFile,
+}: Props) {
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
-  const taRef = useRef<HTMLTextAreaElement>(null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const selectorRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    function handle(e: MouseEvent) {
-      if (!wrapperRef.current?.contains(e.target as Node)) setOpen(false);
+    function handlePointerDown(event: MouseEvent) {
+      if (!selectorRef.current?.contains(event.target as Node)) setOpen(false);
     }
-    document.addEventListener("click", handle);
-    return () => document.removeEventListener("click", handle);
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
   }, []);
 
   useEffect(() => {
-    const el = taRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, MAX_HEIGHT) + "px";
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, MAX_HEIGHT)}px`;
   }, [value]);
 
   function commitSend() {
-    const trimmed = value.trim();
-    if (!trimmed || disabled) return;
-    onSend(trimmed);
+    const text = value.trim();
+    if (!text || disabled) return;
+    onSend(text);
     setValue("");
   }
 
-  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    // Enter = quebra de linha (default do textarea, NÃO chamamos preventDefault)
-    // Ctrl+Enter ou Cmd+Enter = envia
-    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
+  function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
       commitSend();
     }
   }
 
-  const placeholder =
-    mode === "fenrir"
-      ? "Modo Fenrir — criatividade da MSY... (Ctrl+Enter envia)"
-      : "Faça sua pergunta ao Corvus... (Ctrl+Enter envia)";
-
   return (
-    <div className="input-container">
-      <div className="input-wrapper">
-        <div className="model-selector" ref={wrapperRef}>
+    <motion.footer
+      className="composer-shell"
+      initial={{ opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <div className="composer">
+        <div className="agent-picker" ref={selectorRef}>
           <button
             type="button"
-            className={`model-selector-btn${mode === "fenrir" ? " fenrir-active" : ""}`}
+            className="agent-picker-button"
             aria-haspopup="listbox"
             aria-expanded={open}
-            onClick={(e) => {
-              e.stopPropagation();
-              setOpen((v) => !v);
+            title="Selecionar agente"
+            onClick={(event) => {
+              event.stopPropagation();
+              setOpen((current) => !current);
             }}
           >
-            <span
-              className={
-                mode === "fenrir"
-                  ? "model-selector-icon fenrir-icon"
-                  : "model-selector-icon corvus-icon"
-              }
-            >
-              {mode === "fenrir" ? <FenrirIcon /> : <CorvusIcon />}
-            </span>
-            <span className="model-selector-name">
-              {mode === "fenrir" ? "Fenrir" : "Corvus"}
-            </span>
-            <svg
-              className="model-selector-chevron"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M6 9l6 6 6-6" />
-            </svg>
+            {mode === "fenrir" ? <Zap size={17} /> : <Bot size={17} />}
+            <span>{mode === "fenrir" ? "Fenrir" : "Corvus"}</span>
+            <ChevronDown size={15} />
           </button>
 
-          {open && (
-            <div className="model-dropdown open" role="listbox">
-              <div className="model-dropdown-header">Modo de resposta</div>
-              <ModeOption
-                active={mode === "corvus"}
-                onClick={() => {
-                  onModeChange("corvus");
-                  setOpen(false);
-                }}
-                icon={<CorvusIcon />}
-                iconClass="corvus-icon"
-                name="Corvus"
-                desc="Preciso e institucional"
-              />
-              <ModeOption
-                active={mode === "fenrir"}
-                onClick={() => {
-                  onModeChange("fenrir");
-                  setOpen(false);
-                }}
-                icon={<FenrirIcon />}
-                iconClass="fenrir-icon"
-                name="Fenrir"
-                desc="Criativo e expansivo"
-              />
-            </div>
-          )}
+          <AnimatePresence>
+            {open && (
+              <motion.div
+                className="agent-menu"
+                role="listbox"
+                initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                transition={{ duration: 0.16 }}
+              >
+                <ModeOption
+                  active={mode === "corvus"}
+                  icon={<Bot size={18} />}
+                  label="Corvus"
+                  description="Institucional"
+                  onClick={() => {
+                    onModeChange("corvus");
+                    setOpen(false);
+                  }}
+                />
+                <ModeOption
+                  active={mode === "fenrir"}
+                  icon={<Zap size={18} />}
+                  label="Fenrir"
+                  description="Criativo"
+                  onClick={() => {
+                    onModeChange("fenrir");
+                    setOpen(false);
+                  }}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <textarea
-          ref={taRef}
+          ref={textareaRef}
           rows={1}
-          placeholder={placeholder}
+          className="composer-textarea"
+          placeholder={
+            mode === "fenrir" ? "Acione Fenrir..." : "Pergunte ao Corvus..."
+          }
           aria-label="Mensagem"
-          autoComplete="off"
           spellCheck
           value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={onKeyDown}
+          onChange={(event) => setValue(event.target.value)}
+          onKeyDown={handleKeyDown}
         />
 
-        <button
-          className="btn-send"
-          aria-label="Enviar mensagem"
-          onClick={commitSend}
-          disabled={disabled || !value.trim()}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            aria-hidden="true"
-          >
-            <line x1="22" y1="2" x2="11" y2="13" />
-            <polygon points="22 2 15 22 11 13 2 9 22 2" />
-          </svg>
-        </button>
-      </div>
+        <input
+          ref={fileRef}
+          type="file"
+          className="sr-only"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            if (file && onAttachFile) onAttachFile(file);
+            event.currentTarget.value = "";
+          }}
+        />
 
-      <p className="input-hint">
-        © 2026 Masayoshi — Enter quebra linha · Ctrl+Enter ou botão envia
-      </p>
-    </div>
+        <div className="composer-actions">
+          <button
+            type="button"
+            className="icon-button ghost"
+            title="Anexar arquivo"
+            aria-label="Anexar arquivo"
+            disabled={!onAttachFile}
+            onClick={() => fileRef.current?.click()}
+          >
+            <Paperclip size={18} />
+          </button>
+          <button
+            type="button"
+            className="icon-button ghost"
+            title="Voz"
+            aria-label="Voz"
+            disabled
+          >
+            <Mic size={18} />
+          </button>
+          <button
+            type="button"
+            className="send-button"
+            aria-label="Enviar"
+            title="Enviar"
+            disabled={disabled || !value.trim()}
+            onClick={commitSend}
+          >
+            {disabled ? <Sparkles size={18} /> : <Send size={18} />}
+          </button>
+        </div>
+      </div>
+    </motion.footer>
   );
 }
 
 function ModeOption({
   active,
-  onClick,
   icon,
-  iconClass,
-  name,
-  desc,
+  label,
+  description,
+  onClick,
 }: {
   active: boolean;
-  onClick: () => void;
   icon: React.ReactNode;
-  iconClass: string;
-  name: string;
-  desc: string;
+  label: string;
+  description: string;
+  onClick: () => void;
 }) {
   return (
     <button
       type="button"
-      className={`model-option${active ? " active" : ""}`}
+      className={`agent-option${active ? " active" : ""}`}
       role="option"
       aria-selected={active}
       onClick={onClick}
     >
-      <div className={`model-option-icon ${iconClass}`}>{icon}</div>
-      <div className="model-option-info">
-        <span className="model-option-name">{name}</span>
-        <span className="model-option-desc">{desc}</span>
-      </div>
-      <div className="model-option-check">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-          <path d="M20 6L9 17l-5-5" />
-        </svg>
-      </div>
+      <span className="agent-option-icon">{icon}</span>
+      <span>
+        <strong>{label}</strong>
+        <small>{description}</small>
+      </span>
     </button>
-  );
-}
-
-function CorvusIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M12 8v4l3 3" />
-    </svg>
-  );
-}
-
-function FenrirIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-    </svg>
   );
 }

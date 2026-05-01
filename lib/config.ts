@@ -41,12 +41,13 @@ export function getServerConfig() {
     },
     supabase: {
       url: required(
-        "NEXT_PUBLIC_SUPABASE_URL",
-        process.env.NEXT_PUBLIC_SUPABASE_URL
+        "NEXT_PUBLIC_SUPABASE_URL ou SUPABASE_URL",
+        process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL
       ),
       anonKey: required(
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY ou SUPABASE_ANON_KEY",
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+          process.env.SUPABASE_ANON_KEY
       ),
       serviceRoleKey: optional(process.env.SUPABASE_SERVICE_ROLE_KEY, ""),
     },

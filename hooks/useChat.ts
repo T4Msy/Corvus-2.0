@@ -16,6 +16,9 @@ interface SendArgs {
   sessionId: string;
   userId: string;
   userContext: UserContext;
+  accessToken?: string | null;
+  onUserMessage?: (message: ChatMessage) => void | Promise<void>;
+  onAssistantMessage?: (message: ChatMessage) => void | Promise<void>;
 }
 
 interface SendError {
@@ -36,18 +39,22 @@ export function useChat() {
 
   const setHistory = useCallback((next: ChatMessage[]) => {
     setMessages(next);
+    setError(null);
   }, []);
 
   const send = useCallback(async (args: SendArgs) => {
     lastArgsRef.current = args;
-    const userMsg: ChatMessage = {
+
+    const userMessage: ChatMessage = {
       role: "user",
       text: args.text,
       createdAt: Date.now(),
     };
-    setMessages((prev) => [...prev, userMsg]);
+
+    setMessages((prev) => [...prev, userMessage]);
     setPending(true);
     setError(null);
+    void args.onUserMessage?.(userMessage);
 
     const body: ChatRequestBody = {
       message: args.text,
@@ -61,26 +68,38 @@ export function useChat() {
     try {
       const res = await fetch("/api/corvus/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(args.accessToken
+            ? { Authorization: `Bearer ${args.accessToken}` }
+            : {}),
+        },
         body: JSON.stringify(body),
       });
       const data = (await res.json().catch(() => null)) as ChatResponse | null;
 
       if (!data) {
-        setError({ message: "Resposta inválida do servidor.", retryable: true });
+        setError({ message: "Resposta invalida do servidor.", retryable: true });
         return;
       }
       if (!data.ok) {
-        setError({ message: friendlyError(data.error.code, data.error.message), retryable: data.error.retryable });
+        setError({
+          message: friendlyError(data.error.code, data.error.message),
+          retryable: data.error.retryable,
+        });
         return;
       }
-      setMessages((prev) => [
-        ...prev,
-        { role: "corvus", text: data.reply, createdAt: Date.now() },
-      ]);
+
+      const assistantMessage: ChatMessage = {
+        role: "corvus",
+        text: data.reply,
+        createdAt: Date.now(),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+      void args.onAssistantMessage?.(assistantMessage);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro de rede.";
-      setError({ message: `Falha de conexão: ${msg}`, retryable: true });
+      setError({ message: `Falha de conexao: ${msg}`, retryable: true });
     } finally {
       setPending(false);
     }
@@ -98,11 +117,11 @@ function friendlyError(code: string, fallback: string): string {
     case "upstream_timeout":
       return "O Corvus demorou demais para responder. Tente novamente.";
     case "upstream_unreachable":
-      return "Não consegui falar com o motor do Corvus agora. Tente em instantes.";
+      return "Nao consegui falar com o motor do Corvus agora. Tente em instantes.";
     case "upstream_5xx":
-      return "Erro no motor do Corvus. Equipe técnica notificada.";
+      return "Erro no motor do Corvus. Equipe tecnica notificada.";
     case "upstream_4xx":
-      return "Workflow indisponível ou desativado.";
+      return "Workflow indisponivel ou desativado.";
     case "upstream_invalid_response":
       return "O Corvus respondeu em formato inesperado.";
     case "validation":

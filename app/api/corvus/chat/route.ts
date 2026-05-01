@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { sendChatToN8n } from "@/lib/n8n/client";
 import type {
   AgentMode,
@@ -19,6 +20,12 @@ function bad(message: string, status = 400): NextResponse<ChatErrorResponse> {
     { ok: false, error: { code: "validation", message, retryable: false } },
     { status }
   );
+}
+
+function bearerToken(req: Request): string {
+  const header = req.headers.get("authorization") ?? "";
+  const [scheme, token] = header.split(" ");
+  return scheme?.toLowerCase() === "bearer" && token ? token.trim() : "";
 }
 
 function asString(v: unknown, fallback = ""): string {
@@ -70,11 +77,33 @@ export async function POST(req: Request) {
   const modoRaw = asString(b.modo, "corvus") as AgentMode;
   const modo: AgentMode = VALID_MODES.has(modoRaw) ? modoRaw : "corvus";
 
+  const requestedUserId = asString(b.userId, "anonymous");
+  let resolvedUserId = requestedUserId;
+  const token = bearerToken(req);
+
+  if (token) {
+    try {
+      const supabase = createServerSupabaseClient(token);
+      const { data, error } = await supabase.auth.getUser(token);
+      if (error || !data.user) {
+        return bad("Sessao Supabase invalida ou expirada.", 401);
+      }
+      resolvedUserId = data.user.id;
+    } catch (err) {
+      return bad(
+        err instanceof Error
+          ? err.message
+          : "Falha ao validar sessao Supabase.",
+        503
+      );
+    }
+  }
+
   const payload: ChatRequestBody = {
     message,
     conversationId: asString(b.conversationId, ""),
     sessionId: asString(b.sessionId, asString(b.conversationId, "")),
-    userId: asString(b.userId, "anonymous"),
+    userId: resolvedUserId,
     modo,
     userContext: parseUserContext(b.userContext),
   };
