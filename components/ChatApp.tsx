@@ -33,6 +33,7 @@ import { ChatMessages } from "@/components/ChatMessages";
 import { CommandPalette } from "@/components/CommandPalette";
 import { LoginScreen } from "@/components/LoginScreen";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { ShortcutsDialog } from "@/components/ShortcutsDialog";
 import { useToast } from "@/components/ToastProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useChat } from "@/hooks/useChat";
@@ -84,6 +85,7 @@ export function ChatApp() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [query, setQuery] = useState("");
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("all");
@@ -211,6 +213,13 @@ export function ChatApp() {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         setCommandOpen((current) => !current);
+        return;
+      }
+      const tag = (event.target as HTMLElement)?.tagName;
+      const isEditing = tag === "INPUT" || tag === "TEXTAREA" || (event.target as HTMLElement)?.isContentEditable;
+      if (event.key === "?" && !isEditing) {
+        event.preventDefault();
+        setShortcutsOpen((current) => !current);
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -1671,6 +1680,11 @@ export function ChatApp() {
         onUploadAvatar={uploadAvatar}
         onRemoveAvatar={removeAvatar}
         onLogout={auth.logout}
+      />
+
+      <ShortcutsDialog
+        open={shortcutsOpen}
+        onClose={() => setShortcutsOpen(false)}
       />
     </div>
   );
