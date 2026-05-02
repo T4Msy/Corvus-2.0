@@ -14,7 +14,55 @@ import {
   Sparkles,
 } from "lucide-react";
 import { marked } from "marked";
+import hljs from "highlight.js/lib/core";
+import hljsBash from "highlight.js/lib/languages/bash";
+import hljsCss from "highlight.js/lib/languages/css";
+import hljsGo from "highlight.js/lib/languages/go";
+import hljsJs from "highlight.js/lib/languages/javascript";
+import hljsJson from "highlight.js/lib/languages/json";
+import hljsMarkdown from "highlight.js/lib/languages/markdown";
+import hljsPython from "highlight.js/lib/languages/python";
+import hljsRust from "highlight.js/lib/languages/rust";
+import hljsSql from "highlight.js/lib/languages/sql";
+import hljsTs from "highlight.js/lib/languages/typescript";
+import hljsXml from "highlight.js/lib/languages/xml";
+import hljsYaml from "highlight.js/lib/languages/yaml";
 import type { ChatMessage, UserProfile } from "@/lib/types";
+
+hljs.registerLanguage("bash", hljsBash);
+hljs.registerLanguage("sh", hljsBash);
+hljs.registerLanguage("css", hljsCss);
+hljs.registerLanguage("go", hljsGo);
+hljs.registerLanguage("javascript", hljsJs);
+hljs.registerLanguage("js", hljsJs);
+hljs.registerLanguage("jsx", hljsJs);
+hljs.registerLanguage("json", hljsJson);
+hljs.registerLanguage("markdown", hljsMarkdown);
+hljs.registerLanguage("python", hljsPython);
+hljs.registerLanguage("py", hljsPython);
+hljs.registerLanguage("rust", hljsRust);
+hljs.registerLanguage("sql", hljsSql);
+hljs.registerLanguage("typescript", hljsTs);
+hljs.registerLanguage("ts", hljsTs);
+hljs.registerLanguage("tsx", hljsTs);
+hljs.registerLanguage("html", hljsXml);
+hljs.registerLanguage("xml", hljsXml);
+hljs.registerLanguage("yaml", hljsYaml);
+hljs.registerLanguage("yml", hljsYaml);
+
+const COPY_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
+
+marked.use({
+  renderer: {
+    code({ text, lang }: { text: string; lang?: string }) {
+      const language = lang && hljs.getLanguage(lang) ? lang : undefined;
+      const highlighted = language
+        ? hljs.highlight(text, { language }).value
+        : hljs.highlightAuto(text).value;
+      return `<div class="code-block">${language ? `<span class="code-lang">${language}</span>` : ""}<button type="button" class="code-copy-btn" data-copy-code aria-label="Copiar código">${COPY_ICON}</button><pre><code class="hljs">${highlighted}</code></pre></div>`;
+    },
+  },
+});
 
 interface Props {
   messages: ChatMessage[];
@@ -233,6 +281,7 @@ function MessageBubble({
   onAction: (prompt: string) => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const markdownRef = useRef<HTMLDivElement>(null);
   const isCorvus = message.role === "corvus";
 
   const timestamp = useMemo(
@@ -248,6 +297,22 @@ function MessageBubble({
     if (!isCorvus) return "";
     return renderSafeMarkdown(message.text);
   }, [isCorvus, message.text]);
+
+  useEffect(() => {
+    const container = markdownRef.current;
+    if (!container) return;
+    function handleCodeCopy(e: MouseEvent) {
+      const btn = (e.target as HTMLElement).closest("[data-copy-code]") as HTMLElement | null;
+      if (!btn) return;
+      const code = btn.closest(".code-block")?.querySelector("code")?.textContent ?? "";
+      navigator.clipboard.writeText(code).then(() => {
+        btn.classList.add("copied");
+        setTimeout(() => btn.classList.remove("copied"), 1400);
+      }).catch(() => {});
+    }
+    container.addEventListener("click", handleCodeCopy);
+    return () => container.removeEventListener("click", handleCodeCopy);
+  }, [html]);
 
   async function copyMessage() {
     try {
@@ -281,6 +346,7 @@ function MessageBubble({
         </div>
         {isCorvus ? (
           <div
+            ref={markdownRef}
             className="message-text markdown"
             dangerouslySetInnerHTML={{ __html: html }}
           />
