@@ -9,6 +9,8 @@ import {
   ArchiveRestore,
   Check,
   Command,
+  ExternalLink,
+  FileText,
   Info,
   MoreHorizontal,
   Menu,
@@ -33,19 +35,27 @@ import { SettingsDialog } from "@/components/SettingsDialog";
 import { useToast } from "@/components/ToastProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useChat } from "@/hooks/useChat";
+import { useConversationAttachments } from "@/hooks/useConversationAttachments";
 import { useConversations } from "@/hooks/useConversations";
 import { usePreferences } from "@/hooks/usePreferences";
+import { useStorageUrl } from "@/hooks/useStorageUrl";
 import { useTheme } from "@/hooks/useTheme";
 import { getBrowserSupabase } from "@/integrations/supabase/client";
 import {
   subscribeToConversationMessages,
   unsubscribeFromChannel,
 } from "@/integrations/supabase/realtime";
+import {
+  isStoragePath,
+  removeConversationFile,
+  uploadUserFile,
+} from "@/integrations/supabase/storage";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import type {
   AgentMode,
   ChatMessage,
   Conversation,
+  ConversationAttachment,
   SyncStatus,
   UserContext,
   UserProfile,
@@ -83,6 +93,7 @@ export function ChatApp() {
   const [detailsSummary, setDetailsSummary] = useState("");
   const [detailsTagInput, setDetailsTagInput] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
   const loadedConversationRef = useRef<string | null>(null);
   const creatingConversationRef = useRef(false);
   const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
@@ -106,6 +117,18 @@ export function ChatApp() {
     enabled: auth.status === "authed",
     fallbackName: auth.profile?.nome ?? auth.profile?.nome_interno ?? "Membro",
     onProfile: handleProfileChange,
+  });
+
+  const avatarSrc = useStorageUrl(
+    auth.profile?.avatar_url,
+    auth.status === "authed" && auth.supabaseReady && conversations.online
+  );
+
+  const attachments = useConversationAttachments({
+    userId: auth.userId,
+    activeConversationId: conversations.activeConversationId,
+    enabled: auth.status === "authed" && auth.supabaseReady,
+    online: conversations.online,
   });
 
   const userName =
@@ -558,6 +581,212 @@ export function ChatApp() {
     }
   }, [conversations.activeConversation, detailsSummary, updateConversation]);
 
+  const uploadAvatar = useCallback(
+    async (file: File) => {
+      if (auth.status !== "authed" || !auth.supabaseReady) {
+        toast.push({
+          tone: "warning",
+          title: "Login necessário",
+          message: "Entre com sua conta para atualizar o avatar.",
+        });
+        return;
+      }
+      if (!conversations.online) {
+        toast.push({
+          tone: "warning",
+          title: "Você está offline",
+          message: "Reconecte para enviar o avatar.",
+        });
+        return;
+      }
+      if (!file.type.startsWith("image/")) {
+        toast.push({
+          tone: "error",
+          title: "Arquivo inválido",
+          message: "Escolha uma imagem PNG, JPG, WebP ou GIF.",
+        });
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.push({
+          tone: "error",
+          title: "Imagem muito grande",
+          message: "Use uma imagem de até 5 MB.",
+        });
+        return;
+      }
+
+      const previous = auth.profile?.avatar_url;
+      setAvatarBusy(true);
+      try {
+        const uploaded = await uploadUserFile(
+          getBrowserSupabase(),
+          file,
+          auth.userId,
+          "profile"
+        );
+        const result = await preferences.updateProfile({
+          avatar_url: uploaded.path,
+        });
+        if (!result) {
+          await removeConversationFile(getBrowserSupabase(), uploaded.path).catch(
+            () => undefined
+          );
+          throw new Error("Falha ao salvar avatar no perfil.");
+        }
+        if (previous && isStoragePath(previous) && previous !== uploaded.path) {
+          await removeConversationFile(getBrowserSupabase(), previous).catch(
+            () => undefined
+          );
+        }
+        toast.push({
+          tone: "success",
+          title: "Avatar atualizado",
+          message: "Sua identidade visual foi sincronizada.",
+        });
+      } catch (err) {
+        toast.push({
+          tone: "error",
+          title: "Falha no avatar",
+          message:
+            err instanceof Error
+              ? err.message
+              : "Não foi possível atualizar a imagem.",
+        });
+      } finally {
+        setAvatarBusy(false);
+      }
+    },
+    [
+      auth.profile?.avatar_url,
+      auth.status,
+      auth.supabaseReady,
+      auth.userId,
+      conversations.online,
+      preferences,
+      toast,
+    ]
+  );
+
+  const removeAvatar = useCallback(async () => {
+    if (auth.status !== "authed") return;
+    const previous = auth.profile?.avatar_url;
+    setAvatarBusy(true);
+    const result = await preferences.updateProfile({ avatar_url: null });
+    if (!result) {
+      setAvatarBusy(false);
+      toast.push({
+        tone: "error",
+        title: "Falha ao remover avatar",
+        message: "Não foi possível atualizar seu perfil.",
+      });
+      return;
+    }
+    if (previous && isStoragePath(previous) && conversations.online) {
+      await removeConversationFile(getBrowserSupabase(), previous).catch(
+        () => undefined
+      );
+    }
+    toast.push({
+      tone: "success",
+      title: "Avatar removido",
+      message: "O perfil voltou a usar sua inicial.",
+    });
+    setAvatarBusy(false);
+  }, [
+    auth.profile?.avatar_url,
+    auth.status,
+    conversations.online,
+    preferences,
+    toast,
+  ]);
+
+  const attachFile = useCallback(
+    async (file: File) => {
+      if (auth.status !== "authed" || !auth.supabaseReady) {
+        toast.push({
+          tone: "warning",
+          title: "Login necessário",
+          message: "Anexos ficam disponíveis apenas em contas autenticadas.",
+        });
+        return;
+      }
+      if (!conversations.online) {
+        toast.push({
+          tone: "warning",
+          title: "Você está offline",
+          message: "Reconecte para anexar arquivos.",
+        });
+        return;
+      }
+
+      let conversationId = conversations.activeConversationId;
+      if (!conversationId) {
+        const conversation = await conversations.createConversation();
+        conversationId = conversation.id;
+        loadedConversationRef.current = conversation.id;
+        chat.setHistory([]);
+      }
+
+      const attachment = await attachments.upload(file, conversationId);
+      if (!attachment) {
+        toast.push({
+          tone: "error",
+          title: "Falha no anexo",
+          message: attachments.error || "Não foi possível enviar o arquivo.",
+        });
+        return;
+      }
+      toast.push({
+        tone: "success",
+        title: "Arquivo anexado",
+        message: attachment.name,
+      });
+    },
+    [
+      attachments,
+      auth.status,
+      auth.supabaseReady,
+      chat,
+      conversations,
+      toast,
+    ]
+  );
+
+  const openAttachment = useCallback(
+    async (attachment: ConversationAttachment) => {
+      const ok = await attachments.open(attachment);
+      if (!ok) {
+        toast.push({
+          tone: "error",
+          title: "Falha ao abrir arquivo",
+          message: attachments.error || "Não foi possível gerar acesso.",
+        });
+      }
+    },
+    [attachments, toast]
+  );
+
+  const removeAttachment = useCallback(
+    async (attachment: ConversationAttachment) => {
+      const ok = await attachments.remove(attachment);
+      if (!ok) {
+        toast.push({
+          tone: "error",
+          title: "Falha ao remover arquivo",
+          message: attachments.error || "Não foi possível remover o anexo.",
+        });
+        return;
+      }
+      toast.push({
+        tone: "success",
+        title: "Arquivo removido",
+        message: attachment.name,
+      });
+    },
+    [attachments, toast]
+  );
+
   if (auth.status === "loading") {
     return <BootScreen logoSrc={logoSrc} />;
   }
@@ -932,9 +1161,9 @@ export function ChatApp() {
             aria-label="Abrir configurações"
           >
             <span className="profile-avatar">
-              {auth.profile?.avatar_url ? (
+              {avatarSrc ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={auth.profile.avatar_url} alt="" />
+                <img src={avatarSrc} alt="" />
               ) : (
                 userName.charAt(0).toUpperCase()
               )}
@@ -1046,7 +1275,27 @@ export function ChatApp() {
             mode={mode}
             onModeChange={setMode}
             onSend={requestSend}
+            onAttachFile={(file) => void attachFile(file)}
+            onAttachBlocked={() => {
+              toast.push({
+                tone: "warning",
+                title:
+                  auth.status === "guest"
+                    ? "Login necessário"
+                    : "Anexo indisponível",
+                message:
+                  auth.status === "guest"
+                    ? "Entre com sua conta para anexar arquivos."
+                    : "Reconecte para anexar arquivos.",
+              });
+            }}
             disabled={chat.pending}
+            attachmentDisabled={
+              auth.status !== "authed" ||
+              !auth.supabaseReady ||
+              !conversations.online
+            }
+            attachmentBusy={attachments.busy}
             syncStatus={conversations.syncStatus}
           />
         </main>
@@ -1168,6 +1417,91 @@ export function ChatApp() {
                 </section>
 
                 <section className="details-section">
+                  <div className="details-section-heading">
+                    <h3>Arquivos</h3>
+                    <button
+                      type="button"
+                      className="secondary-action sm"
+                      disabled={attachments.busy}
+                      onClick={() => {
+                        if (
+                          auth.status !== "authed" ||
+                          !auth.supabaseReady ||
+                          !conversations.online
+                        ) {
+                          toast.push({
+                            tone: "warning",
+                            title:
+                              auth.status === "guest"
+                                ? "Login necessário"
+                                : "Anexo indisponível",
+                            message:
+                              auth.status === "guest"
+                                ? "Entre com sua conta para anexar arquivos."
+                                : "Reconecte para anexar arquivos.",
+                          });
+                          return;
+                        }
+                        const input = document.getElementById(
+                          "conversation-file-picker"
+                        ) as HTMLInputElement | null;
+                        input?.click();
+                      }}
+                    >
+                      Anexar
+                    </button>
+                  </div>
+                  <input
+                    id="conversation-file-picker"
+                    type="file"
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = "";
+                      if (file) void attachFile(file);
+                    }}
+                  />
+                  {attachments.activeAttachments.length > 0 ? (
+                    <div className="attachment-list">
+                      {attachments.activeAttachments.map((attachment) => (
+                        <div className="attachment-item" key={attachment.id}>
+                          <span className="attachment-icon" aria-hidden="true">
+                            <FileText size={16} />
+                          </span>
+                          <span className="attachment-copy">
+                            <strong>{attachment.name}</strong>
+                            <small>
+                              {fileKindLabel(attachment.type)} ·{" "}
+                              {formatFileSize(attachment.size)}
+                            </small>
+                          </span>
+                          <button
+                            type="button"
+                            title="Abrir"
+                            aria-label="Abrir arquivo"
+                            onClick={() => void openAttachment(attachment)}
+                          >
+                            <ExternalLink size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            title="Remover"
+                            aria-label="Remover arquivo"
+                            onClick={() => void removeAttachment(attachment)}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="details-hint">
+                      Nenhum arquivo anexado.
+                    </p>
+                  )}
+                </section>
+
+                <section className="details-section">
                   <h3>Ações</h3>
                   <div className="details-action-grid">
                     <button
@@ -1242,13 +1576,17 @@ export function ChatApp() {
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
         profile={auth.profile}
+        avatarSrc={avatarSrc}
         loading={preferences.loading}
         saving={preferences.saving}
+        avatarBusy={avatarBusy}
         error={preferences.error}
         themePreference={preference}
         isGuest={auth.status === "guest"}
         onSetTheme={setPreference}
         onUpdateProfile={preferences.updateProfile}
+        onUploadAvatar={uploadAvatar}
+        onRemoveAvatar={removeAvatar}
         onLogout={auth.logout}
       />
     </div>
@@ -1358,6 +1696,22 @@ function formatDateTime(time: number): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatFileSize(size: number): string {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileKindLabel(type: string): string {
+  if (type.startsWith("image/")) return "Imagem";
+  if (type === "application/pdf") return "PDF";
+  if (type.startsWith("text/")) return "Texto";
+  if (type.includes("spreadsheet") || type.includes("excel")) return "Planilha";
+  if (type.includes("presentation")) return "Apresentação";
+  if (type.includes("word") || type.includes("document")) return "Documento";
+  return "Arquivo";
 }
 
 function formatRelative(time: number): string {

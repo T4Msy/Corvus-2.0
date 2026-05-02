@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertCircle,
+  Camera,
   CheckCircle2,
   LogOut,
   Monitor,
   Moon,
   Sun,
+  Trash2,
   X,
 } from "lucide-react";
 import type { ThemePreference, UserProfile } from "@/lib/types";
@@ -17,8 +19,10 @@ interface Props {
   open: boolean;
   onClose: () => void;
   profile: UserProfile | null;
+  avatarSrc?: string | null;
   loading: boolean;
   saving: boolean;
+  avatarBusy?: boolean;
   error: string | null;
   themePreference: ThemePreference;
   isGuest: boolean;
@@ -26,8 +30,11 @@ interface Props {
   onUpdateProfile: (patch: {
     nome?: string;
     nome_interno?: string;
+    avatar_url?: string | null;
     theme_preference?: ThemePreference;
   }) => Promise<UserProfile | null>;
+  onUploadAvatar?: (file: File) => Promise<void>;
+  onRemoveAvatar?: () => Promise<void>;
   onLogout: () => void;
 }
 
@@ -41,13 +48,17 @@ export function SettingsDialog({
   open,
   onClose,
   profile,
+  avatarSrc,
   loading,
   saving,
+  avatarBusy = false,
   error,
   themePreference,
   isGuest,
   onSetTheme,
   onUpdateProfile,
+  onUploadAvatar,
+  onRemoveAvatar,
   onLogout,
 }: Props) {
   const [nome, setNome] = useState("");
@@ -56,6 +67,7 @@ export function SettingsDialog({
     type: "ok" | "error";
     message: string;
   } | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) {
@@ -106,6 +118,20 @@ export function SettingsDialog({
         message: "Tema aplicado, mas falhou ao salvar no servidor.",
       });
     }
+  }
+
+  async function handleAvatarFile(file: File | undefined) {
+    if (!file || !onUploadAvatar) return;
+    if (!file.type.startsWith("image/")) {
+      setFeedback({ type: "error", message: "Escolha uma imagem." });
+      return;
+    }
+    await onUploadAvatar(file);
+  }
+
+  async function handleRemoveAvatar() {
+    if (!onRemoveAvatar) return;
+    await onRemoveAvatar();
   }
 
   const inicial = (
@@ -166,9 +192,9 @@ export function SettingsDialog({
 
               <div className="profile-card">
                 <div className="profile-card-avatar">
-                  {profile?.avatar_url ? (
+                  {avatarSrc ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={profile.avatar_url} alt="" />
+                    <img src={avatarSrc} alt="" />
                   ) : (
                     <span>{inicial}</span>
                   )}
@@ -187,6 +213,40 @@ export function SettingsDialog({
 
               {!isGuest && (
                 <>
+                  <div className="avatar-actions">
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      className="sr-only"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.target.value = "";
+                        void handleAvatarFile(file);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="secondary-action sm"
+                      disabled={loading || saving || avatarBusy}
+                      onClick={() => avatarInputRef.current?.click()}
+                    >
+                      <Camera size={14} />
+                      <span>{avatarBusy ? "Enviando..." : "Alterar avatar"}</span>
+                    </button>
+                    {profile?.avatar_url && (
+                      <button
+                        type="button"
+                        className="danger-action sm"
+                        disabled={loading || saving || avatarBusy}
+                        onClick={() => void handleRemoveAvatar()}
+                      >
+                        <Trash2 size={14} />
+                        <span>Remover</span>
+                      </button>
+                    )}
+                  </div>
+
                   <label className="dialog-field">
                     <span>Nome</span>
                     <input

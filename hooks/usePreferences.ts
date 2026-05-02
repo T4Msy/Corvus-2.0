@@ -24,12 +24,12 @@ interface Args {
   onProfile?: (profile: UserProfile) => void;
 }
 
-type ProfilePatch = Partial<
-  Pick<
-    UserProfile,
-    "nome" | "nome_interno" | "avatar_url" | "theme_preference"
-  >
->;
+type ProfilePatch = {
+  nome?: string;
+  nome_interno?: string;
+  avatar_url?: string | null;
+  theme_preference?: UserProfile["theme_preference"];
+};
 
 const initial: State = { profile: null, loading: false, saving: false, error: null };
 

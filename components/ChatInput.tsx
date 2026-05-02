@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Loader2,
+  Paperclip,
   Send,
   Sparkles,
   TriangleAlert,
@@ -18,7 +19,11 @@ interface Props {
   mode: AgentMode;
   onModeChange: (m: AgentMode) => void;
   onSend: (text: string) => boolean | void;
+  onAttachFile?: (file: File) => void;
+  onAttachBlocked?: () => void;
   disabled: boolean;
+  attachmentDisabled?: boolean;
+  attachmentBusy?: boolean;
   syncStatus: SyncStatusType;
 }
 
@@ -50,12 +55,17 @@ export function ChatInput({
   mode,
   onModeChange,
   onSend,
+  onAttachFile,
+  onAttachBlocked,
   disabled,
+  attachmentDisabled,
+  attachmentBusy,
   syncStatus,
 }: Props) {
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -180,6 +190,33 @@ export function ChatInput({
         />
 
         <div className="composer-actions">
+          <input
+            ref={fileRef}
+            type="file"
+            className="sr-only"
+            aria-label="Selecionar arquivo"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (file) onAttachFile?.(file);
+            }}
+          />
+          <button
+            type="button"
+            className="attachment-button"
+            aria-label="Anexar arquivo"
+            title="Anexar arquivo"
+            disabled={attachmentBusy}
+            onClick={() => {
+              if (attachmentDisabled) {
+                onAttachBlocked?.();
+                return;
+              }
+              fileRef.current?.click();
+            }}
+          >
+            {attachmentBusy ? <Loader2 size={16} /> : <Paperclip size={16} />}
+          </button>
           <button
             type="button"
             className="send-button"

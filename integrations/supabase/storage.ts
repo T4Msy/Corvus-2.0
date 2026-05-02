@@ -40,6 +40,44 @@ export async function uploadConversationFile(
   };
 }
 
+export async function uploadUserFile(
+  supabase: CorvusSupabaseClient,
+  file: File,
+  userId: string,
+  folder = "profile",
+  bucket = DEFAULT_ATTACHMENTS_BUCKET
+): Promise<{ path: string; url: string | null }> {
+  const id =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const path = `${userId}/${folder}/${id}-${safeFileName(file.name)}`;
+
+  const { error } = await supabase.storage.from(bucket).upload(path, file, {
+    upsert: false,
+    cacheControl: "3600",
+  });
+
+  if (error) throw error;
+
+  const url = await createAttachmentSignedUrl(supabase, path, bucket);
+  return { path, url };
+}
+
+export async function createAttachmentSignedUrl(
+  supabase: CorvusSupabaseClient,
+  path: string,
+  bucket = DEFAULT_ATTACHMENTS_BUCKET,
+  expiresIn = 60 * 60
+): Promise<string | null> {
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(path, expiresIn);
+
+  if (error) throw error;
+  return data?.signedUrl || null;
+}
+
 export async function removeConversationFile(
   supabase: CorvusSupabaseClient,
   path: string,
@@ -47,4 +85,9 @@ export async function removeConversationFile(
 ): Promise<void> {
   const { error } = await supabase.storage.from(bucket).remove([path]);
   if (error) throw error;
+}
+
+export function isStoragePath(value: string | null | undefined): value is string {
+  if (!value) return false;
+  return !/^(https?:|data:|blob:)/i.test(value);
 }

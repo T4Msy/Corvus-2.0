@@ -83,6 +83,17 @@ export interface Conversation {
   archived?: boolean;
 }
 
+export interface ConversationAttachment {
+  id: string;
+  conversationId: string;
+  path: string;
+  url?: string | null;
+  name: string;
+  type: string;
+  size: number;
+  createdAt: number;
+}
+
 export type SyncStatus = "idle" | "saving" | "saved" | "offline" | "error";
 
 export type ThemePreference = "dark" | "light" | "system";
