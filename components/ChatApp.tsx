@@ -94,6 +94,7 @@ export function ChatApp() {
   const [detailsTagInput, setDetailsTagInput] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [topbarEditing, setTopbarEditing] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const loadedConversationRef = useRef<string | null>(null);
   const creatingConversationRef = useRef(false);
@@ -467,8 +468,13 @@ export function ChatApp() {
   const selectConversation = useCallback(
     async (conversationId: string) => {
       loadedConversationRef.current = conversationId;
-      const history = await conversations.selectConversation(conversationId);
-      chat.setHistory(history);
+      setHistoryLoading(true);
+      try {
+        const history = await conversations.selectConversation(conversationId);
+        chat.setHistory(history);
+      } finally {
+        setHistoryLoading(false);
+      }
       setSidebarOpen(false);
       setCommandOpen(false);
     },
@@ -887,9 +893,14 @@ export function ChatApp() {
 
         <div className="conversation-stack">
           {conversations.loading && conversations.conversations.length === 0 && (
-            <div className="empty-list">
-              <span className="mini-loader" />
-              <span>Carregando…</span>
+            <div className="skeleton-conversation-list">
+              {[72, 55, 88, 64, 78].map((width, i) => (
+                <div
+                  key={i}
+                  className="skeleton skeleton-conversation-item"
+                  style={{ width: `${width}%` }}
+                />
+              ))}
             </div>
           )}
 
@@ -1307,6 +1318,7 @@ export function ChatApp() {
           <ChatMessages
             messages={chat.messages}
             pending={chat.pending}
+            historyLoading={historyLoading}
             error={chat.error}
             onRetry={chat.retryLast}
             profile={auth.profile}

@@ -67,6 +67,7 @@ marked.use({
 interface Props {
   messages: ChatMessage[];
   pending: boolean;
+  historyLoading?: boolean;
   error: { message: string; retryable: boolean } | null;
   onRetry: () => void;
   profile: UserProfile | null;
@@ -103,6 +104,7 @@ const SUGGESTIONS = [
 export function ChatMessages({
   messages,
   pending,
+  historyLoading = false,
   error,
   onRetry,
   profile,
@@ -166,7 +168,7 @@ export function ChatMessages({
     });
   }, [messages]);
 
-  const empty = showWelcome && messages.length === 0 && !pending;
+  const empty = showWelcome && messages.length === 0 && !pending && !historyLoading;
 
   return (
     <div
@@ -177,6 +179,8 @@ export function ChatMessages({
       aria-label="Conversa"
       onScroll={handleScroll}
     >
+      {historyLoading && <MessagesSkeleton />}
+
       {empty && (
         <motion.section
           className="welcome-panel"
@@ -438,6 +442,36 @@ function TypingIndicator({ logoSrc }: { logoSrc: string }) {
           <span />
         </div>
       </div>
+    </motion.div>
+  );
+}
+
+const SKELETON_ROWS = [
+  { role: "corvus", lines: [80, 60, 90] },
+  { role: "user", lines: [55] },
+  { role: "corvus", lines: [70, 50] },
+  { role: "user", lines: [45] },
+] as const;
+
+function MessagesSkeleton() {
+  return (
+    <motion.div
+      className="messages-skeleton"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      {SKELETON_ROWS.map((row, i) => (
+        <div key={i} className={`skeleton-row ${row.role}`}>
+          <div className="skeleton skeleton-avatar" />
+          <div className="skeleton-bubble">
+            {row.lines.map((width, j) => (
+              <div key={j} className="skeleton skeleton-line" style={{ width: `${width}%` }} />
+            ))}
+          </div>
+        </div>
+      ))}
     </motion.div>
   );
 }
