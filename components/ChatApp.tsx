@@ -9,6 +9,7 @@ import {
   ArchiveRestore,
   Check,
   Command,
+  Download,
   ExternalLink,
   FileText,
   Info,
@@ -50,6 +51,7 @@ import {
   removeConversationFile,
   uploadUserFile,
 } from "@/integrations/supabase/storage";
+import { exportConversationAsMarkdown } from "@/lib/export";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import type {
   AgentMode,
@@ -1053,6 +1055,16 @@ export function ChatApp() {
                           </button>
                           <button
                             type="button"
+                            onClick={() => {
+                              exportConversationAsMarkdown(conversation);
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            <Download size={13} />
+                            <span>Exportar</span>
+                          </button>
+                          <button
+                            type="button"
                             onClick={() =>
                               updateConversation(conversation.id, {
                                 archived: !conversation.archived,
@@ -1604,6 +1616,16 @@ export function ChatApp() {
                     >
                       <Archive size={14} />
                       <span>Arquivar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+                        exportConversationAsMarkdown(conversations.activeConversation!)
+                      }
+                    >
+                      <Download size={14} />
+                      <span>Exportar</span>
                     </button>
                   </div>
                 </section>

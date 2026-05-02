@@ -78,7 +78,7 @@ interface Props {
   onSuggest: (prompt: string) => void;
 }
 
-const SUGGESTIONS = [
+const SUGGESTION_POOL = [
   {
     label: "Síntese institucional",
     prompt:
@@ -99,7 +99,42 @@ const SUGGESTIONS = [
     prompt:
       "Revise o texto a seguir para ficar mais claro, institucional e objetivo.",
   },
+  {
+    label: "Resumo executivo",
+    prompt:
+      "Elabore um resumo executivo do contexto atual da MSY — estado, prioridades e riscos.",
+  },
+  {
+    label: "Brainstorming",
+    prompt:
+      "Gere 8 ideias estratégicas para expandir a atuação institucional da MSY no próximo trimestre.",
+  },
+  {
+    label: "Análise de risco",
+    prompt:
+      "Mapeie os principais riscos operacionais e estratégicos e sugira mitigações objetivas.",
+  },
+  {
+    label: "Estrutura de reunião",
+    prompt:
+      "Monte uma pauta estruturada para uma reunião de alinhamento estratégico — objetivos, tópicos e encaminhamentos.",
+  },
+  {
+    label: "Diagnóstico de processo",
+    prompt:
+      "Analise um processo interno e identifique gargalos, redundâncias e oportunidades de melhoria.",
+  },
+  {
+    label: "Comunicado interno",
+    prompt:
+      "Redija um comunicado interno claro e objetivo sobre uma mudança ou decisão recente.",
+  },
 ];
+
+function pickSuggestions(pool: typeof SUGGESTION_POOL, count: number) {
+  const shuffled = [...pool].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
 
 export function ChatMessages({
   messages,
@@ -117,6 +152,7 @@ export function ChatMessages({
   const containerRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const suggestions = useMemo(() => pickSuggestions(SUGGESTION_POOL, 4), []);
 
   useEffect(() => {
     const c = containerRef.current;
@@ -202,9 +238,9 @@ export function ChatMessages({
             <span>Contexto ativo</span>
           </div>
           <div className="suggestion-row">
-            {SUGGESTIONS.map((s) => (
+            {suggestions.map((s) => (
               <button
-                key={s.prompt}
+                key={s.label}
                 type="button"
                 className="suggestion-pill"
                 onClick={() => onSuggest(s.prompt)}
