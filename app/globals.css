@@ -457,6 +457,101 @@ a {
   box-shadow: 0 0 6px var(--accent);
 }
 
+/* Selection mode */
+
+.select-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 6px;
+  border-radius: 6px;
+  color: var(--text-dim);
+  border: 1px solid transparent;
+  transition: color var(--transition), background var(--transition), border-color var(--transition);
+  flex-shrink: 0;
+}
+
+.select-toggle-btn:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.select-toggle-btn.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.conversation-item.selection-mode .conversation-open {
+  gap: 8px;
+}
+
+.conversation-item.selected > .conversation-open {
+  color: var(--accent);
+}
+
+.conversation-item.selected {
+  background: var(--accent-bg);
+  border-radius: 8px;
+}
+
+.conversation-item.selected > .conversation-open span {
+  color: var(--accent);
+}
+
+.bulk-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  margin: 0 0 6px;
+  border-radius: 8px;
+  background: var(--bg-elev-3);
+  border: 1px solid var(--border);
+  gap: 8px;
+}
+
+.bulk-action-bar > span {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.bulk-action-buttons {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.bulk-action-buttons button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  transition: color var(--transition), background var(--transition);
+}
+
+.bulk-action-buttons button:hover {
+  color: var(--text);
+  background: var(--bg-elev-2);
+}
+
+.bulk-action-buttons button.danger {
+  color: var(--error);
+}
+
+.bulk-action-buttons button.danger:hover {
+  background: color-mix(in srgb, var(--error) 12%, transparent);
+  border-color: color-mix(in srgb, var(--error) 30%, transparent);
+}
+
 .conversation-menu-button {
   display: none;
   margin-right: 6px;

@@ -8,6 +8,7 @@ import {
   Archive,
   ArchiveRestore,
   Check,
+  CheckSquare,
   Command,
   Download,
   ExternalLink,
@@ -23,6 +24,7 @@ import {
   Plus,
   Search,
   Settings,
+  Square,
   Star,
   Tag,
   Trash2,
@@ -102,6 +104,8 @@ export function ChatApp() {
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [seenAt, setSeenAt] = useState<Record<string, number>>({});
   const seenInitializedRef = useRef(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const loadedConversationRef = useRef<string | null>(null);
   const creatingConversationRef = useRef(false);
   const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
@@ -622,6 +626,43 @@ export function ChatApp() {
     [chat, conversations]
   );
 
+  const toggleSelection = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const exitSelectionMode = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleBulkArchive = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    exitSelectionMode();
+    await Promise.all(ids.map((id) => conversations.updateConversation(id, { archived: true })));
+  }, [selectedIds, conversations, exitSelectionMode]);
+
+  const handleBulkDelete = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    exitSelectionMode();
+    const nextId = await conversations.batchDeleteConversations(ids);
+    if (ids.includes(conversations.activeConversationId ?? "")) {
+      if (nextId) {
+        loadedConversationRef.current = nextId;
+        const history = await conversations.selectConversation(nextId);
+        chat.setHistory(history);
+      } else {
+        const created = await conversations.createConversation();
+        loadedConversationRef.current = created.id;
+        chat.setHistory([]);
+      }
+    }
+  }, [selectedIds, conversations, exitSelectionMode, chat]);
+
   const saveDetailsSummary = useCallback(() => {
     const active = conversations.activeConversation;
     if (!active) return;
@@ -908,12 +949,21 @@ export function ChatApp() {
               key={filter.value}
               type="button"
               className={historyFilter === filter.value ? "active" : ""}
-              onClick={() => setHistoryFilter(filter.value)}
+              onClick={() => { setHistoryFilter(filter.value); exitSelectionMode(); }}
             >
               <span>{filter.label}</span>
               <small>{historyFilterCounts[filter.value]}</small>
             </button>
           ))}
+          <button
+            type="button"
+            className={`select-toggle-btn${selectionMode ? " active" : ""}`}
+            title={selectionMode ? "Cancelar seleção" : "Selecionar conversas"}
+            aria-label={selectionMode ? "Cancelar seleção" : "Selecionar conversas"}
+            onClick={() => { selectionMode ? exitSelectionMode() : setSelectionMode(true); }}
+          >
+            <CheckSquare size={12} />
+          </button>
         </div>
 
         <div className="conversation-stack">
@@ -942,6 +992,30 @@ export function ChatApp() {
             </div>
           )}
 
+          <AnimatePresence>
+            {selectionMode && selectedIds.size > 0 && (
+              <motion.div
+                className="bulk-action-bar"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.15 }}
+              >
+                <span>{selectedIds.size} selecionada{selectedIds.size > 1 ? "s" : ""}</span>
+                <div className="bulk-action-buttons">
+                  <button type="button" onClick={() => void handleBulkArchive()}>
+                    <Archive size={13} />
+                    <span>Arquivar</span>
+                  </button>
+                  <button type="button" className="danger" onClick={() => void handleBulkDelete()}>
+                    <Trash2 size={13} />
+                    <span>Excluir</span>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {conversationSections.map((section) => (
             <div className="conversation-group" key={section.label}>
               <p>{section.label}</p>
@@ -954,6 +1028,7 @@ export function ChatApp() {
                 const hasUnread =
                   !active &&
                   conversation.updatedAt > (seenAt[conversation.id] ?? conversation.updatedAt);
+                const isSelected = selectedIds.has(conversation.id);
 
                 return (
                   <div
@@ -961,7 +1036,7 @@ export function ChatApp() {
                     data-conversation-id={conversation.id}
                     className={`conversation-item${active ? " active" : ""}${
                       menuOpen ? " menu-open" : ""
-                    }${hasUnread ? " has-unread" : ""}`}
+                    }${hasUnread ? " has-unread" : ""}${selectionMode ? " selection-mode" : ""}${isSelected ? " selected" : ""}`}
                   >
                     {editing ? (
                       <form
@@ -993,9 +1068,15 @@ export function ChatApp() {
                       <button
                         type="button"
                         className="conversation-open"
-                        onClick={() => void selectConversation(conversation.id)}
+                        onClick={() =>
+                          selectionMode
+                            ? toggleSelection(conversation.id)
+                            : void selectConversation(conversation.id)
+                        }
                       >
-                        {conversation.pinned ? (
+                        {selectionMode ? (
+                          isSelected ? <CheckSquare size={14} /> : <Square size={14} />
+                        ) : conversation.pinned ? (
                           <Pin size={14} />
                         ) : conversation.favorite ? (
                           <Star size={14} />
@@ -1005,11 +1086,11 @@ export function ChatApp() {
                           <MessageSquare size={14} />
                         )}
                         <span>{conversation.title}</span>
-                        <small>{formatRelative(conversation.updatedAt)}</small>
+                        {!selectionMode && <small>{formatRelative(conversation.updatedAt)}</small>}
                       </button>
                     )}
 
-                    {!editing && (
+                    {!editing && !selectionMode && (
                       <button
                         type="button"
                         className="conversation-menu-button"

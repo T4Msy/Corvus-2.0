@@ -526,6 +526,58 @@ export function useConversations(auth: AuthLike) {
     }
   }, [auth.status, auth.supabaseReady, failSync, online, refresh]);
 
+  const batchDeleteConversations = useCallback(
+    async (ids: string[]): Promise<string | null> => {
+      if (ids.length === 0) return activeConversationId;
+
+      const idSet = new Set(ids);
+      const next = conversationsRef.current.filter((item) => !idSet.has(item.id));
+      const activeWasDeleted = activeConversationId ? idSet.has(activeConversationId) : false;
+      const nextActive = activeWasDeleted ? (next[0]?.id ?? null) : activeConversationId;
+
+      setConversations(next);
+      conversationsRef.current = next;
+      setActiveConversationId(nextActive);
+      if (auth.status === "guest") persistLocal(next);
+      setSyncStatus(
+        auth.status === "authed" && auth.supabaseReady
+          ? online ? "saving" : "offline"
+          : "saved"
+      );
+
+      if (auth.status === "authed" && auth.supabaseReady && online) {
+        try {
+          await Promise.all(
+            ids.map((id) =>
+              conversationsApi(
+                `/api/conversations/${encodeURIComponent(id)}`,
+                auth.accessToken,
+                { method: "DELETE" }
+              )
+            )
+          );
+          setSyncStatus("saved");
+          setLastSyncError(null);
+        } catch (err) {
+          failSync(
+            err instanceof Error ? err.message : "Nao foi possivel excluir conversas."
+          );
+        }
+      }
+
+      return nextActive;
+    },
+    [
+      activeConversationId,
+      auth.accessToken,
+      auth.status,
+      auth.supabaseReady,
+      failSync,
+      online,
+      persistLocal,
+    ]
+  );
+
   const ingestRealtimeMessage = useCallback(
     (conversationId: string, message: ChatMessage) => {
       const updatedAt = message.createdAt || Date.now();
@@ -567,6 +619,7 @@ export function useConversations(auth: AuthLike) {
     selectConversation,
     persistMessage,
     updateConversation,
+    batchDeleteConversations,
     ingestRealtimeMessage,
     deleteConversation,
   };
