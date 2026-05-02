@@ -441,6 +441,22 @@ a {
   flex-shrink: 0;
 }
 
+.conversation-item.has-unread .conversation-open span {
+  font-weight: 560;
+  color: var(--text-strong);
+}
+
+.conversation-item.has-unread .conversation-open::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  margin-left: auto;
+  box-shadow: 0 0 6px var(--accent);
+}
+
 .conversation-menu-button {
   display: none;
   margin-right: 6px;

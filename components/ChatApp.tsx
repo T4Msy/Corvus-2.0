@@ -100,6 +100,8 @@ export function ChatApp() {
   const [topbarEditing, setTopbarEditing] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
+  const [seenAt, setSeenAt] = useState<Record<string, number>>({});
+  const seenInitializedRef = useRef(false);
   const loadedConversationRef = useRef<string | null>(null);
   const creatingConversationRef = useRef(false);
   const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
@@ -225,6 +227,17 @@ export function ChatApp() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  // Inicializa seenAt na primeira carga de conversas para não mostrar badges em itens já conhecidos
+  useEffect(() => {
+    if (conversations.loading || seenInitializedRef.current || conversations.conversations.length === 0) return;
+    seenInitializedRef.current = true;
+    const init: Record<string, number> = {};
+    for (const c of conversations.conversations) {
+      init[c.id] = c.updatedAt;
+    }
+    setSeenAt(init);
+  }, [conversations.loading, conversations.conversations]);
 
   useEffect(() => {
     if (!openMenuId) return;
@@ -480,6 +493,7 @@ export function ChatApp() {
     async (conversationId: string) => {
       loadedConversationRef.current = conversationId;
       setHistoryLoading(true);
+      setSeenAt((prev) => ({ ...prev, [conversationId]: Date.now() }));
       try {
         const history = await conversations.selectConversation(conversationId);
         chat.setHistory(history);
@@ -937,6 +951,9 @@ export function ChatApp() {
                 const editing = renameId === conversation.id;
                 const confirming = confirmDeleteId === conversation.id;
                 const menuOpen = openMenuId === conversation.id;
+                const hasUnread =
+                  !active &&
+                  conversation.updatedAt > (seenAt[conversation.id] ?? conversation.updatedAt);
 
                 return (
                   <div
@@ -944,7 +961,7 @@ export function ChatApp() {
                     data-conversation-id={conversation.id}
                     className={`conversation-item${active ? " active" : ""}${
                       menuOpen ? " menu-open" : ""
-                    }`}
+                    }${hasUnread ? " has-unread" : ""}`}
                   >
                     {editing ? (
                       <form
