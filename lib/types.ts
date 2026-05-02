@@ -83,6 +83,8 @@ export interface Conversation {
   archived?: boolean;
 }
 
+export type SyncStatus = "idle" | "saving" | "saved" | "offline" | "error";
+
 export type ThemePreference = "dark" | "light" | "system";
 
 export interface UserProfile {

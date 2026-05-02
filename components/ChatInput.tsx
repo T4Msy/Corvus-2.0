@@ -12,14 +12,14 @@ import {
   TriangleAlert,
   Zap,
 } from "lucide-react";
-import type { AgentMode } from "@/lib/types";
+import type { AgentMode, SyncStatus as SyncStatusType } from "@/lib/types";
 
 interface Props {
   mode: AgentMode;
   onModeChange: (m: AgentMode) => void;
-  onSend: (text: string) => void;
+  onSend: (text: string) => boolean | void;
   disabled: boolean;
-  syncStatus: "idle" | "saving" | "saved" | "error";
+  syncStatus: SyncStatusType;
 }
 
 const MAX_HEIGHT = 200;
@@ -76,8 +76,8 @@ export function ChatInput({
   function commitSend() {
     const text = value.trim();
     if (!text || disabled) return;
-    onSend(text);
-    setValue("");
+    const accepted = onSend(text);
+    if (accepted !== false) setValue("");
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -204,7 +204,7 @@ export function ChatInput({
 function SyncStatus({
   status,
 }: {
-  status: "idle" | "saving" | "saved" | "error";
+  status: SyncStatusType;
 }) {
   if (status === "saving") {
     return (
@@ -227,6 +227,14 @@ function SyncStatus({
       <span className="sync-status error">
         <TriangleAlert size={12} />
         Revisar conexão
+      </span>
+    );
+  }
+  if (status === "offline") {
+    return (
+      <span className="sync-status offline">
+        <TriangleAlert size={12} />
+        Offline
       </span>
     );
   }

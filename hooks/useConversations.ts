@@ -5,7 +5,7 @@ import {
   createLocalConversation,
   deriveConversationTitle,
 } from "@/integrations/supabase/conversations";
-import type { ChatMessage, Conversation } from "@/lib/types";
+import type { ChatMessage, Conversation, SyncStatus } from "@/lib/types";
 
 type AuthLike = {
   status: "loading" | "anon" | "authed" | "guest";
@@ -17,7 +17,6 @@ type AuthLike = {
 const LOCAL_KEY = "corvus_guest_conversations";
 const DEFAULT_TITLE = "Nova conversa";
 
-type SyncStatus = "idle" | "saving" | "saved" | "error";
 type ConversationPatch = Partial<
   Pick<
     Conversation,
@@ -33,7 +32,12 @@ export function useConversations(auth: AuthLike) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
+  const [lastSyncError, setLastSyncError] = useState<string | null>(null);
+  const [online, setOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine
+  );
   const conversationsRef = useRef<Conversation[]>([]);
+  const lastSyncActionRef = useRef<(() => Promise<void>) | null>(null);
 
   const activeConversation = useMemo(
     () => conversations.find((item) => item.id === activeConversationId) ?? null,
@@ -43,6 +47,30 @@ export function useConversations(auth: AuthLike) {
   useEffect(() => {
     conversationsRef.current = conversations;
   }, [conversations]);
+
+  useEffect(() => {
+    function handleOnline() {
+      setOnline(true);
+      setSyncStatus((current) => (current === "offline" ? "idle" : current));
+    }
+    function handleOffline() {
+      setOnline(false);
+      setSyncStatus("offline");
+      setLastSyncError("Sem conexão. As ações locais continuam visíveis.");
+    }
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  const failSync = useCallback((message: string, status: SyncStatus = "error") => {
+    setError(message);
+    setLastSyncError(message);
+    setSyncStatus(status);
+  }, []);
 
   const persistLocal = useCallback((next: Conversation[]) => {
     try {
@@ -63,9 +91,14 @@ export function useConversations(auth: AuthLike) {
 
     setLoading(true);
     setError(null);
+    setLastSyncError(null);
     setSyncStatus("idle");
     try {
       if (auth.status === "authed" && auth.supabaseReady) {
+        if (!online) {
+          failSync("Sem conexão para carregar conversas.", "offline");
+          return;
+        }
         const result = await conversationsApi<{
           conversations: Conversation[];
         }>("/api/conversations", auth.accessToken);
@@ -73,6 +106,7 @@ export function useConversations(auth: AuthLike) {
         conversationsRef.current = remote;
         setConversations(remote);
         setActiveConversationId((current) => current ?? remote[0]?.id ?? null);
+        setLastSyncError(null);
         return;
       }
 
@@ -80,8 +114,9 @@ export function useConversations(auth: AuthLike) {
       conversationsRef.current = local;
       setConversations(local);
       setActiveConversationId((current) => current ?? local[0]?.id ?? null);
+      setLastSyncError(null);
     } catch (err) {
-      setError(
+      failSync(
         err instanceof Error
           ? err.message
           : "Nao foi possivel carregar conversas."
@@ -92,7 +127,7 @@ export function useConversations(auth: AuthLike) {
     } finally {
       setLoading(false);
     }
-  }, [auth.accessToken, auth.status, auth.supabaseReady]);
+  }, [auth.accessToken, auth.status, auth.supabaseReady, failSync, online]);
 
   useEffect(() => {
     void refresh();
@@ -101,7 +136,11 @@ export function useConversations(auth: AuthLike) {
   const createConversation = useCallback(async (): Promise<Conversation> => {
     const conversation = createLocalConversation();
     setSyncStatus(
-      auth.status === "authed" && auth.supabaseReady ? "saving" : "saved"
+      auth.status === "authed" && auth.supabaseReady
+        ? online
+          ? "saving"
+          : "offline"
+        : "saved"
     );
     setConversations((current) => {
       const next = [conversation, ...current];
@@ -112,24 +151,40 @@ export function useConversations(auth: AuthLike) {
     setActiveConversationId(conversation.id);
 
     if (auth.status === "authed" && auth.supabaseReady) {
-      try {
+      const remoteAction = async () => {
         await conversationsApi("/api/conversations", auth.accessToken, {
           method: "POST",
           body: conversation,
         });
+      };
+      lastSyncActionRef.current = remoteAction;
+      if (!online) {
+        failSync("Conversa criada localmente. Sincronize quando voltar online.", "offline");
+        return conversation;
+      }
+      try {
+        await remoteAction();
+        lastSyncActionRef.current = null;
+        setLastSyncError(null);
         setSyncStatus("saved");
       } catch (err) {
-        setError(
+        failSync(
           err instanceof Error
             ? err.message
             : "Nao foi possivel criar conversa no Supabase."
         );
-        setSyncStatus("error");
       }
     }
 
     return conversation;
-  }, [auth.accessToken, auth.status, auth.supabaseReady, persistLocal]);
+  }, [
+    auth.accessToken,
+    auth.status,
+    auth.supabaseReady,
+    failSync,
+    online,
+    persistLocal,
+  ]);
 
   const selectConversation = useCallback(
     async (conversationId: string): Promise<ChatMessage[]> => {
@@ -138,6 +193,13 @@ export function useConversations(auth: AuthLike) {
 
       try {
         if (auth.status === "authed" && auth.supabaseReady) {
+          if (!online) {
+            failSync("Sem conexão. Mostrando o histórico local disponível.", "offline");
+            return (
+              conversations.find((item) => item.id === conversationId)?.messages ??
+              []
+            );
+          }
           const result = await conversationsApi<{ messages: ChatMessage[] }>(
             `/api/conversations/${encodeURIComponent(conversationId)}/messages`,
             auth.accessToken
@@ -159,7 +221,7 @@ export function useConversations(auth: AuthLike) {
           []
         );
       } catch (err) {
-        setError(
+        failSync(
           err instanceof Error
             ? err.message
             : "Nao foi possivel carregar mensagens."
@@ -167,13 +229,26 @@ export function useConversations(auth: AuthLike) {
         return [];
       }
     },
-    [auth.accessToken, auth.status, auth.supabaseReady, conversations]
+    [
+      auth.accessToken,
+      auth.status,
+      auth.supabaseReady,
+      conversations,
+      failSync,
+      online,
+    ]
   );
 
   const persistMessage = useCallback(
     async (conversationId: string, message: ChatMessage): Promise<void> => {
       const now = Date.now();
-      setSyncStatus(auth.status === "authed" && auth.supabaseReady ? "saving" : "saved");
+      setSyncStatus(
+        auth.status === "authed" && auth.supabaseReady
+          ? online
+            ? "saving"
+            : "offline"
+          : "saved"
+      );
       const currentConversation = conversationsRef.current.find(
         (item) => item.id === conversationId
       );
@@ -216,7 +291,7 @@ export function useConversations(auth: AuthLike) {
 
       if (auth.status !== "authed" || !auth.supabaseReady) return;
 
-      try {
+      const remoteAction = async () => {
         await conversationsApi("/api/conversations", auth.accessToken, {
           method: "POST",
           body: conversationForPersist,
@@ -234,20 +309,32 @@ export function useConversations(auth: AuthLike) {
             },
           }
         );
+      };
+      lastSyncActionRef.current = remoteAction;
+      if (!online) {
+        failSync("Mensagem visível localmente. Sincronize quando voltar online.", "offline");
+        return;
+      }
+
+      try {
+        await remoteAction();
+        lastSyncActionRef.current = null;
+        setLastSyncError(null);
         setSyncStatus("saved");
       } catch (err) {
-        setError(
+        failSync(
           err instanceof Error
             ? err.message
             : "Nao foi possivel persistir mensagem."
         );
-        setSyncStatus("error");
       }
     },
     [
       auth.accessToken,
       auth.status,
       auth.supabaseReady,
+      failSync,
+      online,
       persistLocal,
     ]
   );
@@ -285,8 +372,13 @@ export function useConversations(auth: AuthLike) {
 
       const updatedAt = Date.now();
       setError(null);
+      setLastSyncError(null);
       setSyncStatus(
-        auth.status === "authed" && auth.supabaseReady ? "saving" : "saved"
+        auth.status === "authed" && auth.supabaseReady
+          ? online
+            ? "saving"
+            : "offline"
+          : "saved"
       );
 
       setConversations((current) => {
@@ -305,7 +397,7 @@ export function useConversations(auth: AuthLike) {
 
       if (auth.status !== "authed" || !auth.supabaseReady) return;
 
-      try {
+      const remoteAction = async () => {
         await conversationsApi(
           `/api/conversations/${encodeURIComponent(conversationId)}`,
           auth.accessToken,
@@ -317,20 +409,32 @@ export function useConversations(auth: AuthLike) {
             },
           }
         );
+      };
+      lastSyncActionRef.current = remoteAction;
+      if (!online) {
+        failSync("Alteração aplicada localmente. Sincronize quando voltar online.", "offline");
+        return;
+      }
+
+      try {
+        await remoteAction();
+        lastSyncActionRef.current = null;
+        setLastSyncError(null);
         setSyncStatus("saved");
       } catch (err) {
-        setError(
+        failSync(
           err instanceof Error
             ? err.message
             : "Nao foi possivel atualizar conversa."
         );
-        setSyncStatus("error");
       }
     },
     [
       auth.accessToken,
       auth.status,
       auth.supabaseReady,
+      failSync,
+      online,
       persistLocal,
     ]
   );
@@ -347,24 +451,37 @@ export function useConversations(auth: AuthLike) {
       setActiveConversationId(nextActive);
       if (auth.status === "guest") persistLocal(next);
       setSyncStatus(
-        auth.status === "authed" && auth.supabaseReady ? "saving" : "saved"
+        auth.status === "authed" && auth.supabaseReady
+          ? online
+            ? "saving"
+            : "offline"
+          : "saved"
       );
 
       if (auth.status === "authed" && auth.supabaseReady) {
-        try {
+        const remoteAction = async () => {
           await conversationsApi(
             `/api/conversations/${encodeURIComponent(conversationId)}`,
             auth.accessToken,
             { method: "DELETE" }
           );
+        };
+        lastSyncActionRef.current = remoteAction;
+        if (!online) {
+          failSync("Conversa removida localmente. Sincronize quando voltar online.", "offline");
+          return nextActive;
+        }
+        try {
+          await remoteAction();
+          lastSyncActionRef.current = null;
+          setLastSyncError(null);
           setSyncStatus("saved");
         } catch (err) {
-          setError(
+          failSync(
             err instanceof Error
               ? err.message
               : "Nao foi possivel excluir conversa."
           );
-          setSyncStatus("error");
         }
       }
 
@@ -376,8 +493,63 @@ export function useConversations(auth: AuthLike) {
       auth.status,
       auth.supabaseReady,
       conversations,
+      failSync,
+      online,
       persistLocal,
     ]
+  );
+
+  const retrySync = useCallback(async (): Promise<void> => {
+    if (auth.status !== "authed" || !auth.supabaseReady) {
+      await refresh();
+      return;
+    }
+    if (!online) {
+      failSync("Ainda sem conexão para sincronizar.", "offline");
+      return;
+    }
+
+    setSyncStatus("saving");
+    setError(null);
+    setLastSyncError(null);
+    try {
+      if (lastSyncActionRef.current) {
+        await lastSyncActionRef.current();
+        lastSyncActionRef.current = null;
+      }
+      await refresh();
+      setSyncStatus("saved");
+    } catch (err) {
+      failSync(
+        err instanceof Error ? err.message : "Nao foi possivel sincronizar."
+      );
+    }
+  }, [auth.status, auth.supabaseReady, failSync, online, refresh]);
+
+  const ingestRealtimeMessage = useCallback(
+    (conversationId: string, message: ChatMessage) => {
+      const updatedAt = message.createdAt || Date.now();
+      setConversations((current) => {
+        const next = current
+          .map((conversation) => {
+            if (conversation.id !== conversationId) return conversation;
+            const messages = conversation.messages ?? [];
+            if (hasMessage(messages, message)) return conversation;
+            return {
+              ...conversation,
+              updatedAt,
+              messages: [...messages, message].sort(
+                (a, b) => a.createdAt - b.createdAt
+              ),
+            };
+          })
+          .sort((a, b) => b.updatedAt - a.updatedAt);
+        conversationsRef.current = next;
+        if (auth.status === "guest") persistLocal(next);
+        return next;
+      });
+    },
+    [auth.status, persistLocal]
   );
 
   return {
@@ -387,13 +559,28 @@ export function useConversations(auth: AuthLike) {
     loading,
     error,
     syncStatus,
+    lastSyncError,
+    online,
     refresh,
+    retrySync,
     createConversation,
     selectConversation,
     persistMessage,
     updateConversation,
+    ingestRealtimeMessage,
     deleteConversation,
   };
+}
+
+function hasMessage(messages: ChatMessage[], next: ChatMessage): boolean {
+  return messages.some((message) => {
+    if (next.id && message.id === next.id) return true;
+    return (
+      message.role === next.role &&
+      message.text === next.text &&
+      Math.abs(message.createdAt - next.createdAt) < 1500
+    );
+  });
 }
 
 function deriveConversationSummary(text: string): string {

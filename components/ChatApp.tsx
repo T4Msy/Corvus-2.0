@@ -30,12 +30,26 @@ import { ChatMessages } from "@/components/ChatMessages";
 import { CommandPalette } from "@/components/CommandPalette";
 import { LoginScreen } from "@/components/LoginScreen";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { useToast } from "@/components/ToastProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useChat } from "@/hooks/useChat";
 import { useConversations } from "@/hooks/useConversations";
 import { usePreferences } from "@/hooks/usePreferences";
 import { useTheme } from "@/hooks/useTheme";
-import type { AgentMode, Conversation, UserContext, UserProfile } from "@/lib/types";
+import { getBrowserSupabase } from "@/integrations/supabase/client";
+import {
+  subscribeToConversationMessages,
+  unsubscribeFromChannel,
+} from "@/integrations/supabase/realtime";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import type {
+  AgentMode,
+  ChatMessage,
+  Conversation,
+  SyncStatus,
+  UserContext,
+  UserProfile,
+} from "@/lib/types";
 
 type HistoryFilter = "all" | "pinned" | "favorite" | "tagged" | "archived";
 
@@ -49,6 +63,7 @@ const HISTORY_FILTERS: Array<{ value: HistoryFilter; label: string }> = [
 
 export function ChatApp() {
   const { preference, setPreference, logoSrc } = useTheme();
+  const toast = useToast();
   const auth = useAuth();
   const chat = useChat();
   const conversations = useConversations(auth);
@@ -70,6 +85,9 @@ export function ChatApp() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const loadedConversationRef = useRef<string | null>(null);
   const creatingConversationRef = useRef(false);
+  const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
+  const lastSyncStatusRef = useRef<SyncStatus>("idle");
+  const wasOnlineRef = useRef(true);
 
   // Sincroniza profile vindo do server com o snapshot do useAuth.
   // Também aplica o tema preferido do usuário ao carregar.
@@ -203,6 +221,124 @@ export function ChatApp() {
     setDetailsTagInput("");
   }, [conversations.activeConversation, detailsOpen]);
 
+  useEffect(() => {
+    if (conversations.online === wasOnlineRef.current) return;
+    wasOnlineRef.current = conversations.online;
+    if (conversations.online) {
+      toast.push({
+        tone: "info",
+        title: "Conexão restaurada",
+        message: "Você pode sincronizar as alterações pendentes.",
+        actionLabel: "Sincronizar",
+        onAction: conversations.retrySync,
+      });
+      return;
+    }
+    toast.push({
+      tone: "warning",
+      title: "Você está offline",
+      message: "A navegação local continua disponível.",
+      duration: 5200,
+    });
+  }, [conversations.online, conversations.retrySync, toast]);
+
+  useEffect(() => {
+    const previous = lastSyncStatusRef.current;
+    const current = conversations.syncStatus;
+    if (previous === current) return;
+    lastSyncStatusRef.current = current;
+
+    if (current === "error") {
+      toast.push({
+        tone: "error",
+        title: "Sincronização falhou",
+        message:
+          conversations.lastSyncError ||
+          "Não foi possível concluir a operação agora.",
+        actionLabel: "Repetir",
+        onAction: conversations.retrySync,
+      });
+    }
+
+    if (current === "saved" && (previous === "error" || previous === "offline")) {
+      toast.push({
+        tone: "success",
+        title: "Sincronizado",
+        message: "As alterações foram confirmadas.",
+      });
+    }
+  }, [
+    conversations.lastSyncError,
+    conversations.retrySync,
+    conversations.syncStatus,
+    toast,
+  ]);
+
+  const handleRealtimeMessage = useCallback(
+    (message: ChatMessage) => {
+      const conversationId = conversations.activeConversationId;
+      if (!conversationId) return;
+      conversations.ingestRealtimeMessage(conversationId, message);
+      chat.appendExternalMessage(message);
+    },
+    [
+      chat.appendExternalMessage,
+      conversations.activeConversationId,
+      conversations.ingestRealtimeMessage,
+    ]
+  );
+
+  useEffect(() => {
+    if (
+      auth.status !== "authed" ||
+      !auth.supabaseReady ||
+      !conversations.activeConversationId ||
+      !conversations.online
+    ) {
+      return;
+    }
+
+    try {
+      const supabase = getBrowserSupabase();
+      const channel = subscribeToConversationMessages(
+        supabase,
+        conversations.activeConversationId,
+        handleRealtimeMessage,
+        (message) =>
+          toast.push({
+            tone: "warning",
+            title: "Realtime indisponível",
+            message,
+            duration: 5200,
+          })
+      );
+      realtimeChannelRef.current = channel;
+
+      return () => {
+        unsubscribeFromChannel(supabase, channel);
+        if (realtimeChannelRef.current === channel) {
+          realtimeChannelRef.current = null;
+        }
+      };
+    } catch (err) {
+      toast.push({
+        tone: "warning",
+        title: "Realtime indisponível",
+        message:
+          err instanceof Error
+            ? err.message
+            : "Não foi possível abrir a sincronização ao vivo.",
+      });
+    }
+  }, [
+    auth.status,
+    auth.supabaseReady,
+    conversations.activeConversationId,
+    conversations.online,
+    handleRealtimeMessage,
+    toast,
+  ]);
+
   const filteredConversations = useMemo(() => {
     const term = query.trim().toLowerCase();
     return conversations.conversations.filter((item) => {
@@ -237,6 +373,14 @@ export function ChatApp() {
 
   const send = useCallback(
     async (text: string) => {
+      if (!conversations.online) {
+        toast.push({
+          tone: "warning",
+          title: "Você está offline",
+          message: "Conecte novamente para enviar ao Corvus.",
+        });
+        return;
+      }
       let active = conversations.activeConversation;
       if (!active) {
         active = await conversations.createConversation();
@@ -259,7 +403,33 @@ export function ChatApp() {
           conversations.persistMessage(conversation.id, message),
       });
     },
-    [auth.accessToken, auth.userId, chat, conversations, mode, userContext]
+    [
+      auth.accessToken,
+      auth.userId,
+      chat,
+      conversations,
+      mode,
+      toast,
+      userContext,
+    ]
+  );
+
+  const requestSend = useCallback(
+    (text: string) => {
+      if (!conversations.online) {
+        toast.push({
+          tone: "warning",
+          title: "Você está offline",
+          message: "A mensagem não foi enviada. Tente novamente ao reconectar.",
+          actionLabel: "Sincronizar",
+          onAction: conversations.retrySync,
+        });
+        return false;
+      }
+      void send(text);
+      return true;
+    },
+    [conversations.online, conversations.retrySync, send, toast]
   );
 
   const createConversation = useCallback(async () => {
@@ -748,7 +918,12 @@ export function ChatApp() {
 
         <div className="sidebar-footer">
           {conversations.error && (
-            <p className="sidebar-error">{conversations.error}</p>
+            <div className="sidebar-error" role="alert">
+              <span>{conversations.error}</span>
+              <button type="button" onClick={conversations.retrySync}>
+                Sincronizar
+              </button>
+            </div>
           )}
           <button
             type="button"
@@ -865,12 +1040,12 @@ export function ChatApp() {
                 : `Olá, ${userName}`
             }
             welcomeSubtitle="Pergunte algo. Ou escolha uma sugestão."
-            onSuggest={send}
+            onSuggest={requestSend}
           />
           <ChatInput
             mode={mode}
             onModeChange={setMode}
-            onSend={send}
+            onSend={requestSend}
             disabled={chat.pending}
             syncStatus={conversations.syncStatus}
           />
@@ -890,7 +1065,7 @@ export function ChatApp() {
         onSetMode={setMode}
         onOpenSettings={() => setSettingsOpen(true)}
         onToggleFocus={() => setFocusMode((current) => !current)}
-        onQuickPrompt={send}
+        onQuickPrompt={requestSend}
         historyFilter={historyFilter}
         onSetHistoryFilter={setHistoryFilter}
         onSearchTag={searchTag}
@@ -1099,13 +1274,15 @@ function BootScreen({ logoSrc }: { logoSrc: string }) {
 function SyncPill({
   status,
 }: {
-  status: "idle" | "saving" | "saved" | "error";
+  status: SyncStatus;
 }) {
   const label =
     status === "saving"
       ? "Salvando"
       : status === "saved"
         ? "Salvo"
+        : status === "offline"
+          ? "Offline"
         : status === "error"
           ? "Erro de sync"
           : "Pronto";

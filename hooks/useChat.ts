@@ -42,6 +42,13 @@ export function useChat() {
     setError(null);
   }, []);
 
+  const appendExternalMessage = useCallback((message: ChatMessage) => {
+    setMessages((current) => {
+      if (hasMessage(current, message)) return current;
+      return [...current, message].sort((a, b) => a.createdAt - b.createdAt);
+    });
+  }, []);
+
   const send = useCallback(async (args: SendArgs) => {
     lastArgsRef.current = args;
 
@@ -109,7 +116,27 @@ export function useChat() {
     if (lastArgsRef.current) void send(lastArgsRef.current);
   }, [send]);
 
-  return { messages, pending, error, send, retryLast, reset, setHistory };
+  return {
+    messages,
+    pending,
+    error,
+    send,
+    retryLast,
+    reset,
+    setHistory,
+    appendExternalMessage,
+  };
+}
+
+function hasMessage(messages: ChatMessage[], next: ChatMessage): boolean {
+  return messages.some((message) => {
+    if (next.id && message.id === next.id) return true;
+    return (
+      message.role === next.role &&
+      message.text === next.text &&
+      Math.abs(message.createdAt - next.createdAt) < 1500
+    );
+  });
 }
 
 function friendlyError(code: string, fallback: string): string {
