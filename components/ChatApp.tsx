@@ -1564,9 +1564,7 @@ export function ChatApp() {
                     <div className="attachment-list">
                       {attachments.activeAttachments.map((attachment) => (
                         <div className="attachment-item" key={attachment.id}>
-                          <span className="attachment-icon" aria-hidden="true">
-                            <FileText size={16} />
-                          </span>
+                          <AttachmentThumb attachment={attachment} />
                           <span className="attachment-copy">
                             <strong>{attachment.name}</strong>
                             <small>
@@ -1720,6 +1718,29 @@ function BootScreen({ logoSrc }: { logoSrc: string }) {
         <span />
       </motion.div>
     </main>
+  );
+}
+
+function AttachmentThumb({ attachment }: { attachment: ConversationAttachment }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const isImage = attachment.type.startsWith("image/");
+
+  if (isImage && attachment.url && !imgFailed) {
+    return (
+      /* eslint-disable-next-line @next/next/no-img-element */
+      <img
+        src={attachment.url}
+        alt={attachment.name}
+        className="attachment-thumb"
+        onError={() => setImgFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <span className="attachment-icon" aria-hidden="true">
+      <FileText size={16} />
+    </span>
   );
 }
 

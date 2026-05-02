@@ -2125,6 +2125,15 @@ a {
   background: var(--accent-soft);
 }
 
+.attachment-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
 .attachment-copy {
   min-width: 0;
   display: flex;
