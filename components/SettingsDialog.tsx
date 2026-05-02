@@ -67,11 +67,13 @@ export function SettingsDialog({
     type: "ok" | "error";
     message: string;
   } | null>(null);
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) {
       setFeedback(null);
+      setConfirmLogout(false);
       return;
     }
     setNome(profile?.nome ?? "");
@@ -332,17 +334,44 @@ export function SettingsDialog({
 
             <section className="dialog-section">
               <h3>Sessão</h3>
-              <button
-                type="button"
-                className="danger-action"
-                onClick={() => {
-                  onClose();
-                  onLogout();
-                }}
-              >
-                <LogOut size={15} />
-                <span>{isGuest ? "Sair do modo convidado" : "Sair"}</span>
-              </button>
+              {confirmLogout ? (
+                <div className="logout-confirm">
+                  <span>
+                    {isGuest
+                      ? "Sair do modo convidado? O histórico desta sessão será perdido."
+                      : "Tem certeza que deseja sair?"}
+                  </span>
+                  <div className="logout-confirm-actions">
+                    <button
+                      type="button"
+                      className="danger-action sm"
+                      onClick={() => {
+                        onClose();
+                        onLogout();
+                      }}
+                    >
+                      <LogOut size={14} />
+                      <span>Confirmar saída</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary-action sm"
+                      onClick={() => setConfirmLogout(false)}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="danger-action"
+                  onClick={() => setConfirmLogout(true)}
+                >
+                  <LogOut size={15} />
+                  <span>{isGuest ? "Sair do modo convidado" : "Sair"}</span>
+                </button>
+              )}
             </section>
           </motion.div>
         </motion.div>

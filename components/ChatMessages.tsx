@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  ArrowDown,
   ArrowRight,
   AlertTriangle,
   Check,
@@ -64,17 +65,58 @@ export function ChatMessages({
   onSuggest,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const atBottomRef = useRef(true);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
 
   useEffect(() => {
     const c = containerRef.current;
     if (!c) return;
-    c.scrollTo({ top: c.scrollHeight, behavior: messages.length > 1 ? "smooth" : "auto" });
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage?.role === "user" || atBottomRef.current || messages.length <= 1) {
+      c.scrollTo({ top: c.scrollHeight, behavior: messages.length > 1 ? "smooth" : "auto" });
+      setShowScrollBtn(false);
+    }
   }, [messages, pending, error]);
+
+  function handleScroll() {
+    const c = containerRef.current;
+    if (!c) return;
+    const isAtBottom = c.scrollHeight - c.scrollTop - c.clientHeight < 100;
+    atBottomRef.current = isAtBottom;
+    setShowScrollBtn(!isAtBottom);
+  }
+
+  function scrollToBottom() {
+    const c = containerRef.current;
+    if (!c) return;
+    c.scrollTo({ top: c.scrollHeight, behavior: "smooth" });
+    atBottomRef.current = true;
+    setShowScrollBtn(false);
+  }
 
   const userInitial = useMemo(() => {
     const name = profile?.nome_interno || profile?.nome || "U";
     return name.charAt(0).toUpperCase();
   }, [profile]);
+
+  const messageItems = useMemo(() => {
+    return messages.flatMap((message, index) => {
+      const prev = messages[index - 1];
+      const showSep =
+        !prev ||
+        !isSameDay(new Date(message.createdAt), new Date(prev.createdAt));
+      const key = message.id ?? `${message.createdAt}-${index}`;
+      const items: Array<
+        | { type: "date"; key: string; timestamp: number }
+        | { type: "message"; key: string; message: ChatMessage }
+      > = [];
+      if (showSep) {
+        items.push({ type: "date", key: `date-${key}`, timestamp: message.createdAt });
+      }
+      items.push({ type: "message", key, message });
+      return items;
+    });
+  }, [messages]);
 
   const empty = showWelcome && messages.length === 0 && !pending;
 
@@ -85,6 +127,7 @@ export function ChatMessages({
       role="log"
       aria-live="polite"
       aria-label="Conversa"
+      onScroll={handleScroll}
     >
       {empty && (
         <motion.section
@@ -123,18 +166,36 @@ export function ChatMessages({
       )}
 
       <AnimatePresence initial={false}>
-        {messages.map((message, index) => (
-          <MessageBubble
-            key={message.id ?? `${message.createdAt}-${index}`}
-            message={message}
-            logoSrc={logoSrc}
-            userInitial={userInitial}
-            onAction={onSuggest}
-          />
-        ))}
+        {messageItems.map((item) =>
+          item.type === "date" ? (
+            <DateSeparator key={item.key} timestamp={item.timestamp} />
+          ) : (
+            <MessageBubble
+              key={item.key}
+              message={item.message}
+              logoSrc={logoSrc}
+              userInitial={userInitial}
+              onAction={onSuggest}
+            />
+          )
+        )}
       </AnimatePresence>
 
       {pending && <TypingIndicator logoSrc={logoSrc} />}
+
+      {showScrollBtn && (
+        <div className="scroll-to-bottom-wrap">
+          <button
+            type="button"
+            className="scroll-to-bottom"
+            aria-label="Ir ao fim da conversa"
+            onClick={scrollToBottom}
+          >
+            <ArrowDown size={13} />
+            <span>Ir ao fim</span>
+          </button>
+        </div>
+      )}
 
       <AnimatePresence>
         {error && (
@@ -313,6 +374,42 @@ function TypingIndicator({ logoSrc }: { logoSrc: string }) {
       </div>
     </motion.div>
   );
+}
+
+function DateSeparator({ timestamp }: { timestamp: number }) {
+  const label = useMemo(() => getDateLabel(timestamp), [timestamp]);
+  return (
+    <motion.div
+      className="message-date-separator"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.22 }}
+    >
+      <span>{label}</span>
+    </motion.div>
+  );
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function getDateLabel(timestamp: number): string {
+  const date = new Date(timestamp);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (isSameDay(date, today)) return "Hoje";
+  if (isSameDay(date, yesterday)) return "Ontem";
+  return date.toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
 }
 
 function renderSafeMarkdown(text: string): string {

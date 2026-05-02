@@ -93,6 +93,7 @@ export function ChatApp() {
   const [detailsSummary, setDetailsSummary] = useState("");
   const [detailsTagInput, setDetailsTagInput] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [topbarEditing, setTopbarEditing] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const loadedConversationRef = useRef<string | null>(null);
   const creatingConversationRef = useRef(false);
@@ -548,6 +549,24 @@ export function ChatApp() {
     },
     [conversations.conversations, renameValue, updateConversation]
   );
+
+  const startTopbarRename = useCallback(() => {
+    if (!conversations.activeConversation) return;
+    setTopbarEditing(true);
+    setRenameValue(conversations.activeConversation.title);
+  }, [conversations.activeConversation]);
+
+  const commitTopbarRename = useCallback(() => {
+    const activeId = conversations.activeConversationId;
+    setTopbarEditing(false);
+    if (!activeId) return;
+    const title = renameValue.trim();
+    if (!title) return;
+    const current = conversations.conversations.find((item) => item.id === activeId);
+    if (current && current.title !== title) {
+      updateConversation(activeId, { title });
+    }
+  }, [conversations.activeConversationId, conversations.conversations, renameValue, updateConversation]);
 
   const deleteConversation = useCallback(
     async (conversationId: string) => {
@@ -1190,9 +1209,39 @@ export function ChatApp() {
           </button>
 
           <div className="topbar-title">
-            <strong>
-              {conversations.activeConversation?.title ?? "Nova conversa"}
-            </strong>
+            {topbarEditing ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  commitTopbarRename();
+                }}
+              >
+                <input
+                  className="topbar-rename-input"
+                  autoFocus
+                  value={renameValue}
+                  aria-label="Renomear conversa"
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onBlur={commitTopbarRename}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      e.preventDefault();
+                      setTopbarEditing(false);
+                    }
+                  }}
+                />
+              </form>
+            ) : (
+              <button
+                type="button"
+                className="topbar-title-btn"
+                title="Clique para renomear"
+                onClick={startTopbarRename}
+                disabled={!conversations.activeConversation}
+              >
+                {conversations.activeConversation?.title ?? "Nova conversa"}
+              </button>
+            )}
             <span className="topbar-mode">
               {mode === "fenrir" ? "Fenrir" : "Corvus"}
             </span>
