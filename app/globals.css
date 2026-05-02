@@ -308,6 +308,53 @@ a {
   color: var(--text-dim);
 }
 
+.history-filter-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 0 1px 2px;
+  scrollbar-width: none;
+}
+
+.history-filter-row::-webkit-scrollbar {
+  display: none;
+}
+
+.history-filter-row button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color var(--transition), background var(--transition),
+    border-color var(--transition);
+}
+
+.history-filter-row button:hover,
+.history-filter-row button.active {
+  color: var(--text);
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+.history-filter-row button.active {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+  border-color: transparent;
+}
+
+.history-filter-row small {
+  color: var(--text-dim);
+  font-size: 10.5px;
+}
+
 .conversation-stack {
   flex: 1;
   min-height: 0;
@@ -416,7 +463,8 @@ a {
 }
 
 .conversation-menu,
-.conversation-confirm {
+.conversation-confirm,
+.conversation-tag-editor {
   position: absolute;
   top: calc(100% + 5px);
   right: 6px;
@@ -455,6 +503,79 @@ a {
 
 .conversation-menu button.danger {
   color: var(--danger);
+}
+
+.conversation-tag-editor {
+  width: 248px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.tag-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-chip,
+.tag-empty {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background: var(--surface-hover);
+  font-size: 11.5px;
+  line-height: 1.2;
+}
+
+.tag-chip.removable {
+  transition: color var(--transition), border-color var(--transition),
+    background var(--transition);
+}
+
+.tag-chip.removable:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.tag-empty {
+  color: var(--text-dim);
+  border-style: dashed;
+}
+
+.tag-input-row {
+  display: flex;
+  gap: 6px;
+}
+
+.tag-input-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+.tag-input-row input::placeholder {
+  color: var(--text-dim);
+}
+
+.tag-input-row button {
+  padding: 0 9px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background: var(--surface-hover);
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .conversation-confirm {
@@ -1498,6 +1619,159 @@ a {
   font-size: 13px;
 }
 
+/* Conversation details */
+
+.conversation-details {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 170;
+  width: min(390px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-glass);
+  backdrop-filter: var(--panel-blur);
+  box-shadow: var(--shadow-lg);
+}
+
+.details-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.details-header > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.details-header .eyebrow {
+  color: var(--accent);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.details-header h2 {
+  margin-top: 3px;
+  color: var(--text-strong);
+  font-size: 16px;
+  font-weight: 580;
+  line-height: 1.35;
+}
+
+.details-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.details-section {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.details-section h3 {
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.details-section textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 112px;
+  padding: 10px 11px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-elev-2);
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.details-section textarea:focus {
+  border-color: var(--border-strong);
+  background: var(--bg);
+}
+
+.details-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.details-action-grid button {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background: var(--bg-elev-2);
+  font-size: 11.5px;
+  font-weight: 500;
+  transition: color var(--transition), border-color var(--transition),
+    background var(--transition);
+}
+
+.details-action-grid button:hover,
+.details-action-grid button.active {
+  color: var(--text);
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+
+.details-action-grid button.active svg {
+  color: var(--accent);
+}
+
+.details-section.compact dl {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.details-section.compact dl > div {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.details-section dt {
+  color: var(--text-dim);
+}
+
+.details-section dd {
+  min-width: 0;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.details-empty {
+  padding: 18px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
 .composer-hint {
   max-width: var(--content-max);
   margin: 8px auto 0;
@@ -2133,7 +2407,8 @@ a {
   }
 
   .conversation-menu,
-  .conversation-confirm {
+  .conversation-confirm,
+  .conversation-tag-editor {
     position: fixed;
     left: 12px;
     right: 12px;
@@ -2145,6 +2420,21 @@ a {
 
   .conversation-menu button {
     min-height: 42px;
+  }
+
+  .conversation-tag-editor {
+    width: auto;
+  }
+
+  .conversation-details {
+    inset: auto 8px 8px;
+    top: 58px;
+    width: auto;
+    border-radius: var(--radius-lg);
+  }
+
+  .details-action-grid {
+    grid-template-columns: 1fr;
   }
 
   .command-backdrop {

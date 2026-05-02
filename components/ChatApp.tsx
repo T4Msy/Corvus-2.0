@@ -9,6 +9,7 @@ import {
   ArchiveRestore,
   Check,
   Command,
+  Info,
   MoreHorizontal,
   Menu,
   MessageSquare,
@@ -20,6 +21,7 @@ import {
   Search,
   Settings,
   Star,
+  Tag,
   Trash2,
   X,
 } from "lucide-react";
@@ -35,6 +37,16 @@ import { usePreferences } from "@/hooks/usePreferences";
 import { useTheme } from "@/hooks/useTheme";
 import type { AgentMode, Conversation, UserContext, UserProfile } from "@/lib/types";
 
+type HistoryFilter = "all" | "pinned" | "favorite" | "tagged" | "archived";
+
+const HISTORY_FILTERS: Array<{ value: HistoryFilter; label: string }> = [
+  { value: "all", label: "Todas" },
+  { value: "pinned", label: "Fixadas" },
+  { value: "favorite", label: "Favoritas" },
+  { value: "tagged", label: "Tags" },
+  { value: "archived", label: "Arquivo" },
+];
+
 export function ChatApp() {
   const { preference, setPreference, logoSrc } = useTheme();
   const auth = useAuth();
@@ -44,11 +56,17 @@ export function ChatApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [query, setQuery] = useState("");
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("all");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [tagEditorId, setTagEditorId] = useState<string | null>(null);
+  const [tagInput, setTagInput] = useState("");
+  const [detailsSummary, setDetailsSummary] = useState("");
+  const [detailsTagInput, setDetailsTagInput] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const loadedConversationRef = useRef<string | null>(null);
   const creatingConversationRef = useRef(false);
@@ -166,20 +184,55 @@ export function ChatApp() {
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [openMenuId]);
 
+  useEffect(() => {
+    if (!tagEditorId) return;
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target as HTMLElement | null;
+      if (!target?.closest(`[data-conversation-id="${tagEditorId}"]`)) {
+        setTagEditorId(null);
+        setTagInput("");
+      }
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [tagEditorId]);
+
+  useEffect(() => {
+    if (!detailsOpen) return;
+    setDetailsSummary(conversations.activeConversation?.summary ?? "");
+    setDetailsTagInput("");
+  }, [conversations.activeConversation, detailsOpen]);
+
   const filteredConversations = useMemo(() => {
     const term = query.trim().toLowerCase();
-    if (!term) return conversations.conversations;
     return conversations.conversations.filter((item) => {
-      const text = [item.title, item.summary, ...(item.tags ?? [])]
-        .join(" ")
-        .toLowerCase();
-      return text.includes(term);
+      if (!matchesHistoryFilter(item, historyFilter)) return false;
+      if (!term) return true;
+      return getConversationSearchText(item).includes(term);
     });
-  }, [conversations.conversations, query]);
+  }, [conversations.conversations, historyFilter, query]);
 
   const conversationSections = useMemo(
-    () => sectionConversations(filteredConversations),
-    [filteredConversations]
+    () => sectionConversations(filteredConversations, historyFilter),
+    [filteredConversations, historyFilter]
+  );
+
+  const historyFilterCounts = useMemo(
+    () => ({
+      all: conversations.conversations.filter((item) => !item.archived).length,
+      pinned: conversations.conversations.filter(
+        (item) => item.pinned && !item.archived
+      ).length,
+      favorite: conversations.conversations.filter(
+        (item) => item.favorite && !item.archived
+      ).length,
+      tagged: conversations.conversations.filter(
+        (item) => !item.archived && (item.tags?.length ?? 0) > 0
+      ).length,
+      archived: conversations.conversations.filter((item) => item.archived)
+        .length,
+    }),
+    [conversations.conversations]
   );
 
   const send = useCallback(
@@ -236,10 +289,55 @@ export function ChatApp() {
     [conversations]
   );
 
+  const updateActiveConversation = useCallback(
+    (patch: Parameters<typeof conversations.updateConversation>[1]) => {
+      const activeId = conversations.activeConversationId;
+      if (!activeId) return;
+      updateConversation(activeId, patch);
+    },
+    [conversations.activeConversationId, updateConversation]
+  );
+
+  const openTagEditor = useCallback((conversation: Conversation) => {
+    setTagEditorId(conversation.id);
+    setTagInput("");
+    setOpenMenuId(null);
+    setConfirmDeleteId(null);
+  }, []);
+
+  const addConversationTag = useCallback(
+    (conversation: Conversation, rawTag: string) => {
+      const tag = normalizeTag(rawTag);
+      if (!tag) return;
+      const tags = normalizeTags([...(conversation.tags ?? []), tag]);
+      updateConversation(conversation.id, { tags });
+      setTagInput("");
+      setDetailsTagInput("");
+    },
+    [updateConversation]
+  );
+
+  const removeConversationTag = useCallback(
+    (conversation: Conversation, tag: string) => {
+      const tags = normalizeTags(
+        (conversation.tags ?? []).filter((item) => item !== tag)
+      );
+      updateConversation(conversation.id, { tags });
+    },
+    [updateConversation]
+  );
+
+  const searchTag = useCallback((tag: string) => {
+    setHistoryFilter("tagged");
+    setQuery(tag);
+    setCommandOpen(false);
+  }, []);
+
   const startRename = useCallback((conversation: Conversation) => {
     setRenameId(conversation.id);
     setRenameValue(conversation.title);
     setOpenMenuId(null);
+    setTagEditorId(null);
     setConfirmDeleteId(null);
   }, []);
 
@@ -261,6 +359,7 @@ export function ChatApp() {
   const deleteConversation = useCallback(
     async (conversationId: string) => {
       setOpenMenuId(null);
+      setTagEditorId(null);
       setConfirmDeleteId(null);
       const wasActive = conversationId === conversations.activeConversationId;
       const nextId = await conversations.deleteConversation(conversationId);
@@ -279,6 +378,15 @@ export function ChatApp() {
     },
     [chat, conversations]
   );
+
+  const saveDetailsSummary = useCallback(() => {
+    const active = conversations.activeConversation;
+    if (!active) return;
+    const summary = detailsSummary.trim();
+    if (summary !== (active.summary ?? "")) {
+      updateConversation(active.id, { summary });
+    }
+  }, [conversations.activeConversation, detailsSummary, updateConversation]);
 
   if (auth.status === "loading") {
     return <BootScreen logoSrc={logoSrc} />;
@@ -339,11 +447,25 @@ export function ChatApp() {
           <input
             id="conversation-search"
             type="search"
-            placeholder="Buscar conversa"
+            placeholder="Buscar título, tag ou resumo"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
         </label>
+
+        <div className="history-filter-row" aria-label="Filtros do histórico">
+          {HISTORY_FILTERS.map((filter) => (
+            <button
+              key={filter.value}
+              type="button"
+              className={historyFilter === filter.value ? "active" : ""}
+              onClick={() => setHistoryFilter(filter.value)}
+            >
+              <span>{filter.label}</span>
+              <small>{historyFilterCounts[filter.value]}</small>
+            </button>
+          ))}
+        </div>
 
         <div className="conversation-stack">
           {conversations.loading && conversations.conversations.length === 0 && (
@@ -356,7 +478,13 @@ export function ChatApp() {
           {!conversations.loading && filteredConversations.length === 0 && (
             <div className="empty-list">
               <MessageSquare size={16} />
-              <span>{query ? "Nada encontrado" : "Nenhuma conversa ainda"}</span>
+              <span>
+                {query
+                  ? "Nada encontrado"
+                  : historyFilter === "archived"
+                    ? "Nenhuma conversa arquivada"
+                    : "Nenhuma conversa neste filtro"}
+              </span>
             </div>
           )}
 
@@ -489,6 +617,13 @@ export function ChatApp() {
                           </button>
                           <button
                             type="button"
+                            onClick={() => openTagEditor(conversation)}
+                          >
+                            <Tag size={13} />
+                            <span>Tags</span>
+                          </button>
+                          <button
+                            type="button"
                             onClick={() =>
                               updateConversation(conversation.id, {
                                 archived: !conversation.archived,
@@ -517,6 +652,64 @@ export function ChatApp() {
                             <Trash2 size={13} />
                             <span>Excluir</span>
                           </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <AnimatePresence>
+                      {tagEditorId === conversation.id && (
+                        <motion.div
+                          className="conversation-tag-editor"
+                          initial={{ opacity: 0, y: 4, scale: 0.98 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                          transition={{ duration: 0.12 }}
+                        >
+                          <div className="tag-chip-list">
+                            {(conversation.tags ?? []).length > 0 ? (
+                              (conversation.tags ?? []).map((tag) => (
+                                <button
+                                  key={tag}
+                                  type="button"
+                                  className="tag-chip removable"
+                                  title="Remover tag"
+                                  onClick={() =>
+                                    removeConversationTag(conversation, tag)
+                                  }
+                                >
+                                  <span>{tag}</span>
+                                  <X size={11} />
+                                </button>
+                              ))
+                            ) : (
+                              <span className="tag-empty">Sem tags</span>
+                            )}
+                          </div>
+                          <form
+                            className="tag-input-row"
+                            onSubmit={(event) => {
+                              event.preventDefault();
+                              addConversationTag(conversation, tagInput);
+                            }}
+                          >
+                            <input
+                              autoFocus
+                              value={tagInput}
+                              maxLength={24}
+                              placeholder="Adicionar tag"
+                              onChange={(event) =>
+                                setTagInput(event.target.value)
+                              }
+                              onKeyDown={(event) => {
+                                if (event.key === "Escape") {
+                                  event.preventDefault();
+                                  setTagEditorId(null);
+                                  setTagInput("");
+                                }
+                              }}
+                            />
+                            <button type="submit">Adicionar</button>
+                          </form>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -628,6 +821,15 @@ export function ChatApp() {
             <button
               type="button"
               className="icon-button"
+              title="Detalhes da conversa"
+              aria-label="Abrir detalhes da conversa"
+              onClick={() => setDetailsOpen(true)}
+            >
+              <Info size={17} />
+            </button>
+            <button
+              type="button"
+              className="icon-button"
               title="Configurações"
               aria-label="Abrir configurações"
               onClick={() => setSettingsOpen(true)}
@@ -689,7 +891,177 @@ export function ChatApp() {
         onOpenSettings={() => setSettingsOpen(true)}
         onToggleFocus={() => setFocusMode((current) => !current)}
         onQuickPrompt={send}
+        historyFilter={historyFilter}
+        onSetHistoryFilter={setHistoryFilter}
+        onSearchTag={searchTag}
+        onUpdateActiveConversation={updateActiveConversation}
       />
+
+      <AnimatePresence>
+        {detailsOpen && (
+          <motion.aside
+            className="conversation-details"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Detalhes da conversa"
+            initial={{ opacity: 0, x: 18 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 18 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="details-header">
+              <div>
+                <p className="eyebrow">Histórico</p>
+                <h2>{conversations.activeConversation?.title ?? "Nova conversa"}</h2>
+              </div>
+              <button
+                type="button"
+                className="dialog-close"
+                aria-label="Fechar detalhes"
+                onClick={() => setDetailsOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {conversations.activeConversation ? (
+              <div className="details-body">
+                <section className="details-section">
+                  <h3>Resumo</h3>
+                  <textarea
+                    value={detailsSummary}
+                    rows={5}
+                    placeholder="Resumo curto para localizar esta conversa depois."
+                    onChange={(event) => setDetailsSummary(event.target.value)}
+                    onBlur={saveDetailsSummary}
+                  />
+                  <button
+                    type="button"
+                    className="secondary-action sm"
+                    onClick={saveDetailsSummary}
+                  >
+                    Salvar resumo
+                  </button>
+                </section>
+
+                <section className="details-section">
+                  <h3>Tags</h3>
+                  <div className="tag-chip-list">
+                    {(conversations.activeConversation.tags ?? []).length > 0 ? (
+                      (conversations.activeConversation.tags ?? []).map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          className="tag-chip removable"
+                          onClick={() =>
+                            removeConversationTag(
+                              conversations.activeConversation as Conversation,
+                              tag
+                            )
+                          }
+                        >
+                          <span>{tag}</span>
+                          <X size={11} />
+                        </button>
+                      ))
+                    ) : (
+                      <span className="tag-empty">Nenhuma tag cadastrada</span>
+                    )}
+                  </div>
+                  <form
+                    className="tag-input-row"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      if (conversations.activeConversation) {
+                        addConversationTag(
+                          conversations.activeConversation,
+                          detailsTagInput
+                        );
+                      }
+                    }}
+                  >
+                    <input
+                      value={detailsTagInput}
+                      maxLength={24}
+                      placeholder="Nova tag"
+                      onChange={(event) =>
+                        setDetailsTagInput(event.target.value)
+                      }
+                    />
+                    <button type="submit">Adicionar</button>
+                  </form>
+                </section>
+
+                <section className="details-section">
+                  <h3>Ações</h3>
+                  <div className="details-action-grid">
+                    <button
+                      type="button"
+                      className={conversations.activeConversation.pinned ? "active" : ""}
+                      onClick={() =>
+                        updateActiveConversation({
+                          pinned: !conversations.activeConversation?.pinned,
+                        })
+                      }
+                    >
+                      <Pin size={14} />
+                      <span>Fixar</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={
+                        conversations.activeConversation.favorite ? "active" : ""
+                      }
+                      onClick={() =>
+                        updateActiveConversation({
+                          favorite: !conversations.activeConversation?.favorite,
+                        })
+                      }
+                    >
+                      <Star size={14} />
+                      <span>Favoritar</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={
+                        conversations.activeConversation.archived ? "active" : ""
+                      }
+                      onClick={() =>
+                        updateActiveConversation({
+                          archived: !conversations.activeConversation?.archived,
+                        })
+                      }
+                    >
+                      <Archive size={14} />
+                      <span>Arquivar</span>
+                    </button>
+                  </div>
+                </section>
+
+                <section className="details-section compact">
+                  <h3>Dados</h3>
+                  <dl>
+                    <div>
+                      <dt>Atualizada</dt>
+                      <dd>{formatDateTime(conversations.activeConversation.updatedAt)}</dd>
+                    </div>
+                    <div>
+                      <dt>Criada</dt>
+                      <dd>{formatDateTime(conversations.activeConversation.createdAt)}</dd>
+                    </div>
+                    <div>
+                      <dt>Sessão</dt>
+                      <dd>{conversations.activeConversation.sessionId}</dd>
+                    </div>
+                  </dl>
+                </section>
+              </div>
+            ) : (
+              <div className="details-empty">Nenhuma conversa ativa.</div>
+            )}
+          </motion.aside>
+        )}
+      </AnimatePresence>
 
       <SettingsDialog
         open={settingsOpen}
@@ -741,7 +1113,12 @@ function SyncPill({
   return <span className={`sync-pill ${status}`}>{label}</span>;
 }
 
-function sectionConversations(items: Conversation[]) {
+function sectionConversations(items: Conversation[], filter: HistoryFilter) {
+  if (filter === "pinned") return [{ label: "Fixadas", items }];
+  if (filter === "favorite") return [{ label: "Favoritas", items }];
+  if (filter === "tagged") return [{ label: "Com tags", items }];
+  if (filter === "archived") return [{ label: "Arquivadas", items }];
+
   const pinned = items.filter((item) => item.pinned && !item.archived);
   const favorites = items.filter(
     (item) => item.favorite && !item.pinned && !item.archived
@@ -749,14 +1126,61 @@ function sectionConversations(items: Conversation[]) {
   const recent = items.filter(
     (item) => !item.pinned && !item.favorite && !item.archived
   );
-  const archived = items.filter((item) => item.archived);
 
   return [
     { label: "Fixados", items: pinned },
     { label: "Favoritos", items: favorites },
     { label: "Recentes", items: recent },
-    { label: "Arquivados", items: archived },
   ].filter((section) => section.items.length > 0);
+}
+
+function matchesHistoryFilter(
+  conversation: Conversation,
+  filter: HistoryFilter
+): boolean {
+  if (filter === "archived") return Boolean(conversation.archived);
+  if (conversation.archived) return false;
+  if (filter === "pinned") return Boolean(conversation.pinned);
+  if (filter === "favorite") return Boolean(conversation.favorite);
+  if (filter === "tagged") return (conversation.tags?.length ?? 0) > 0;
+  return true;
+}
+
+function getConversationSearchText(conversation: Conversation): string {
+  return [
+    conversation.title,
+    conversation.summary,
+    ...(conversation.tags ?? []),
+    ...(conversation.messages ?? []).slice(0, 4).map((message) => message.text),
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+function normalizeTag(value: string): string {
+  return value
+    .replace(/^#/, "")
+    .replace(/\s+/g, "-")
+    .replace(/[^\p{L}\p{N}_-]/gu, "")
+    .toLowerCase()
+    .slice(0, 24);
+}
+
+function normalizeTags(values: string[]): string[] {
+  return Array.from(new Set(values.map(normalizeTag).filter(Boolean))).slice(
+    0,
+    8
+  );
+}
+
+function formatDateTime(time: number): string {
+  return new Date(time).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function formatRelative(time: number): string {

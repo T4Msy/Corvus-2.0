@@ -142,6 +142,15 @@ export function useConversations(auth: AuthLike) {
             `/api/conversations/${encodeURIComponent(conversationId)}/messages`,
             auth.accessToken
           );
+          setConversations((current) => {
+            const next = current.map((item) =>
+              item.id === conversationId
+                ? { ...item, messages: result.messages }
+                : item
+            );
+            conversationsRef.current = next;
+            return next;
+          });
           return result.messages;
         }
 

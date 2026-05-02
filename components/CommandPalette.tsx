@@ -3,24 +3,31 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  Archive,
   Bot,
   Check,
   Compass,
   Focus,
   MessageSquare,
+  Pin,
   Plus,
   Search,
   Settings,
   Sparkles,
+  Star,
+  Tag,
   Zap,
 } from "lucide-react";
 import type { AgentMode, Conversation } from "@/lib/types";
+
+type HistoryFilter = "all" | "pinned" | "favorite" | "tagged" | "archived";
 
 interface Props {
   open: boolean;
   conversations: Conversation[];
   activeConversationId: string | null;
   focusMode: boolean;
+  historyFilter: HistoryFilter;
   onClose: () => void;
   onCreateConversation: () => void;
   onSelectConversation: (conversationId: string) => void;
@@ -28,6 +35,13 @@ interface Props {
   onOpenSettings: () => void;
   onToggleFocus: () => void;
   onQuickPrompt: (prompt: string) => void;
+  onSetHistoryFilter: (filter: HistoryFilter) => void;
+  onSearchTag: (tag: string) => void;
+  onUpdateActiveConversation: (
+    patch: Partial<
+      Pick<Conversation, "pinned" | "favorite" | "archived">
+    >
+  ) => void;
 }
 
 const QUICK_PROMPTS = [
@@ -53,11 +67,50 @@ const QUICK_PROMPTS = [
   },
 ];
 
+const HISTORY_FILTERS: Array<{
+  value: HistoryFilter;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+}> = [
+  {
+    value: "all",
+    label: "Todas",
+    description: "Conversas ativas não arquivadas",
+    icon: <MessageSquare size={15} />,
+  },
+  {
+    value: "pinned",
+    label: "Fixadas",
+    description: "Apenas conversas fixadas",
+    icon: <Pin size={15} />,
+  },
+  {
+    value: "favorite",
+    label: "Favoritas",
+    description: "Apenas conversas favoritas",
+    icon: <Star size={15} />,
+  },
+  {
+    value: "tagged",
+    label: "Com tags",
+    description: "Conversas com etiquetas manuais",
+    icon: <Tag size={15} />,
+  },
+  {
+    value: "archived",
+    label: "Arquivadas",
+    description: "Conversas fora dos recentes",
+    icon: <Archive size={15} />,
+  },
+];
+
 export function CommandPalette({
   open,
   conversations,
   activeConversationId,
   focusMode,
+  historyFilter,
   onClose,
   onCreateConversation,
   onSelectConversation,
@@ -65,6 +118,9 @@ export function CommandPalette({
   onOpenSettings,
   onToggleFocus,
   onQuickPrompt,
+  onSetHistoryFilter,
+  onSearchTag,
+  onUpdateActiveConversation,
 }: Props) {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -87,7 +143,9 @@ export function CommandPalette({
 
   const filteredConversations = useMemo(() => {
     const term = query.trim().toLowerCase();
-    const source = conversations.filter((item) => !item.archived);
+    const source = conversations.filter((item) =>
+      historyFilter === "archived" ? item.archived : !item.archived
+    );
     if (!term) return source.slice(0, 6);
     return source
       .filter((item) => {
@@ -101,7 +159,27 @@ export function CommandPalette({
         return text.includes(term);
       })
       .slice(0, 8);
-  }, [conversations, query]);
+  }, [conversations, historyFilter, query]);
+
+  const activeConversation = useMemo(
+    () =>
+      conversations.find((item) => item.id === activeConversationId) ?? null,
+    [activeConversationId, conversations]
+  );
+
+  const tags = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          conversations
+            .flatMap((conversation) => conversation.tags ?? [])
+            .filter(Boolean)
+        )
+      )
+        .sort((a, b) => a.localeCompare(b, "pt-BR"))
+        .slice(0, 12),
+    [conversations]
+  );
 
   function run(action: () => void) {
     action();
@@ -180,6 +258,76 @@ export function CommandPalette({
               </section>
 
               <section>
+                <p>Histórico</p>
+                {HISTORY_FILTERS.map((filter) => (
+                  <CommandItem
+                    key={filter.value}
+                    icon={filter.icon}
+                    label={`Filtro: ${filter.label}`}
+                    description={filter.description}
+                    trailing={
+                      historyFilter === filter.value ? <Check size={14} /> : null
+                    }
+                    onClick={() =>
+                      run(() => onSetHistoryFilter(filter.value))
+                    }
+                  />
+                ))}
+                {activeConversation && (
+                  <>
+                    <CommandItem
+                      icon={<Pin size={15} />}
+                      label={
+                        activeConversation.pinned
+                          ? "Desafixar conversa ativa"
+                          : "Fixar conversa ativa"
+                      }
+                      description="Atualizar destaque no histórico"
+                      onClick={() =>
+                        run(() =>
+                          onUpdateActiveConversation({
+                            pinned: !activeConversation.pinned,
+                          })
+                        )
+                      }
+                    />
+                    <CommandItem
+                      icon={<Star size={15} />}
+                      label={
+                        activeConversation.favorite
+                          ? "Remover favorito da ativa"
+                          : "Favoritar conversa ativa"
+                      }
+                      description="Atualizar retenção da conversa"
+                      onClick={() =>
+                        run(() =>
+                          onUpdateActiveConversation({
+                            favorite: !activeConversation.favorite,
+                          })
+                        )
+                      }
+                    />
+                    <CommandItem
+                      icon={<Archive size={15} />}
+                      label={
+                        activeConversation.archived
+                          ? "Restaurar conversa ativa"
+                          : "Arquivar conversa ativa"
+                      }
+                      description="Mover conversa para fora de recentes"
+                      onClick={() =>
+                        run(() =>
+                          onUpdateActiveConversation({
+                            archived: !activeConversation.archived,
+                          })
+                        )
+                      }
+                    />
+                  </>
+                )}
+              </section>
+
+              <section>
                 <p>Ações rápidas MSY</p>
                 {QUICK_PROMPTS.map((item) => (
                   <CommandItem
@@ -191,6 +339,21 @@ export function CommandPalette({
                   />
                 ))}
               </section>
+
+              {tags.length > 0 && (
+                <section>
+                  <p>Tags</p>
+                  {tags.map((tag) => (
+                    <CommandItem
+                      key={tag}
+                      icon={<Tag size={15} />}
+                      label={`#${tag}`}
+                      description="Buscar conversas com esta tag"
+                      onClick={() => run(() => onSearchTag(tag))}
+                    />
+                  ))}
+                </section>
+              )}
 
               <section>
                 <p>Conversas</p>
