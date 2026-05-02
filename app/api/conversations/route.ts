@@ -24,6 +24,15 @@ function asNumber(value: unknown, fallback: number): number {
     : fallback;
 }
 
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === "object" && "message" in err) {
+    const message = (err as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return "Erro desconhecido.";
+}
+
 export async function GET(req: Request) {
   const context = await getSupabaseRequestContext(req);
   if (isApiError(context)) return context;
@@ -68,7 +77,7 @@ export async function POST(req: Request) {
   } catch (err) {
     return apiError(
       "conversation_create_failed",
-      err instanceof Error ? err.message : "Nao foi possivel criar conversa.",
+      `Nao foi possivel criar conversa: ${errorMessage(err)}`,
       500
     );
   }

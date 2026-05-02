@@ -29,7 +29,12 @@ function parseRole(value: unknown): MessageRole {
 const DEFAULT_TITLE = "Nova conversa";
 
 function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : "Erro desconhecido.";
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === "object" && "message" in err) {
+    const message = (err as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return "Erro desconhecido.";
 }
 
 function asNumber(value: unknown, fallback: number): number {

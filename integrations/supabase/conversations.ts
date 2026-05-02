@@ -74,15 +74,31 @@ export async function upsertConversation(
   conversation: Conversation,
   userId: string
 ): Promise<void> {
-  const { error } = await supabase.from("msy_conversas").upsert({
+  const row = {
     id: conversation.id,
     usuario_id: userId,
     titulo: conversation.title,
     session_id: conversation.sessionId,
     updated_at: new Date(conversation.updatedAt).toISOString(),
-  });
+  };
 
-  if (error) throw error;
+  const existing = await supabase
+    .from("msy_conversas")
+    .update({
+      titulo: row.titulo,
+      session_id: row.session_id,
+      updated_at: row.updated_at,
+    })
+    .eq("id", conversation.id)
+    .eq("usuario_id", userId)
+    .select("id")
+    .maybeSingle();
+
+  if (existing.error) throw existing.error;
+  if (existing.data) return;
+
+  const inserted = await supabase.from("msy_conversas").insert(row);
+  if (inserted.error) throw inserted.error;
 }
 
 export async function updateConversationMeta(
