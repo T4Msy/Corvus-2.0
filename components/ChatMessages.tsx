@@ -10,8 +10,10 @@ import {
   Check,
   Copy,
   ListTodo,
+  Pencil,
   RefreshCcw,
   Sparkles,
+  X,
 } from "lucide-react";
 import { marked } from "marked";
 import hljs from "highlight.js/lib/core";
@@ -76,6 +78,7 @@ interface Props {
   welcomeName: string;
   welcomeSubtitle?: string;
   onSuggest: (prompt: string) => void;
+  onEditMessage?: (createdAt: number, newText: string) => void;
 }
 
 const SUGGESTION_POOL = [
@@ -148,6 +151,7 @@ export function ChatMessages({
   welcomeName,
   welcomeSubtitle,
   onSuggest,
+  onEditMessage,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true);
@@ -184,6 +188,13 @@ export function ChatMessages({
     const name = profile?.nome_interno || profile?.nome || "U";
     return name.charAt(0).toUpperCase();
   }, [profile]);
+
+  const lastUserMessageCreatedAt = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "user") return messages[i].createdAt;
+    }
+    return null;
+  }, [messages]);
 
   const messageItems = useMemo(() => {
     return messages.flatMap((message, index) => {
@@ -264,6 +275,13 @@ export function ChatMessages({
               logoSrc={logoSrc}
               userInitial={userInitial}
               onAction={onSuggest}
+              canEdit={
+                !pending &&
+                item.message.role === "user" &&
+                item.message.createdAt === lastUserMessageCreatedAt &&
+                !!onEditMessage
+              }
+              onEditMessage={onEditMessage}
             />
           )
         )}
@@ -314,14 +332,21 @@ function MessageBubble({
   logoSrc,
   userInitial,
   onAction,
+  canEdit,
+  onEditMessage,
 }: {
   message: ChatMessage;
   logoSrc: string;
   userInitial: string;
   onAction: (prompt: string) => void;
+  canEdit?: boolean;
+  onEditMessage?: (createdAt: number, newText: string) => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState("");
   const markdownRef = useRef<HTMLDivElement>(null);
+  const editRef = useRef<HTMLTextAreaElement>(null);
   const isCorvus = message.role === "corvus";
 
   const timestamp = useMemo(
@@ -364,6 +389,33 @@ function MessageBubble({
     }
   }
 
+  function startEdit() {
+    setEditValue(message.text);
+    setEditing(true);
+    requestAnimationFrame(() => {
+      if (editRef.current) {
+        editRef.current.focus();
+        editRef.current.selectionStart = editRef.current.value.length;
+      }
+    });
+  }
+
+  function cancelEdit() {
+    setEditing(false);
+    setEditValue("");
+  }
+
+  function confirmEdit() {
+    const text = editValue.trim();
+    if (!text || text === message.text) {
+      cancelEdit();
+      return;
+    }
+    setEditing(false);
+    setEditValue("");
+    onEditMessage?.(message.createdAt, text);
+  }
+
   return (
     <motion.article
       className={`message-row ${isCorvus ? "corvus" : "user"}`}
@@ -390,8 +442,45 @@ function MessageBubble({
             className="message-text markdown"
             dangerouslySetInnerHTML={{ __html: html }}
           />
+        ) : editing ? (
+          <div className="message-edit-wrap">
+            <textarea
+              ref={editRef}
+              className="message-edit-textarea"
+              value={editValue}
+              rows={Math.max(2, editValue.split("\n").length)}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") { e.preventDefault(); cancelEdit(); }
+                if (e.key === "Enter" && e.ctrlKey) { e.preventDefault(); confirmEdit(); }
+              }}
+            />
+            <div className="message-edit-actions">
+              <button type="button" className="message-edit-confirm" onClick={confirmEdit}>
+                <Check size={13} />
+                <span>Enviar</span>
+              </button>
+              <button type="button" className="message-edit-cancel" onClick={cancelEdit}>
+                <X size={13} />
+                <span>Cancelar</span>
+              </button>
+            </div>
+          </div>
         ) : (
-          <p className="message-text">{message.text}</p>
+          <div className="message-user-wrap">
+            <p className="message-text">{message.text}</p>
+            {canEdit && (
+              <button
+                type="button"
+                className="message-edit-btn"
+                title="Editar mensagem"
+                aria-label="Editar mensagem"
+                onClick={startEdit}
+              >
+                <Pencil size={12} />
+              </button>
+            )}
+          </div>
         )}
         {isCorvus && (
           <div className="message-tools">

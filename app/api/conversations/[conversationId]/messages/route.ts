@@ -5,10 +5,12 @@ import {
   isApiError,
 } from "@/integrations/supabase/request";
 import {
+  deleteMessagesFrom,
   deriveConversationTitle,
   loadMessages,
   saveMessage,
   touchOwnedConversation,
+  updateMessageByTimestamp,
   updateOwnedConversationMeta,
   upsertConversation,
   userCanAccessConversation,
@@ -239,6 +241,65 @@ export async function POST(req: Request, { params }: RouteContext) {
     return apiError(
       "message_save_failed",
       err instanceof Error ? err.message : "Nao foi possivel salvar mensagem.",
+      500
+    );
+  }
+}
+
+export async function PATCH(req: Request, { params }: RouteContext) {
+  const context = await getSupabaseRequestContext(req);
+  if (isApiError(context)) return context;
+
+  const { conversationId } = await params;
+  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+
+  const createdAt =
+    typeof body.createdAt === "number" && Number.isFinite(body.createdAt)
+      ? body.createdAt
+      : null;
+  const text = typeof body.text === "string" ? body.text.trim() : "";
+
+  if (!createdAt) return apiError("validation", "createdAt obrigatorio.", 400);
+  if (!text) return apiError("validation", "Texto obrigatorio.", 400);
+
+  try {
+    const allowed = await userCanAccessConversation(context.db, conversationId, context.userId);
+    if (!allowed) return apiError("not_found", "Conversa nao encontrada.", 404);
+
+    await updateMessageByTimestamp(context.db, conversationId, createdAt, text);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    return apiError(
+      "message_update_failed",
+      err instanceof Error ? err.message : "Nao foi possivel atualizar mensagem.",
+      500
+    );
+  }
+}
+
+export async function DELETE(req: Request, { params }: RouteContext) {
+  const context = await getSupabaseRequestContext(req);
+  if (isApiError(context)) return context;
+
+  const { conversationId } = await params;
+  const { searchParams } = new URL(req.url);
+  const fromParam = searchParams.get("from");
+  const fromMs = fromParam ? Number(fromParam) : NaN;
+
+  if (!Number.isFinite(fromMs)) {
+    return apiError("validation", "Parametro 'from' (timestamp ms) obrigatorio.", 400);
+  }
+
+  try {
+    const allowed = await userCanAccessConversation(context.db, conversationId, context.userId);
+    if (!allowed) return apiError("not_found", "Conversa nao encontrada.", 404);
+
+    await deleteMessagesFrom(context.db, conversationId, fromMs);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    return apiError(
+      "messages_delete_failed",
+      err instanceof Error ? err.message : "Nao foi possivel excluir mensagens.",
       500
     );
   }

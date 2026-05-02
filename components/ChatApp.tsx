@@ -90,6 +90,8 @@ export function ChatApp() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<null | import("@/lib/types").Conversation[]>(null);
+  const [searchPending, setSearchPending] = useState(false);
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("all");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [renameId, setRenameId] = useState<string | null>(null);
@@ -327,6 +329,37 @@ export function ChatApp() {
     toast,
   ]);
 
+  // Debounced full-text search via API (authed + online + query >= 2 chars)
+  useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2 || auth.status !== "authed" || !conversations.online) {
+      setSearchResults(null);
+      setSearchPending(false);
+      return;
+    }
+    setSearchPending(true);
+    const id = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/conversations/search?q=${encodeURIComponent(term)}`,
+          {
+            headers: auth.accessToken
+              ? { Authorization: `Bearer ${auth.accessToken}` }
+              : {},
+          }
+        );
+        if (!res.ok) { setSearchResults(null); return; }
+        const data = (await res.json()) as { ok: boolean; conversations: import("@/lib/types").Conversation[] };
+        setSearchResults(data.ok ? data.conversations : null);
+      } catch {
+        setSearchResults(null);
+      } finally {
+        setSearchPending(false);
+      }
+    }, 300);
+    return () => { clearTimeout(id); setSearchPending(false); };
+  }, [query, auth.status, auth.accessToken, conversations.online]);
+
   const handleRealtimeMessage = useCallback(
     (message: ChatMessage) => {
       const conversationId = conversations.activeConversationId;
@@ -393,13 +426,18 @@ export function ChatApp() {
   ]);
 
   const filteredConversations = useMemo(() => {
+    if (searchResults !== null) {
+      return historyFilter === "all"
+        ? searchResults
+        : searchResults.filter((item) => matchesHistoryFilter(item, historyFilter));
+    }
     const term = query.trim().toLowerCase();
     return conversations.conversations.filter((item) => {
       if (!matchesHistoryFilter(item, historyFilter)) return false;
       if (!term) return true;
       return getConversationSearchText(item).includes(term);
     });
-  }, [conversations.conversations, historyFilter, query]);
+  }, [conversations.conversations, historyFilter, query, searchResults]);
 
   const conversationSections = useMemo(
     () => sectionConversations(filteredConversations, historyFilter),
@@ -662,6 +700,52 @@ export function ChatApp() {
       }
     }
   }, [selectedIds, conversations, exitSelectionMode, chat]);
+
+  const handleEditMessage = useCallback(
+    async (originalCreatedAt: number, newText: string) => {
+      const active = conversations.activeConversation;
+      if (!active) return;
+
+      // Update DB: patch message text + remove all messages after it
+      if (auth.status === "authed" && conversations.online && auth.accessToken) {
+        const base = `/api/conversations/${active.id}/messages`;
+        await Promise.all([
+          fetch(base, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${auth.accessToken}`,
+            },
+            body: JSON.stringify({ createdAt: originalCreatedAt, text: newText }),
+          }),
+          fetch(`${base}?from=${originalCreatedAt + 1}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${auth.accessToken}` },
+          }),
+        ]).catch(() => undefined);
+      }
+
+      await chat.editAndResend(originalCreatedAt, newText, {
+        mode,
+        conversationId: active.id,
+        sessionId: active.sessionId,
+        userId: auth.userId,
+        userContext,
+        accessToken: auth.accessToken,
+        onAssistantMessage: (message) =>
+          conversations.persistMessage(active.id, message),
+      });
+    },
+    [
+      auth.accessToken,
+      auth.status,
+      auth.userId,
+      chat,
+      conversations,
+      mode,
+      userContext,
+    ]
+  );
 
   const saveDetailsSummary = useCallback(() => {
     const active = conversations.activeConversation;
@@ -937,10 +1021,14 @@ export function ChatApp() {
           <input
             id="conversation-search"
             type="search"
-            placeholder="Buscar título, tag ou resumo"
+            placeholder="Buscar título, mensagens, tags…"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              if (!event.target.value.trim()) setSearchResults(null);
+            }}
           />
+          {searchPending && <span className="search-pending-dot" aria-hidden="true" />}
         </label>
 
         <div className="history-filter-row" aria-label="Filtros do histórico">
@@ -1450,6 +1538,11 @@ export function ChatApp() {
             }
             welcomeSubtitle="Pergunte algo. Ou escolha uma sugestão."
             onSuggest={requestSend}
+            onEditMessage={
+              auth.status === "authed" || auth.status === "guest"
+                ? handleEditMessage
+                : undefined
+            }
           />
           <ChatInput
             mode={mode}

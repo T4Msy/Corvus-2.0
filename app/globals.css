@@ -308,6 +308,20 @@ a {
   color: var(--text-dim);
 }
 
+.search-pending-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+  animation: search-pulse 1s ease-in-out infinite;
+}
+
+@keyframes search-pulse {
+  0%, 100% { opacity: 0.4; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
 .history-filter-row {
   display: flex;
   gap: 6px;
@@ -1331,6 +1345,93 @@ a {
   padding: 10px 14px;
   border-radius: 14px 14px 4px 14px;
   max-width: min(80%, 560px);
+}
+
+/* Message edit UI */
+
+.message-user-wrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.message-edit-btn {
+  display: none;
+  padding: 4px;
+  border-radius: 6px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  margin-bottom: 2px;
+  transition: color var(--transition), background var(--transition);
+}
+
+.message-edit-btn:hover {
+  color: var(--text-muted);
+  background: var(--surface-hover);
+}
+
+.message-row.user:hover .message-edit-btn {
+  display: inline-flex;
+}
+
+.message-edit-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(80%, 560px);
+}
+
+.message-edit-textarea {
+  width: 100%;
+  min-width: 260px;
+  padding: 10px 14px;
+  border-radius: 14px 14px 4px 14px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent);
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text);
+  resize: none;
+  overflow: hidden;
+  font-family: inherit;
+}
+
+.message-edit-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.message-edit-confirm,
+.message-edit-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: background var(--transition), color var(--transition);
+}
+
+.message-edit-confirm {
+  background: var(--accent);
+  color: #fff;
+}
+
+.message-edit-confirm:hover {
+  opacity: 0.9;
+}
+
+.message-edit-cancel {
+  color: var(--text-muted);
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+}
+
+.message-edit-cancel:hover {
+  color: var(--text);
 }
 
 /* Markdown styling for Corvus messages */

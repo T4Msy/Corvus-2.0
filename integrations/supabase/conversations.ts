@@ -403,3 +403,85 @@ export async function saveMessage(
 
   if (error) throw error;
 }
+
+export async function updateMessageByTimestamp(
+  supabase: CorvusSupabaseClient,
+  conversationId: string,
+  createdAt: number,
+  newText: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("msy_mensagens")
+    .update({ texto: newText })
+    .eq("conversa_id", conversationId)
+    .eq("created_at", new Date(createdAt).toISOString());
+
+  if (error) throw error;
+}
+
+export async function deleteMessagesFrom(
+  supabase: CorvusSupabaseClient,
+  conversationId: string,
+  fromCreatedAt: number
+): Promise<void> {
+  const { error } = await supabase
+    .from("msy_mensagens")
+    .delete()
+    .eq("conversa_id", conversationId)
+    .gte("created_at", new Date(fromCreatedAt).toISOString());
+
+  if (error) throw error;
+}
+
+export async function searchConversations(
+  supabase: CorvusSupabaseClient,
+  userId: string,
+  query: string
+): Promise<Conversation[]> {
+  const term = `%${query.trim().toLowerCase()}%`;
+
+  const [convResult, msgResult] = await Promise.all([
+    supabase
+      .from("msy_conversas")
+      .select(META_CONVERSATION_SELECT)
+      .eq("usuario_id", userId)
+      .or(`titulo.ilike.${term},summary.ilike.${term}`)
+      .order("updated_at", { ascending: false })
+      .limit(40),
+    supabase
+      .from("msy_mensagens")
+      .select("conversa_id")
+      .ilike("texto", term)
+      .limit(200),
+  ]);
+
+  if (convResult.error) throw convResult.error;
+
+  const convIds = new Set((convResult.data ?? []).map((row) => row.id as string));
+  const msgConvIds = (msgResult.data ?? []).map(
+    (row) => (row as { conversa_id: string }).conversa_id
+  );
+
+  const missingIds = msgConvIds.filter((id) => !convIds.has(id));
+  const uniqueMissingIds = [...new Set(missingIds)];
+
+  let extra: Conversation[] = [];
+  if (uniqueMissingIds.length > 0) {
+    const extraResult = await supabase
+      .from("msy_conversas")
+      .select(META_CONVERSATION_SELECT)
+      .eq("usuario_id", userId)
+      .in("id", uniqueMissingIds.slice(0, 40))
+      .order("updated_at", { ascending: false });
+
+    if (!extraResult.error) {
+      extra = (extraResult.data ?? []).map(conversationRowToModel);
+    }
+  }
+
+  const base = (convResult.data ?? []).map(conversationRowToModel);
+  const seen = new Set(base.map((c) => c.id));
+  const merged = [...base, ...extra.filter((c) => !seen.has(c.id))];
+  merged.sort((a, b) => b.updatedAt - a.updatedAt);
+  return merged;
+}

@@ -116,6 +116,23 @@ export function useChat() {
     if (lastArgsRef.current) void send(lastArgsRef.current);
   }, [send]);
 
+  const editAndResend = useCallback(
+    async (
+      originalCreatedAt: number,
+      newText: string,
+      args: Omit<SendArgs, "text" | "onUserMessage">
+    ) => {
+      // Remove the original message and everything after it; send() will add the new version
+      setMessages((prev) => {
+        const idx = prev.findIndex((m) => m.createdAt === originalCreatedAt && m.role === "user");
+        if (idx === -1) return prev;
+        return prev.slice(0, idx);
+      });
+      await send({ ...args, text: newText });
+    },
+    [send]
+  );
+
   return {
     messages,
     pending,
@@ -125,6 +142,7 @@ export function useChat() {
     reset,
     setHistory,
     appendExternalMessage,
+    editAndResend,
   };
 }
 
