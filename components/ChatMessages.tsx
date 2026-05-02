@@ -3,7 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertTriangle, Check, Copy, RefreshCcw, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  AlertTriangle,
+  Check,
+  Copy,
+  ListTodo,
+  RefreshCcw,
+  Sparkles,
+} from "lucide-react";
 import { marked } from "marked";
 import type { ChatMessage, UserProfile } from "@/lib/types";
 
@@ -22,16 +30,24 @@ interface Props {
 
 const SUGGESTIONS = [
   {
-    label: "Estrutura",
-    prompt: "Sintetize a estrutura da Ordem Masayoshi em blocos objetivos.",
+    label: "Síntese institucional",
+    prompt:
+      "Sintetize a estrutura da Ordem Masayoshi em blocos objetivos, com riscos e próximos passos.",
   },
   {
-    label: "Prioridades",
-    prompt: "Quais prioridades devo observar na operação atual da MSY?",
+    label: "Plano de ação",
+    prompt:
+      "Monte um plano de ação para a operação atual da MSY com prioridades e sequência.",
   },
   {
-    label: "Valores",
-    prompt: "Quais são os valores fundamentais da Ordem Masayoshi?",
+    label: "Análise de decisão",
+    prompt:
+      "Ajude a analisar uma decisão importante usando critérios, tradeoffs e recomendação.",
+  },
+  {
+    label: "Revisão de texto",
+    prompt:
+      "Revise o texto a seguir para ficar mais claro, institucional e objetivo.",
   },
 ];
 
@@ -85,6 +101,11 @@ export function ChatMessages({
           {welcomeSubtitle && (
             <p className="welcome-subtitle">{welcomeSubtitle}</p>
           )}
+          <div className="welcome-context" aria-label="Memória da sessão">
+            <span>{profile?.cargo || "Sessão institucional"}</span>
+            <span>{profile?.sigla_cargo || profile?.tipo || "MSY"}</span>
+            <span>Contexto ativo</span>
+          </div>
           <div className="suggestion-row">
             {SUGGESTIONS.map((s) => (
               <button
@@ -108,6 +129,7 @@ export function ChatMessages({
             message={message}
             logoSrc={logoSrc}
             userInitial={userInitial}
+            onAction={onSuggest}
           />
         ))}
       </AnimatePresence>
@@ -142,10 +164,12 @@ function MessageBubble({
   message,
   logoSrc,
   userInitial,
+  onAction,
 }: {
   message: ChatMessage;
   logoSrc: string;
   userInitial: string;
+  onAction: (prompt: string) => void;
 }) {
   const [copied, setCopied] = useState(false);
   const isCorvus = message.role === "corvus";
@@ -213,10 +237,59 @@ function MessageBubble({
             >
               {copied ? <Check size={13} /> : <Copy size={13} />}
             </button>
+            <MessageAction
+              icon={<RefreshCcw size={13} />}
+              label="Regenerar"
+              prompt="Refaça a resposta anterior com mais precisão, clareza e objetividade."
+              onAction={onAction}
+            />
+            <MessageAction
+              icon={<ArrowRight size={13} />}
+              label="Continuar"
+              prompt="Continue a resposta anterior mantendo o mesmo contexto e nível de detalhe."
+              onAction={onAction}
+            />
+            <MessageAction
+              icon={<Sparkles size={13} />}
+              label="Resumir"
+              prompt="Resuma a resposta anterior em pontos executivos, preservando decisões e riscos."
+              onAction={onAction}
+            />
+            <MessageAction
+              icon={<ListTodo size={13} />}
+              label="Tarefas"
+              prompt="Transforme a resposta anterior em uma lista de tarefas acionáveis."
+              onAction={onAction}
+            />
           </div>
         )}
       </div>
     </motion.article>
+  );
+}
+
+function MessageAction({
+  icon,
+  label,
+  prompt,
+  onAction,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  prompt: string;
+  onAction: (prompt: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="message-action-button"
+      title={label}
+      aria-label={label}
+      onClick={() => onAction(prompt)}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
   );
 }
 
@@ -231,6 +304,7 @@ function TypingIndicator({ logoSrc }: { logoSrc: string }) {
         <Image src={logoSrc} alt="" width={20} height={20} />
       </div>
       <div className="message-card">
+        <div className="typing-label">Corvus processando</div>
         <div className="typing-card">
           <span />
           <span />

@@ -13,6 +13,11 @@ export type ConversationRow = {
   usuario_id: string;
   titulo: string | null;
   session_id: string | null;
+  pinned?: boolean | null;
+  favorite?: boolean | null;
+  tags?: string[] | null;
+  summary?: string | null;
+  archived?: boolean | null;
   created_at?: string | null;
   updated_at: string | null;
 };
@@ -57,6 +62,11 @@ export interface Database {
           usuario_id: string;
           titulo?: string | null;
           session_id?: string | null;
+          pinned?: boolean | null;
+          favorite?: boolean | null;
+          tags?: string[] | null;
+          summary?: string | null;
+          archived?: boolean | null;
           updated_at?: string | null;
         };
         Update: Partial<ConversationRow>;

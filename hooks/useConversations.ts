@@ -17,6 +17,14 @@ type AuthLike = {
 const LOCAL_KEY = "corvus_guest_conversations";
 const DEFAULT_TITLE = "Nova conversa";
 
+type SyncStatus = "idle" | "saving" | "saved" | "error";
+type ConversationPatch = Partial<
+  Pick<
+    Conversation,
+    "title" | "pinned" | "favorite" | "tags" | "summary" | "archived"
+  >
+>;
+
 export function useConversations(auth: AuthLike) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(
@@ -24,6 +32,7 @@ export function useConversations(auth: AuthLike) {
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
   const conversationsRef = useRef<Conversation[]>([]);
 
   const activeConversation = useMemo(
@@ -54,6 +63,7 @@ export function useConversations(auth: AuthLike) {
 
     setLoading(true);
     setError(null);
+    setSyncStatus("idle");
     try {
       if (auth.status === "authed" && auth.supabaseReady) {
         const result = await conversationsApi<{
@@ -90,6 +100,9 @@ export function useConversations(auth: AuthLike) {
 
   const createConversation = useCallback(async (): Promise<Conversation> => {
     const conversation = createLocalConversation();
+    setSyncStatus(
+      auth.status === "authed" && auth.supabaseReady ? "saving" : "saved"
+    );
     setConversations((current) => {
       const next = [conversation, ...current];
       conversationsRef.current = next;
@@ -104,12 +117,14 @@ export function useConversations(auth: AuthLike) {
           method: "POST",
           body: conversation,
         });
+        setSyncStatus("saved");
       } catch (err) {
         setError(
           err instanceof Error
             ? err.message
             : "Nao foi possivel criar conversa no Supabase."
         );
+        setSyncStatus("error");
       }
     }
 
@@ -149,6 +164,7 @@ export function useConversations(auth: AuthLike) {
   const persistMessage = useCallback(
     async (conversationId: string, message: ChatMessage): Promise<void> => {
       const now = Date.now();
+      setSyncStatus(auth.status === "authed" && auth.supabaseReady ? "saving" : "saved");
       const currentConversation = conversationsRef.current.find(
         (item) => item.id === conversationId
       );
@@ -156,10 +172,14 @@ export function useConversations(auth: AuthLike) {
         currentConversation?.title === DEFAULT_TITLE && message.role === "user"
           ? deriveConversationTitle(message.text)
           : currentConversation?.title || DEFAULT_TITLE;
+      const summaryForPersist =
+        currentConversation?.summary ||
+        (message.role === "corvus" ? deriveConversationSummary(message.text) : "");
       const conversationForPersist: Conversation = {
         ...(currentConversation ?? createLocalConversation()),
         id: conversationId,
         title: titleForPersist,
+        summary: summaryForPersist,
         updatedAt: now,
       };
 
@@ -170,6 +190,7 @@ export function useConversations(auth: AuthLike) {
             return {
               ...item,
               title: titleForPersist,
+              summary: item.summary || summaryForPersist,
               updatedAt: now,
               messages:
                 auth.status === "guest"
@@ -204,12 +225,97 @@ export function useConversations(auth: AuthLike) {
             },
           }
         );
+        setSyncStatus("saved");
       } catch (err) {
         setError(
           err instanceof Error
             ? err.message
             : "Nao foi possivel persistir mensagem."
         );
+        setSyncStatus("error");
+      }
+    },
+    [
+      auth.accessToken,
+      auth.status,
+      auth.supabaseReady,
+      persistLocal,
+    ]
+  );
+
+  const updateConversation = useCallback(
+    async (
+      conversationId: string,
+      patch: ConversationPatch
+    ): Promise<void> => {
+      const normalizedPatch: ConversationPatch = {};
+      if (typeof patch.title === "string") {
+        const title = patch.title.trim();
+        if (!title) return;
+        normalizedPatch.title = title;
+      }
+      if (typeof patch.pinned === "boolean") normalizedPatch.pinned = patch.pinned;
+      if (typeof patch.favorite === "boolean") {
+        normalizedPatch.favorite = patch.favorite;
+      }
+      if (Array.isArray(patch.tags)) {
+        normalizedPatch.tags = patch.tags
+          .filter((item) => typeof item === "string")
+          .map((item) => item.trim())
+          .filter(Boolean)
+          .slice(0, 8);
+      }
+      if (typeof patch.summary === "string") {
+        normalizedPatch.summary = patch.summary.trim();
+      }
+      if (typeof patch.archived === "boolean") {
+        normalizedPatch.archived = patch.archived;
+      }
+
+      if (Object.keys(normalizedPatch).length === 0) return;
+
+      const updatedAt = Date.now();
+      setError(null);
+      setSyncStatus(
+        auth.status === "authed" && auth.supabaseReady ? "saving" : "saved"
+      );
+
+      setConversations((current) => {
+        const next = current
+          .map((item) =>
+            item.id === conversationId
+              ? { ...item, ...normalizedPatch, updatedAt }
+              : item
+          )
+          .sort((a, b) => b.updatedAt - a.updatedAt);
+
+        conversationsRef.current = next;
+        if (auth.status === "guest") persistLocal(next);
+        return next;
+      });
+
+      if (auth.status !== "authed" || !auth.supabaseReady) return;
+
+      try {
+        await conversationsApi(
+          `/api/conversations/${encodeURIComponent(conversationId)}`,
+          auth.accessToken,
+          {
+            method: "PATCH",
+            body: {
+              ...normalizedPatch,
+              updatedAt,
+            },
+          }
+        );
+        setSyncStatus("saved");
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Nao foi possivel atualizar conversa."
+        );
+        setSyncStatus("error");
       }
     },
     [
@@ -231,6 +337,9 @@ export function useConversations(auth: AuthLike) {
       conversationsRef.current = next;
       setActiveConversationId(nextActive);
       if (auth.status === "guest") persistLocal(next);
+      setSyncStatus(
+        auth.status === "authed" && auth.supabaseReady ? "saving" : "saved"
+      );
 
       if (auth.status === "authed" && auth.supabaseReady) {
         try {
@@ -239,12 +348,14 @@ export function useConversations(auth: AuthLike) {
             auth.accessToken,
             { method: "DELETE" }
           );
+          setSyncStatus("saved");
         } catch (err) {
           setError(
             err instanceof Error
               ? err.message
               : "Nao foi possivel excluir conversa."
           );
+          setSyncStatus("error");
         }
       }
 
@@ -266,12 +377,24 @@ export function useConversations(auth: AuthLike) {
     activeConversationId,
     loading,
     error,
+    syncStatus,
     refresh,
     createConversation,
     selectConversation,
     persistMessage,
+    updateConversation,
     deleteConversation,
   };
+}
+
+function deriveConversationSummary(text: string): string {
+  const clean = text
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/[#>*_`~\-[\]]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!clean) return "";
+  return clean.length > 140 ? `${clean.slice(0, 140).trim()}...` : clean;
 }
 
 async function conversationsApi<T = unknown>(
@@ -322,6 +445,17 @@ function readLocalConversations(): Conversation[] {
         ...item,
         title: item.title || DEFAULT_TITLE,
         messages: Array.isArray(item.messages) ? item.messages : [],
+        pinned: Boolean(item.pinned),
+        favorite: Boolean(item.favorite),
+        tags: Array.isArray(item.tags)
+          ? item.tags
+              .filter((tag): tag is string => typeof tag === "string")
+              .map((tag) => tag.trim())
+              .filter(Boolean)
+              .slice(0, 8)
+          : [],
+        summary: typeof item.summary === "string" ? item.summary : "",
+        archived: Boolean(item.archived),
       }))
       .sort((a, b) => b.updatedAt - a.updatedAt);
   } catch {

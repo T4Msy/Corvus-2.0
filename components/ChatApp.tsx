@@ -5,16 +5,27 @@ import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertCircle,
+  Archive,
+  ArchiveRestore,
+  Check,
+  Command,
+  MoreHorizontal,
   Menu,
   MessageSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Pencil,
+  Pin,
   Plus,
   Search,
   Settings,
+  Star,
   Trash2,
   X,
 } from "lucide-react";
 import { ChatInput } from "@/components/ChatInput";
 import { ChatMessages } from "@/components/ChatMessages";
+import { CommandPalette } from "@/components/CommandPalette";
 import { LoginScreen } from "@/components/LoginScreen";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -32,7 +43,13 @@ export function ChatApp() {
   const [mode, setMode] = useState<AgentMode>("corvus");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
   const [query, setQuery] = useState("");
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const loadedConversationRef = useRef<string | null>(null);
   const creatingConversationRef = useRef(false);
 
@@ -126,16 +143,42 @@ export function ChatApp() {
     conversations.selectConversation,
   ]);
 
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandOpen((current) => !current);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (!openMenuId) return;
+    function handlePointerDown(event: MouseEvent) {
+      const target = event.target as HTMLElement | null;
+      if (!target?.closest(`[data-conversation-id="${openMenuId}"]`)) {
+        setOpenMenuId(null);
+      }
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [openMenuId]);
+
   const filteredConversations = useMemo(() => {
     const term = query.trim().toLowerCase();
     if (!term) return conversations.conversations;
-    return conversations.conversations.filter((item) =>
-      item.title.toLowerCase().includes(term)
-    );
+    return conversations.conversations.filter((item) => {
+      const text = [item.title, item.summary, ...(item.tags ?? [])]
+        .join(" ")
+        .toLowerCase();
+      return text.includes(term);
+    });
   }, [conversations.conversations, query]);
 
-  const groupedConversations = useMemo(
-    () => groupConversations(filteredConversations),
+  const conversationSections = useMemo(
+    () => sectionConversations(filteredConversations),
     [filteredConversations]
   );
 
@@ -171,6 +214,7 @@ export function ChatApp() {
     loadedConversationRef.current = conversation.id;
     chat.setHistory([]);
     setSidebarOpen(false);
+    setCommandOpen(false);
   }, [chat, conversations]);
 
   const selectConversation = useCallback(
@@ -179,12 +223,45 @@ export function ChatApp() {
       const history = await conversations.selectConversation(conversationId);
       chat.setHistory(history);
       setSidebarOpen(false);
+      setCommandOpen(false);
     },
     [chat, conversations]
   );
 
+  const updateConversation = useCallback(
+    (conversationId: string, patch: Parameters<typeof conversations.updateConversation>[1]) => {
+      void conversations.updateConversation(conversationId, patch);
+      setOpenMenuId(null);
+    },
+    [conversations]
+  );
+
+  const startRename = useCallback((conversation: Conversation) => {
+    setRenameId(conversation.id);
+    setRenameValue(conversation.title);
+    setOpenMenuId(null);
+    setConfirmDeleteId(null);
+  }, []);
+
+  const commitRename = useCallback(
+    (conversationId: string) => {
+      const title = renameValue.trim();
+      setRenameId(null);
+      if (!title) return;
+      const current = conversations.conversations.find(
+        (item) => item.id === conversationId
+      );
+      if (current && current.title !== title) {
+        updateConversation(conversationId, { title });
+      }
+    },
+    [conversations.conversations, renameValue, updateConversation]
+  );
+
   const deleteConversation = useCallback(
     async (conversationId: string) => {
+      setOpenMenuId(null);
+      setConfirmDeleteId(null);
       const wasActive = conversationId === conversations.activeConversationId;
       const nextId = await conversations.deleteConversation(conversationId);
       if (!wasActive) return;
@@ -219,7 +296,7 @@ export function ChatApp() {
   }
 
   return (
-    <div className="corvus-shell">
+    <div className={`corvus-shell${focusMode ? " focus-mode" : ""}`}>
       <AnimatePresence>
         {sidebarOpen && (
           <motion.button
@@ -283,41 +360,195 @@ export function ChatApp() {
             </div>
           )}
 
-          {groupedConversations.map((group) => (
-            <div className="conversation-group" key={group.label}>
-              <p>{group.label}</p>
-              {group.items.map((conversation) => (
-                <div
-                  key={conversation.id}
-                  className={`conversation-item${
-                    conversation.id === conversations.activeConversationId
-                      ? " active"
-                      : ""
-                  }`}
-                >
-                  <button
-                    type="button"
-                    className="conversation-open"
-                    onClick={() => void selectConversation(conversation.id)}
+          {conversationSections.map((section) => (
+            <div className="conversation-group" key={section.label}>
+              <p>{section.label}</p>
+              {section.items.map((conversation) => {
+                const active =
+                  conversation.id === conversations.activeConversationId;
+                const editing = renameId === conversation.id;
+                const confirming = confirmDeleteId === conversation.id;
+                const menuOpen = openMenuId === conversation.id;
+
+                return (
+                  <div
+                    key={conversation.id}
+                    data-conversation-id={conversation.id}
+                    className={`conversation-item${active ? " active" : ""}${
+                      menuOpen ? " menu-open" : ""
+                    }`}
                   >
-                    <MessageSquare size={14} />
-                    <span>{conversation.title}</span>
-                    <small>{formatRelative(conversation.updatedAt)}</small>
-                  </button>
-                  <button
-                    type="button"
-                    className="conversation-delete"
-                    title="Excluir"
-                    aria-label="Excluir conversa"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void deleteConversation(conversation.id);
-                    }}
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </div>
-              ))}
+                    {editing ? (
+                      <form
+                        className="conversation-rename"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          commitRename(conversation.id);
+                        }}
+                      >
+                        <input
+                          autoFocus
+                          value={renameValue}
+                          aria-label="Renomear conversa"
+                          onChange={(event) =>
+                            setRenameValue(event.target.value)
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "Escape") {
+                              event.preventDefault();
+                              setRenameId(null);
+                            }
+                          }}
+                        />
+                        <button type="submit" aria-label="Salvar nome">
+                          <Check size={13} />
+                        </button>
+                      </form>
+                    ) : (
+                      <button
+                        type="button"
+                        className="conversation-open"
+                        onClick={() => void selectConversation(conversation.id)}
+                      >
+                        {conversation.pinned ? (
+                          <Pin size={14} />
+                        ) : conversation.favorite ? (
+                          <Star size={14} />
+                        ) : conversation.archived ? (
+                          <Archive size={14} />
+                        ) : (
+                          <MessageSquare size={14} />
+                        )}
+                        <span>{conversation.title}</span>
+                        <small>{formatRelative(conversation.updatedAt)}</small>
+                      </button>
+                    )}
+
+                    {!editing && (
+                      <button
+                        type="button"
+                        className="conversation-menu-button"
+                        title="Ações"
+                        aria-label="Ações da conversa"
+                        aria-expanded={menuOpen}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setOpenMenuId((current) =>
+                            current === conversation.id ? null : conversation.id
+                          );
+                          setConfirmDeleteId(null);
+                        }}
+                      >
+                        <MoreHorizontal size={14} />
+                      </button>
+                    )}
+
+                    <AnimatePresence>
+                      {menuOpen && !confirming && (
+                        <motion.div
+                          className="conversation-menu"
+                          initial={{ opacity: 0, y: 4, scale: 0.98 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                          transition={{ duration: 0.12 }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateConversation(conversation.id, {
+                                pinned: !conversation.pinned,
+                              })
+                            }
+                          >
+                            <Pin size={13} />
+                            <span>
+                              {conversation.pinned ? "Desafixar" : "Fixar"}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateConversation(conversation.id, {
+                                favorite: !conversation.favorite,
+                              })
+                            }
+                          >
+                            <Star size={13} />
+                            <span>
+                              {conversation.favorite
+                                ? "Remover favorito"
+                                : "Favoritar"}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => startRename(conversation)}
+                          >
+                            <Pencil size={13} />
+                            <span>Renomear</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateConversation(conversation.id, {
+                                archived: !conversation.archived,
+                              })
+                            }
+                          >
+                            {conversation.archived ? (
+                              <ArchiveRestore size={13} />
+                            ) : (
+                              <Archive size={13} />
+                            )}
+                            <span>
+                              {conversation.archived
+                                ? "Restaurar"
+                                : "Arquivar"}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            className="danger"
+                            onClick={() => {
+                              setConfirmDeleteId(conversation.id);
+                              setOpenMenuId(null);
+                            }}
+                          >
+                            <Trash2 size={13} />
+                            <span>Excluir</span>
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <AnimatePresence>
+                      {confirming && (
+                        <motion.div
+                          className="conversation-confirm"
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 4 }}
+                          transition={{ duration: 0.12 }}
+                        >
+                          <span>Excluir conversa?</span>
+                          <button
+                            type="button"
+                            onClick={() => void deleteConversation(conversation.id)}
+                          >
+                            Excluir
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteId(null)}
+                          >
+                            Cancelar
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>
@@ -365,6 +596,44 @@ export function ChatApp() {
             <strong>
               {conversations.activeConversation?.title ?? "Nova conversa"}
             </strong>
+            <span className="topbar-mode">
+              {mode === "fenrir" ? "Fenrir" : "Corvus"}
+            </span>
+            <SyncPill status={conversations.syncStatus} />
+          </div>
+
+          <div className="topbar-actions">
+            <button
+              type="button"
+              className="icon-button"
+              title="Comandos"
+              aria-label="Abrir comandos"
+              onClick={() => setCommandOpen(true)}
+            >
+              <Command size={17} />
+            </button>
+            <button
+              type="button"
+              className="icon-button"
+              title={focusMode ? "Mostrar sidebar" : "Modo foco"}
+              aria-label={focusMode ? "Mostrar sidebar" : "Ativar modo foco"}
+              onClick={() => setFocusMode((current) => !current)}
+            >
+              {focusMode ? (
+                <PanelLeftOpen size={17} />
+              ) : (
+                <PanelLeftClose size={17} />
+              )}
+            </button>
+            <button
+              type="button"
+              className="icon-button"
+              title="Configurações"
+              aria-label="Abrir configurações"
+              onClick={() => setSettingsOpen(true)}
+            >
+              <Settings size={17} />
+            </button>
           </div>
         </header>
 
@@ -401,9 +670,26 @@ export function ChatApp() {
             onModeChange={setMode}
             onSend={send}
             disabled={chat.pending}
+            syncStatus={conversations.syncStatus}
           />
         </main>
       </section>
+
+      <CommandPalette
+        open={commandOpen}
+        conversations={conversations.conversations}
+        activeConversationId={conversations.activeConversationId}
+        focusMode={focusMode}
+        onClose={() => setCommandOpen(false)}
+        onCreateConversation={() => void createConversation()}
+        onSelectConversation={(conversationId) =>
+          void selectConversation(conversationId)
+        }
+        onSetMode={setMode}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onToggleFocus={() => setFocusMode((current) => !current)}
+        onQuickPrompt={send}
+      />
 
       <SettingsDialog
         open={settingsOpen}
@@ -438,31 +724,39 @@ function BootScreen({ logoSrc }: { logoSrc: string }) {
   );
 }
 
-function groupConversations(items: Conversation[]) {
-  return items.reduce<Array<{ label: string; items: Conversation[] }>>(
-    (groups, conversation) => {
-      const label = groupLabel(conversation.updatedAt);
-      const group = groups.find((g) => g.label === label);
-      if (group) group.items.push(conversation);
-      else groups.push({ label, items: [conversation] });
-      return groups;
-    },
-    []
-  );
+function SyncPill({
+  status,
+}: {
+  status: "idle" | "saving" | "saved" | "error";
+}) {
+  const label =
+    status === "saving"
+      ? "Salvando"
+      : status === "saved"
+        ? "Salvo"
+        : status === "error"
+          ? "Erro de sync"
+          : "Pronto";
+
+  return <span className={`sync-pill ${status}`}>{label}</span>;
 }
 
-function groupLabel(time: number): string {
-  const now = new Date();
-  const date = new Date(time);
-  const day = 24 * 60 * 60 * 1000;
-  const diff = now.getTime() - date.getTime();
-  if (date.toDateString() === now.toDateString()) return "Hoje";
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  if (date.toDateString() === yesterday.toDateString()) return "Ontem";
-  if (diff < day * 7) return "Esta semana";
-  if (diff < day * 30) return "Este mês";
-  return "Anteriores";
+function sectionConversations(items: Conversation[]) {
+  const pinned = items.filter((item) => item.pinned && !item.archived);
+  const favorites = items.filter(
+    (item) => item.favorite && !item.pinned && !item.archived
+  );
+  const recent = items.filter(
+    (item) => !item.pinned && !item.favorite && !item.archived
+  );
+  const archived = items.filter((item) => item.archived);
+
+  return [
+    { label: "Fixados", items: pinned },
+    { label: "Favoritos", items: favorites },
+    { label: "Recentes", items: recent },
+    { label: "Arquivados", items: archived },
+  ].filter((section) => section.items.length > 0);
 }
 
 function formatRelative(time: number): string {

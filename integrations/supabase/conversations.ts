@@ -2,6 +2,15 @@ import type { CorvusSupabaseClient } from "@/integrations/supabase/types";
 import type { ChatMessage, Conversation, MessageRole } from "@/lib/types";
 
 const DEFAULT_TITLE = "Nova conversa";
+const BASE_CONVERSATION_SELECT = "id,titulo,session_id,updated_at";
+const META_CONVERSATION_SELECT = `${BASE_CONVERSATION_SELECT},pinned,favorite,tags,summary,archived`;
+
+export type ConversationMetaPatch = Partial<
+  Pick<
+    Conversation,
+    "title" | "updatedAt" | "pinned" | "favorite" | "tags" | "summary" | "archived"
+  >
+>;
 
 function toTime(value: string | null | undefined, fallback = Date.now()): number {
   if (!value) return fallback;
@@ -15,6 +24,100 @@ function normalizeRole(role: string): MessageRole {
 
 function serializeRole(role: MessageRole): string {
   return role === "corvus" ? "assistant" : role;
+}
+
+function normalizeTags(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+function isMissingMetadataColumn(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const record = error as { code?: unknown; message?: unknown; details?: unknown };
+  const code = typeof record.code === "string" ? record.code : "";
+  const message = `${String(record.message ?? "")} ${String(record.details ?? "")}`.toLowerCase();
+  return (
+    code === "42703" ||
+    code === "PGRST204" ||
+    message.includes("pinned") ||
+    message.includes("favorite") ||
+    message.includes("archived") ||
+    message.includes("tags") ||
+    message.includes("summary")
+  );
+}
+
+function conversationRowToModel(row: {
+  id: string;
+  titulo: string | null;
+  session_id: string | null;
+  updated_at: string | null;
+  pinned?: boolean | null;
+  favorite?: boolean | null;
+  tags?: string[] | null;
+  summary?: string | null;
+  archived?: boolean | null;
+}): Conversation {
+  const updatedAt = toTime(row.updated_at);
+  return {
+    id: row.id,
+    title: row.titulo || DEFAULT_TITLE,
+    sessionId: row.session_id || makeSessionId(),
+    createdAt: updatedAt,
+    updatedAt,
+    messages: [],
+    pinned: Boolean(row.pinned),
+    favorite: Boolean(row.favorite),
+    tags: normalizeTags(row.tags),
+    summary: row.summary || "",
+    archived: Boolean(row.archived),
+  };
+}
+
+function baseConversationRow(conversation: Conversation, userId: string) {
+  return {
+    id: conversation.id,
+    usuario_id: userId,
+    titulo: conversation.title,
+    session_id: conversation.sessionId,
+    updated_at: new Date(conversation.updatedAt).toISOString(),
+  };
+}
+
+function fullConversationRow(conversation: Conversation, userId: string) {
+  return {
+    ...baseConversationRow(conversation, userId),
+    pinned: Boolean(conversation.pinned),
+    favorite: Boolean(conversation.favorite),
+    tags: normalizeTags(conversation.tags),
+    summary: conversation.summary || null,
+    archived: Boolean(conversation.archived),
+  };
+}
+
+function baseMetaPatch(patch: ConversationMetaPatch) {
+  const updatedAt = patch.updatedAt ?? Date.now();
+  return {
+    ...(typeof patch.title === "string" ? { titulo: patch.title } : {}),
+    updated_at: new Date(updatedAt).toISOString(),
+  };
+}
+
+function fullMetaPatch(patch: ConversationMetaPatch) {
+  return {
+    ...baseMetaPatch(patch),
+    ...(typeof patch.pinned === "boolean" ? { pinned: patch.pinned } : {}),
+    ...(typeof patch.favorite === "boolean" ? { favorite: patch.favorite } : {}),
+    ...(Array.isArray(patch.tags) ? { tags: normalizeTags(patch.tags) } : {}),
+    ...(typeof patch.summary === "string"
+      ? { summary: patch.summary.trim() || null }
+      : {}),
+    ...(typeof patch.archived === "boolean" ? { archived: patch.archived } : {}),
+  };
 }
 
 export function makeSessionId(): string {
@@ -40,6 +143,11 @@ export function createLocalConversation(): Conversation {
     createdAt: now,
     updatedAt: now,
     messages: [],
+    pinned: false,
+    favorite: false,
+    tags: [],
+    summary: "",
+    archived: false,
   };
 }
 
@@ -47,26 +155,28 @@ export async function listConversations(
   supabase: CorvusSupabaseClient,
   userId: string
 ): Promise<Conversation[]> {
-  const { data, error } = await supabase
+  const query = supabase
     .from("msy_conversas")
-    .select("id,titulo,session_id,updated_at")
+    .select(META_CONVERSATION_SELECT)
     .eq("usuario_id", userId)
     .order("updated_at", { ascending: false })
     .limit(60);
+  const { data, error } = await query;
+
+  if (error && isMissingMetadataColumn(error)) {
+    const fallback = await supabase
+      .from("msy_conversas")
+      .select(BASE_CONVERSATION_SELECT)
+      .eq("usuario_id", userId)
+      .order("updated_at", { ascending: false })
+      .limit(60);
+    if (fallback.error) throw fallback.error;
+    return (fallback.data ?? []).map(conversationRowToModel);
+  }
 
   if (error) throw error;
 
-  return (data ?? []).map((row) => {
-    const updatedAt = toTime(row.updated_at);
-    return {
-      id: row.id,
-      title: row.titulo || DEFAULT_TITLE,
-      sessionId: row.session_id || makeSessionId(),
-      createdAt: updatedAt,
-      updatedAt,
-      messages: [],
-    };
-  });
+  return (data ?? []).map(conversationRowToModel);
 }
 
 export async function upsertConversation(
@@ -74,30 +184,52 @@ export async function upsertConversation(
   conversation: Conversation,
   userId: string
 ): Promise<void> {
-  const row = {
-    id: conversation.id,
-    usuario_id: userId,
-    titulo: conversation.title,
-    session_id: conversation.sessionId,
-    updated_at: new Date(conversation.updatedAt).toISOString(),
-  };
-
   const existing = await supabase
     .from("msy_conversas")
     .update({
-      titulo: row.titulo,
-      session_id: row.session_id,
-      updated_at: row.updated_at,
+      ...fullMetaPatch(conversation),
+      session_id: conversation.sessionId,
     })
     .eq("id", conversation.id)
     .eq("usuario_id", userId)
     .select("id")
     .maybeSingle();
 
+  if (existing.error && isMissingMetadataColumn(existing.error)) {
+    const fallbackUpdate = await supabase
+      .from("msy_conversas")
+      .update({
+        titulo: conversation.title,
+        session_id: conversation.sessionId,
+        updated_at: new Date(conversation.updatedAt).toISOString(),
+      })
+      .eq("id", conversation.id)
+      .eq("usuario_id", userId)
+      .select("id")
+      .maybeSingle();
+    if (fallbackUpdate.error) throw fallbackUpdate.error;
+    if (fallbackUpdate.data) return;
+
+    const fallbackInsert = await supabase
+      .from("msy_conversas")
+      .insert(baseConversationRow(conversation, userId));
+    if (fallbackInsert.error) throw fallbackInsert.error;
+    return;
+  }
+
   if (existing.error) throw existing.error;
   if (existing.data) return;
 
-  const inserted = await supabase.from("msy_conversas").insert(row);
+  const inserted = await supabase
+    .from("msy_conversas")
+    .insert(fullConversationRow(conversation, userId));
+  if (inserted.error && isMissingMetadataColumn(inserted.error)) {
+    const fallback = await supabase
+      .from("msy_conversas")
+      .insert(baseConversationRow(conversation, userId));
+    if (fallback.error) throw fallback.error;
+    return;
+  }
   if (inserted.error) throw inserted.error;
 }
 
@@ -125,14 +257,33 @@ export async function updateOwnedConversationMeta(
   title: string,
   updatedAt: number
 ): Promise<void> {
+  await patchOwnedConversationMeta(supabase, conversationId, userId, {
+    title,
+    updatedAt,
+  });
+}
+
+export async function patchOwnedConversationMeta(
+  supabase: CorvusSupabaseClient,
+  conversationId: string,
+  userId: string,
+  patch: ConversationMetaPatch
+): Promise<void> {
   const { error } = await supabase
     .from("msy_conversas")
-    .update({
-      titulo: title,
-      updated_at: new Date(updatedAt).toISOString(),
-    })
+    .update(fullMetaPatch(patch))
     .eq("id", conversationId)
     .eq("usuario_id", userId);
+
+  if (error && isMissingMetadataColumn(error)) {
+    const fallback = await supabase
+      .from("msy_conversas")
+      .update(baseMetaPatch(patch))
+      .eq("id", conversationId)
+      .eq("usuario_id", userId);
+    if (fallback.error) throw fallback.error;
+    return;
+  }
 
   if (error) throw error;
 }

@@ -31,6 +31,11 @@ create table if not exists public.msy_conversas (
   usuario_id text not null,
   titulo text default 'Nova conversa',
   session_id text,
+  pinned boolean default false,
+  favorite boolean default false,
+  tags text[] default '{}',
+  summary text,
+  archived boolean default false,
   updated_at timestamptz default now()
 );
 
@@ -38,6 +43,11 @@ alter table if exists public.msy_conversas
   add column if not exists usuario_id text,
   add column if not exists titulo text default 'Nova conversa',
   add column if not exists session_id text,
+  add column if not exists pinned boolean default false,
+  add column if not exists favorite boolean default false,
+  add column if not exists tags text[] default '{}',
+  add column if not exists summary text,
+  add column if not exists archived boolean default false,
   add column if not exists updated_at timestamptz default now();
 
 do $$
@@ -97,6 +107,15 @@ alter table if exists public.msy_mensagens
 
 create index if not exists msy_conversas_usuario_updated_idx
   on public.msy_conversas (usuario_id, updated_at desc);
+
+create index if not exists msy_conversas_usuario_pinned_idx
+  on public.msy_conversas (usuario_id, pinned, updated_at desc);
+
+create index if not exists msy_conversas_usuario_favorite_idx
+  on public.msy_conversas (usuario_id, favorite, updated_at desc);
+
+create index if not exists msy_conversas_usuario_archived_idx
+  on public.msy_conversas (usuario_id, archived, updated_at desc);
 
 create index if not exists msy_mensagens_conversa_created_idx
   on public.msy_mensagens (conversa_id, created_at asc);

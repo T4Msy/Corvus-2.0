@@ -76,6 +76,11 @@ export interface Conversation {
   createdAt: number;
   updatedAt: number;
   messages: ChatMessage[];
+  pinned?: boolean;
+  favorite?: boolean;
+  tags?: string[];
+  summary?: string;
+  archived?: boolean;
 }
 
 export type ThemePreference = "dark" | "light" | "system";

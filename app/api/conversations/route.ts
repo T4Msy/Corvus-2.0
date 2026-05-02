@@ -24,6 +24,19 @@ function asNumber(value: unknown, fallback: number): number {
     : fallback;
 }
 
+function asBoolean(value: unknown, fallback = false): boolean {
+  return typeof value === "boolean" ? value : fallback;
+}
+
+function asTags(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
 function errorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (err && typeof err === "object" && "message" in err) {
@@ -69,6 +82,11 @@ export async function POST(req: Request) {
     createdAt: asNumber(body.createdAt, now),
     updatedAt: asNumber(body.updatedAt, now),
     messages: [],
+    pinned: asBoolean(body.pinned),
+    favorite: asBoolean(body.favorite),
+    tags: asTags(body.tags),
+    summary: asString(body.summary, ""),
+    archived: asBoolean(body.archived),
   };
 
   try {

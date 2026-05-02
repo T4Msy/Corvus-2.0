@@ -43,6 +43,15 @@ function asNumber(value: unknown, fallback: number): number {
     : fallback;
 }
 
+function asTags(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
 function parseConversation(
   raw: unknown,
   conversationId: string,
@@ -67,6 +76,11 @@ function parseConversation(
     createdAt: asNumber(value.createdAt, updatedAt),
     updatedAt,
     messages: [],
+    pinned: typeof value.pinned === "boolean" ? value.pinned : false,
+    favorite: typeof value.favorite === "boolean" ? value.favorite : false,
+    tags: asTags(value.tags),
+    summary: typeof value.summary === "string" ? value.summary : "",
+    archived: typeof value.archived === "boolean" ? value.archived : false,
   };
 }
 
