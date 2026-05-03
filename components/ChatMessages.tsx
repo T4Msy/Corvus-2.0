@@ -83,52 +83,62 @@ interface Props {
 
 const SUGGESTION_POOL = [
   {
-    label: "Síntese institucional",
+    tag: "Síntese",
+    label: "Resumo institucional",
     prompt:
       "Sintetize a estrutura da Ordem Masayoshi em blocos objetivos, com riscos e próximos passos.",
   },
   {
-    label: "Plano de ação",
+    tag: "Plano",
+    label: "Construir plano de ação",
     prompt:
       "Monte um plano de ação para a operação atual da MSY com prioridades e sequência.",
   },
   {
-    label: "Análise de decisão",
+    tag: "Decisão",
+    label: "Avaliar uma decisão",
     prompt:
       "Ajude a analisar uma decisão importante usando critérios, tradeoffs e recomendação.",
   },
   {
-    label: "Revisão de texto",
+    tag: "Revisão",
+    label: "Refinar comunicação",
     prompt:
       "Revise o texto a seguir para ficar mais claro, institucional e objetivo.",
   },
   {
+    tag: "Análise",
     label: "Resumo executivo",
     prompt:
       "Elabore um resumo executivo do contexto atual da MSY — estado, prioridades e riscos.",
   },
   {
-    label: "Brainstorming",
+    tag: "Estratégia",
+    label: "Ideias estratégicas",
     prompt:
       "Gere 8 ideias estratégicas para expandir a atuação institucional da MSY no próximo trimestre.",
   },
   {
-    label: "Análise de risco",
+    tag: "Risco",
+    label: "Mapeamento de riscos",
     prompt:
       "Mapeie os principais riscos operacionais e estratégicos e sugira mitigações objetivas.",
   },
   {
-    label: "Estrutura de reunião",
+    tag: "Reunião",
+    label: "Pauta estruturada",
     prompt:
       "Monte uma pauta estruturada para uma reunião de alinhamento estratégico — objetivos, tópicos e encaminhamentos.",
   },
   {
+    tag: "Processo",
     label: "Diagnóstico de processo",
     prompt:
       "Analise um processo interno e identifique gargalos, redundâncias e oportunidades de melhoria.",
   },
   {
-    label: "Comunicado interno",
+    tag: "Comunicado",
+    label: "Redigir comunicado",
     prompt:
       "Redija um comunicado interno claro e objetivo sobre uma mudança ou decisão recente.",
   },
@@ -256,8 +266,11 @@ export function ChatMessages({
                 className="suggestion-pill"
                 onClick={() => onSuggest(s.prompt)}
               >
-                <Sparkles size={13} />
-                <span>{s.label}</span>
+                <span className="suggestion-pill-label">
+                  <Sparkles size={10} />
+                  {s.tag}
+                </span>
+                <span className="suggestion-pill-title">{s.label}</span>
               </button>
             ))}
           </div>
