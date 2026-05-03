@@ -58,6 +58,7 @@ import {
   uploadUserFile,
 } from "@/integrations/supabase/storage";
 import { exportConversationAsMarkdown } from "@/lib/export";
+import { getGreeting } from "@/lib/utils/getGreeting";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import type {
   AgentMode,
@@ -78,6 +79,8 @@ const HISTORY_FILTERS: Array<{ value: HistoryFilter; label: string }> = [
   { value: "tagged", label: "Tags" },
   { value: "archived", label: "Arquivo" },
 ];
+
+const GREETING_REFRESH_MS = 60 * 1000;
 
 export function ChatApp() {
   const { preference, setPreference, logoSrc } = useTheme();
@@ -106,6 +109,7 @@ export function ChatApp() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmDeleteAllOpen, setConfirmDeleteAllOpen] = useState(false);
   const [topbarEditing, setTopbarEditing] = useState(false);
+  const [welcomeGreeting, setWelcomeGreeting] = useState("Olá.");
   const [historyLoading, setHistoryLoading] = useState(false);
   const [sendBusy, setSendBusy] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
@@ -157,6 +161,14 @@ export function ChatApp() {
     auth.profile?.nome ||
     (auth.status === "guest" ? "Convidado" : "Operador");
 
+  const greetingName = useMemo(
+    () =>
+      auth.status === "guest"
+        ? null
+        : auth.profile?.nome_interno || auth.profile?.nome || null,
+    [auth.profile?.nome, auth.profile?.nome_interno, auth.status]
+  );
+
   const userContext: UserContext = useMemo(
     () => ({
       nome: userName,
@@ -167,6 +179,14 @@ export function ChatApp() {
     }),
     [auth.profile, auth.status, userName]
   );
+
+  useEffect(() => {
+    const updateGreeting = () => setWelcomeGreeting(getGreeting(greetingName));
+    updateGreeting();
+
+    const interval = window.setInterval(updateGreeting, GREETING_REFRESH_MS);
+    return () => window.clearInterval(interval);
+  }, [greetingName]);
 
   // Reset chat ao deslogar
   useEffect(() => {
@@ -1629,11 +1649,7 @@ export function ChatApp() {
             profile={auth.profile}
             logoSrc={logoSrc}
             showWelcome
-            welcomeName={
-              auth.status === "guest"
-                ? "Olá. Sou Corvus."
-                : `Olá, ${userName}`
-            }
+            welcomeName={welcomeGreeting}
             welcomeSubtitle="Pergunte algo. Ou escolha uma sugestão."
             onSuggest={requestSend}
             onEditMessage={
