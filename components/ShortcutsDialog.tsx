@@ -14,6 +14,7 @@ const SECTIONS: Array<{ title: string; shortcuts: Shortcut[] }> = [
     title: "Navegação",
     shortcuts: [
       { keys: ["Ctrl", "K"], label: "Abrir paleta de comandos" },
+      { keys: ["Ctrl", "F"], label: "Buscar na conversa atual" },
       { keys: ["?"], label: "Mostrar atalhos de teclado" },
       { keys: ["Esc"], label: "Fechar painel / cancelar ação" },
     ],
@@ -28,6 +29,7 @@ const SECTIONS: Array<{ title: string; shortcuts: Shortcut[] }> = [
   {
     title: "Conversa",
     shortcuts: [
+      { keys: ["Novo chat"], label: "Abrir rascunho sem criar conversa vazia" },
       { keys: ["Clique no título"], label: "Renomear conversa inline" },
     ],
   },

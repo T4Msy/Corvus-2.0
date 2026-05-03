@@ -6,6 +6,7 @@ import {
 } from "@/integrations/supabase/request";
 import {
   createLocalConversation,
+  deleteAllOwnedConversationRecords,
   listConversations,
   upsertConversation,
 } from "@/integrations/supabase/conversations";
@@ -96,6 +97,22 @@ export async function POST(req: Request) {
     return apiError(
       "conversation_create_failed",
       `Nao foi possivel criar conversa: ${errorMessage(err)}`,
+      500
+    );
+  }
+}
+
+export async function DELETE(req: Request) {
+  const context = await getSupabaseRequestContext(req);
+  if (isApiError(context)) return context;
+
+  try {
+    await deleteAllOwnedConversationRecords(context.db, context.userId);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    return apiError(
+      "conversations_delete_failed",
+      err instanceof Error ? err.message : "Nao foi possivel excluir conversas.",
       500
     );
   }

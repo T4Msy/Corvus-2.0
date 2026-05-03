@@ -351,6 +351,35 @@ export async function deleteOwnedConversationRecord(
   if (conversationDelete.error) throw conversationDelete.error;
 }
 
+export async function deleteAllOwnedConversationRecords(
+  supabase: CorvusSupabaseClient,
+  userId: string
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("msy_conversas")
+    .select("id")
+    .eq("usuario_id", userId);
+
+  if (error) throw error;
+
+  const ids = (data ?? []).map((row) => row.id as string);
+  if (ids.length === 0) return;
+
+  const messageDelete = await supabase
+    .from("msy_mensagens")
+    .delete()
+    .in("conversa_id", ids);
+
+  if (messageDelete.error) throw messageDelete.error;
+
+  const conversationDelete = await supabase
+    .from("msy_conversas")
+    .delete()
+    .eq("usuario_id", userId);
+
+  if (conversationDelete.error) throw conversationDelete.error;
+}
+
 export async function deleteConversationRecord(
   supabase: CorvusSupabaseClient,
   conversationId: string

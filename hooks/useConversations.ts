@@ -80,6 +80,19 @@ export function useConversations(auth: AuthLike) {
     }
   }, []);
 
+  const clearLocal = useCallback(() => {
+    try {
+      window.localStorage.removeItem(LOCAL_KEY);
+    } catch {
+      /* localStorage indisponivel */
+    }
+  }, []);
+
+  const clearActiveConversation = useCallback(() => {
+    setActiveConversationId(null);
+    setError(null);
+  }, []);
+
   const refresh = useCallback(async () => {
     if (auth.status === "loading" || auth.status === "anon") {
       setConversations([]);
@@ -578,6 +591,55 @@ export function useConversations(auth: AuthLike) {
     ]
   );
 
+  const deleteAllConversations = useCallback(async (): Promise<void> => {
+    setConversations([]);
+    conversationsRef.current = [];
+    setActiveConversationId(null);
+    setError(null);
+    setLastSyncError(null);
+
+    if (auth.status === "guest") clearLocal();
+    setSyncStatus(
+      auth.status === "authed" && auth.supabaseReady
+        ? online
+          ? "saving"
+          : "offline"
+        : "saved"
+    );
+
+    if (auth.status !== "authed" || !auth.supabaseReady) return;
+
+    const remoteAction = async () => {
+      await conversationsApi("/api/conversations", auth.accessToken, {
+        method: "DELETE",
+      });
+    };
+    lastSyncActionRef.current = remoteAction;
+
+    if (!online) {
+      failSync("Conversas removidas localmente. Sincronize quando voltar online.", "offline");
+      return;
+    }
+
+    try {
+      await remoteAction();
+      lastSyncActionRef.current = null;
+      setLastSyncError(null);
+      setSyncStatus("saved");
+    } catch (err) {
+      failSync(
+        err instanceof Error ? err.message : "Nao foi possivel excluir conversas."
+      );
+    }
+  }, [
+    auth.accessToken,
+    auth.status,
+    auth.supabaseReady,
+    clearLocal,
+    failSync,
+    online,
+  ]);
+
   const ingestRealtimeMessage = useCallback(
     (conversationId: string, message: ChatMessage) => {
       const updatedAt = message.createdAt || Date.now();
@@ -615,11 +677,13 @@ export function useConversations(auth: AuthLike) {
     online,
     refresh,
     retrySync,
+    clearActiveConversation,
     createConversation,
     selectConversation,
     persistMessage,
     updateConversation,
     batchDeleteConversations,
+    deleteAllConversations,
     ingestRealtimeMessage,
     deleteConversation,
   };

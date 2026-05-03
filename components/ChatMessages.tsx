@@ -30,6 +30,7 @@ import hljsTs from "highlight.js/lib/languages/typescript";
 import hljsXml from "highlight.js/lib/languages/xml";
 import hljsYaml from "highlight.js/lib/languages/yaml";
 import type { ChatMessage, UserProfile } from "@/lib/types";
+import type { MessageSearchMatch } from "@/hooks/useMessageSearch";
 
 hljs.registerLanguage("bash", hljsBash);
 hljs.registerLanguage("sh", hljsBash);
@@ -79,6 +80,9 @@ interface Props {
   welcomeSubtitle?: string;
   onSuggest: (prompt: string) => void;
   onEditMessage?: (createdAt: number, newText: string) => void;
+  searchQuery?: string;
+  searchMatches?: MessageSearchMatch[];
+  activeSearchMatchId?: string | null;
 }
 
 const SUGGESTION_POOL = [
@@ -162,6 +166,9 @@ export function ChatMessages({
   welcomeSubtitle,
   onSuggest,
   onEditMessage,
+  searchQuery = "",
+  searchMatches = [],
+  activeSearchMatchId = null,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true);
@@ -171,12 +178,23 @@ export function ChatMessages({
   useEffect(() => {
     const c = containerRef.current;
     if (!c) return;
+    if (activeSearchMatchId) return;
     const lastMessage = messages[messages.length - 1];
     if (lastMessage?.role === "user" || atBottomRef.current || messages.length <= 1) {
       c.scrollTo({ top: c.scrollHeight, behavior: messages.length > 1 ? "smooth" : "auto" });
       setShowScrollBtn(false);
     }
-  }, [messages, pending, error]);
+  }, [messages, pending, error, activeSearchMatchId]);
+
+  useEffect(() => {
+    if (!activeSearchMatchId) return;
+    const c = containerRef.current;
+    if (!c) return;
+    const target = c.querySelector(
+      `[data-search-match-id="${escapeAttribute(activeSearchMatchId)}"]`
+    );
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [activeSearchMatchId]);
 
   function handleScroll() {
     const c = containerRef.current;
@@ -284,10 +302,16 @@ export function ChatMessages({
           ) : (
             <MessageBubble
               key={item.key}
+              messageKey={item.key}
               message={item.message}
               logoSrc={logoSrc}
               userInitial={userInitial}
               onAction={onSuggest}
+              searchQuery={searchQuery}
+              searchMatches={searchMatches.filter(
+                (match) => match.messageKey === item.key
+              )}
+              activeSearchMatchId={activeSearchMatchId}
               canEdit={
                 !pending &&
                 item.message.role === "user" &&
@@ -341,19 +365,27 @@ export function ChatMessages({
 }
 
 function MessageBubble({
+  messageKey,
   message,
   logoSrc,
   userInitial,
   onAction,
   canEdit,
   onEditMessage,
+  searchQuery,
+  searchMatches,
+  activeSearchMatchId,
 }: {
+  messageKey: string;
   message: ChatMessage;
   logoSrc: string;
   userInitial: string;
   onAction: (prompt: string) => void;
   canEdit?: boolean;
   onEditMessage?: (createdAt: number, newText: string) => void;
+  searchQuery: string;
+  searchMatches: MessageSearchMatch[];
+  activeSearchMatchId: string | null;
 }) {
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -391,6 +423,17 @@ function MessageBubble({
     container.addEventListener("click", handleCodeCopy);
     return () => container.removeEventListener("click", handleCodeCopy);
   }, [html]);
+
+  useEffect(() => {
+    const container = markdownRef.current;
+    if (!container) return;
+    applyMarkdownSearchHighlights(
+      container,
+      searchQuery,
+      searchMatches,
+      activeSearchMatchId
+    );
+  }, [html, searchQuery, searchMatches, activeSearchMatchId]);
 
   async function copyMessage() {
     try {
@@ -481,7 +524,13 @@ function MessageBubble({
           </div>
         ) : (
           <div className="message-user-wrap">
-            <p className="message-text">{message.text}</p>
+            <p className="message-text">
+              <HighlightedText
+                text={message.text}
+                matches={searchMatches}
+                activeSearchMatchId={activeSearchMatchId}
+              />
+            </p>
             {canEdit && (
               <button
                 type="button"
@@ -535,6 +584,43 @@ function MessageBubble({
       </div>
     </motion.article>
   );
+}
+
+function HighlightedText({
+  text,
+  matches,
+  activeSearchMatchId,
+}: {
+  text: string;
+  matches: MessageSearchMatch[];
+  activeSearchMatchId: string | null;
+}) {
+  if (matches.length === 0) return <>{text}</>;
+
+  const parts: React.ReactNode[] = [];
+  let cursor = 0;
+  matches.forEach((match) => {
+    if (match.start > cursor) {
+      parts.push(text.slice(cursor, match.start));
+    }
+    parts.push(
+      <mark
+        key={match.id}
+        className={
+          match.id === activeSearchMatchId
+            ? "message-search-hit active"
+            : "message-search-hit"
+        }
+        data-search-match-id={match.id}
+      >
+        {text.slice(match.start, match.end)}
+      </mark>
+    );
+    cursor = match.end;
+  });
+  if (cursor < text.length) parts.push(text.slice(cursor));
+
+  return <>{parts}</>;
 }
 
 function MessageAction({
@@ -677,4 +763,75 @@ function renderSafeMarkdown(text: string): string {
   });
 
   return document.body.innerHTML;
+}
+
+function applyMarkdownSearchHighlights(
+  container: HTMLElement,
+  query: string,
+  matches: MessageSearchMatch[],
+  activeSearchMatchId: string | null
+) {
+  container.querySelectorAll("mark.message-search-hit").forEach((mark) => {
+    mark.replaceWith(document.createTextNode(mark.textContent ?? ""));
+  });
+  container.normalize();
+
+  const term = query.trim().toLowerCase();
+  if (!term || matches.length === 0) return;
+
+  let matchIndex = 0;
+  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const parent = node.parentElement;
+      if (!parent || !node.textContent?.toLowerCase().includes(term)) {
+        return NodeFilter.FILTER_REJECT;
+      }
+      if (parent.closest("pre, code, button, .code-lang")) {
+        return NodeFilter.FILTER_REJECT;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+
+  const textNodes: Text[] = [];
+  while (walker.nextNode()) {
+    textNodes.push(walker.currentNode as Text);
+  }
+
+  for (const node of textNodes) {
+    const original = node.textContent ?? "";
+    const lower = original.toLowerCase();
+    const fragment = document.createDocumentFragment();
+    let cursor = 0;
+    let index = lower.indexOf(term);
+
+    while (index !== -1) {
+      if (index > cursor) {
+        fragment.append(document.createTextNode(original.slice(cursor, index)));
+      }
+
+      const match = matches[matchIndex];
+      const mark = document.createElement("mark");
+      mark.className =
+        match?.id === activeSearchMatchId
+          ? "message-search-hit active"
+          : "message-search-hit";
+      if (match) mark.dataset.searchMatchId = match.id;
+      mark.textContent = original.slice(index, index + term.length);
+      fragment.append(mark);
+
+      matchIndex += 1;
+      cursor = index + term.length;
+      index = lower.indexOf(term, cursor);
+    }
+
+    if (cursor < original.length) {
+      fragment.append(document.createTextNode(original.slice(cursor)));
+    }
+    node.replaceWith(fragment);
+  }
+}
+
+function escapeAttribute(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }

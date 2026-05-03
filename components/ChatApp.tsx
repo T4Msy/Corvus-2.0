@@ -9,6 +9,8 @@ import {
   ArchiveRestore,
   Check,
   CheckSquare,
+  ChevronDown,
+  ChevronUp,
   Command,
   Download,
   ExternalLink,
@@ -41,6 +43,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useChat } from "@/hooks/useChat";
 import { useConversationAttachments } from "@/hooks/useConversationAttachments";
 import { useConversations } from "@/hooks/useConversations";
+import { useMessageSearch } from "@/hooks/useMessageSearch";
 import { usePreferences } from "@/hooks/usePreferences";
 import { useStorageUrl } from "@/hooks/useStorageUrl";
 import { useTheme } from "@/hooks/useTheme";
@@ -101,15 +104,19 @@ export function ChatApp() {
   const [detailsSummary, setDetailsSummary] = useState("");
   const [detailsTagInput, setDetailsTagInput] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmDeleteAllOpen, setConfirmDeleteAllOpen] = useState(false);
   const [topbarEditing, setTopbarEditing] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [sendBusy, setSendBusy] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [seenAt, setSeenAt] = useState<Record<string, number>>({});
   const seenInitializedRef = useRef(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const loadedConversationRef = useRef<string | null>(null);
-  const creatingConversationRef = useRef(false);
+  const creatingConversationRef = useRef<Promise<Conversation> | null>(null);
+  const messageSearchInputRef = useRef<HTMLInputElement>(null);
+  const sendBusyRef = useRef(false);
   const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
   const lastSyncStatusRef = useRef<SyncStatus>("idle");
   const wasOnlineRef = useRef(true);
@@ -169,35 +176,6 @@ export function ChatApp() {
     }
   }, [auth.status, chat.reset]);
 
-  // Garante uma conversa ativa quando o usuário entra
-  useEffect(() => {
-    if (
-      (auth.status === "authed" || auth.status === "guest") &&
-      !conversations.loading &&
-      !conversations.activeConversationId &&
-      conversations.conversations.length === 0
-    ) {
-      if (creatingConversationRef.current) return;
-      creatingConversationRef.current = true;
-      void conversations
-        .createConversation()
-        .then((conversation) => {
-          loadedConversationRef.current = conversation.id;
-          chat.setHistory([]);
-        })
-        .finally(() => {
-          creatingConversationRef.current = false;
-        });
-    }
-  }, [
-    auth.status,
-    chat.setHistory,
-    conversations.activeConversationId,
-    conversations.conversations.length,
-    conversations.createConversation,
-    conversations.loading,
-  ]);
-
   // Carrega histórico quando a conversa ativa muda
   useEffect(() => {
     if (auth.status !== "authed" && auth.status !== "guest") return;
@@ -225,6 +203,11 @@ export function ChatApp() {
       }
       const tag = (event.target as HTMLElement)?.tagName;
       const isEditing = tag === "INPUT" || tag === "TEXTAREA" || (event.target as HTMLElement)?.isContentEditable;
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "f" && !isEditing) {
+        event.preventDefault();
+        messageSearchInputRef.current?.focus();
+        return;
+      }
       if (event.key === "?" && !isEditing) {
         event.preventDefault();
         setShortcutsOpen((current) => !current);
@@ -462,8 +445,30 @@ export function ChatApp() {
     [conversations.conversations]
   );
 
+  const messageSearch = useMessageSearch(chat.messages);
+
+  const ensureConversationForSend = useCallback(async (): Promise<Conversation> => {
+    if (conversations.activeConversation) return conversations.activeConversation;
+    if (creatingConversationRef.current) return creatingConversationRef.current;
+
+    const creation = conversations
+      .createConversation()
+      .then((conversation) => {
+        loadedConversationRef.current = conversation.id;
+        chat.setHistory([]);
+        return conversation;
+      })
+      .finally(() => {
+        creatingConversationRef.current = null;
+      });
+
+    creatingConversationRef.current = creation;
+    return creation;
+  }, [chat, conversations]);
+
   const send = useCallback(
     async (text: string) => {
+      if (sendBusyRef.current) return;
       if (!conversations.online) {
         toast.push({
           tone: "warning",
@@ -472,33 +477,35 @@ export function ChatApp() {
         });
         return;
       }
-      let active = conversations.activeConversation;
-      if (!active) {
-        active = await conversations.createConversation();
-        loadedConversationRef.current = active.id;
-        chat.setHistory([]);
-      }
-      const conversation = active;
+      sendBusyRef.current = true;
+      setSendBusy(true);
+      try {
+        const conversation = await ensureConversationForSend();
 
-      void chat.send({
-        text,
-        mode,
-        conversationId: conversation.id,
-        sessionId: conversation.sessionId,
-        userId: auth.userId,
-        userContext,
-        accessToken: auth.accessToken,
-        onUserMessage: (message) =>
-          conversations.persistMessage(conversation.id, message),
-        onAssistantMessage: (message) =>
-          conversations.persistMessage(conversation.id, message),
-      });
+        await chat.send({
+          text,
+          mode,
+          conversationId: conversation.id,
+          sessionId: conversation.sessionId,
+          userId: auth.userId,
+          userContext,
+          accessToken: auth.accessToken,
+          onUserMessage: (message) =>
+            conversations.persistMessage(conversation.id, message),
+          onAssistantMessage: (message) =>
+            conversations.persistMessage(conversation.id, message),
+        });
+      } finally {
+        sendBusyRef.current = false;
+        setSendBusy(false);
+      }
     },
     [
       auth.accessToken,
       auth.userId,
       chat,
       conversations,
+      ensureConversationForSend,
       mode,
       toast,
       userContext,
@@ -524,12 +531,21 @@ export function ChatApp() {
   );
 
   const createConversation = useCallback(async () => {
-    const conversation = await conversations.createConversation();
-    loadedConversationRef.current = conversation.id;
+    conversations.clearActiveConversation();
+    loadedConversationRef.current = null;
+    messageSearch.clear();
     chat.setHistory([]);
+    setDetailsOpen(false);
+    setTopbarEditing(false);
+    setOpenMenuId(null);
+    setTagEditorId(null);
+    setConfirmDeleteId(null);
+    setConfirmDeleteAllOpen(false);
+    setSelectionMode(false);
+    setSelectedIds(new Set());
     setSidebarOpen(false);
     setCommandOpen(false);
-  }, [chat, conversations]);
+  }, [chat, conversations, messageSearch]);
 
   const selectConversation = useCallback(
     async (conversationId: string) => {
@@ -657,11 +673,11 @@ export function ChatApp() {
         return;
       }
 
-      const created = await conversations.createConversation();
-      loadedConversationRef.current = created.id;
+      loadedConversationRef.current = null;
       chat.setHistory([]);
+      messageSearch.clear();
     },
-    [chat, conversations]
+    [chat, conversations, messageSearch]
   );
 
   const toggleSelection = useCallback((id: string) => {
@@ -694,12 +710,33 @@ export function ChatApp() {
         const history = await conversations.selectConversation(nextId);
         chat.setHistory(history);
       } else {
-        const created = await conversations.createConversation();
-        loadedConversationRef.current = created.id;
+        loadedConversationRef.current = null;
         chat.setHistory([]);
+        messageSearch.clear();
       }
     }
-  }, [selectedIds, conversations, exitSelectionMode, chat]);
+  }, [selectedIds, conversations, exitSelectionMode, chat, messageSearch]);
+
+  const handleDeleteAllConversations = useCallback(async () => {
+    setConfirmDeleteAllOpen(false);
+    exitSelectionMode();
+    setOpenMenuId(null);
+    setTagEditorId(null);
+    setConfirmDeleteId(null);
+    setDetailsOpen(false);
+    setQuery("");
+    setSearchResults(null);
+    setSeenAt({});
+    loadedConversationRef.current = null;
+    await conversations.deleteAllConversations();
+    chat.setHistory([]);
+    messageSearch.clear();
+    toast.push({
+      tone: "success",
+      title: "Conversas apagadas",
+      message: "O histórico local foi limpo.",
+    });
+  }, [chat, conversations, exitSelectionMode, messageSearch, toast]);
 
   const handleEditMessage = useCallback(
     async (originalCreatedAt: number, newText: string) => {
@@ -897,10 +934,12 @@ export function ChatApp() {
 
       let conversationId = conversations.activeConversationId;
       if (!conversationId) {
-        const conversation = await conversations.createConversation();
-        conversationId = conversation.id;
-        loadedConversationRef.current = conversation.id;
-        chat.setHistory([]);
+        toast.push({
+          tone: "warning",
+          title: "Conversa ainda não criada",
+          message: "Envie a primeira mensagem antes de anexar arquivos.",
+        });
+        return;
       }
 
       const attachment = await attachments.upload(file, conversationId);
@@ -1054,6 +1093,16 @@ export function ChatApp() {
           </button>
         </div>
 
+        <button
+          type="button"
+          className="delete-all-conversations-button"
+          disabled={conversations.conversations.length === 0}
+          onClick={() => setConfirmDeleteAllOpen(true)}
+        >
+          <Trash2 size={13} />
+          <span>Apagar todas as conversas</span>
+        </button>
+
         <div className="conversation-stack">
           {conversations.loading && conversations.conversations.length === 0 && (
             <div className="skeleton-conversation-list">
@@ -1075,7 +1124,7 @@ export function ChatApp() {
                   ? "Nada encontrado"
                   : historyFilter === "archived"
                     ? "Nenhuma conversa arquivada"
-                    : "Nenhuma conversa neste filtro"}
+                    : "Envie uma mensagem para criar a primeira conversa"}
               </span>
             </div>
           )}
@@ -1457,7 +1506,7 @@ export function ChatApp() {
                 onClick={startTopbarRename}
                 disabled={!conversations.activeConversation}
               >
-                {conversations.activeConversation?.title ?? "Nova conversa"}
+                {conversations.activeConversation?.title ?? "Novo chat"}
               </button>
             )}
             <span className="topbar-mode">
@@ -1465,6 +1514,54 @@ export function ChatApp() {
             </span>
             <SyncPill status={conversations.syncStatus} />
           </div>
+
+          <label className="conversation-message-search" htmlFor="message-search">
+            <Search size={14} />
+            <input
+              ref={messageSearchInputRef}
+              id="message-search"
+              type="search"
+              placeholder="Buscar na conversa"
+              value={messageSearch.query}
+              disabled={chat.messages.length === 0}
+              onChange={(event) => messageSearch.setQuery(event.target.value)}
+            />
+            {messageSearch.query && (
+              <>
+                <span className="message-search-count">
+                  {messageSearch.total > 0
+                    ? `${messageSearch.activeIndex + 1}/${messageSearch.total}`
+                    : "0/0"}
+                </span>
+                <button
+                  type="button"
+                  title="Resultado anterior"
+                  aria-label="Resultado anterior"
+                  disabled={messageSearch.total === 0}
+                  onClick={messageSearch.previous}
+                >
+                  <ChevronUp size={13} />
+                </button>
+                <button
+                  type="button"
+                  title="Próximo resultado"
+                  aria-label="Próximo resultado"
+                  disabled={messageSearch.total === 0}
+                  onClick={messageSearch.next}
+                >
+                  <ChevronDown size={13} />
+                </button>
+                <button
+                  type="button"
+                  title="Limpar busca"
+                  aria-label="Limpar busca"
+                  onClick={messageSearch.clear}
+                >
+                  <X size={13} />
+                </button>
+              </>
+            )}
+          </label>
 
           <div className="topbar-actions">
             <button
@@ -1494,6 +1591,7 @@ export function ChatApp() {
               className="icon-button"
               title="Detalhes da conversa"
               aria-label="Abrir detalhes da conversa"
+              disabled={!conversations.activeConversation}
               onClick={() => setDetailsOpen(true)}
             >
               <Info size={17} />
@@ -1543,6 +1641,9 @@ export function ChatApp() {
                 ? handleEditMessage
                 : undefined
             }
+            searchQuery={messageSearch.normalizedQuery}
+            searchMatches={messageSearch.matches}
+            activeSearchMatchId={messageSearch.activeMatch?.id ?? null}
           />
           <ChatInput
             mode={mode}
@@ -1553,20 +1654,25 @@ export function ChatApp() {
               toast.push({
                 tone: "warning",
                 title:
-                  auth.status === "guest"
+                  !conversations.activeConversationId
+                    ? "Conversa ainda não criada"
+                    : auth.status === "guest"
                     ? "Login necessário"
                     : "Anexo indisponível",
                 message:
-                  auth.status === "guest"
+                  !conversations.activeConversationId
+                    ? "Envie a primeira mensagem antes de anexar arquivos."
+                    : auth.status === "guest"
                     ? "Entre com sua conta para anexar arquivos."
                     : "Reconecte para anexar arquivos.",
               });
             }}
-            disabled={chat.pending}
+            disabled={chat.pending || sendBusy}
             attachmentDisabled={
               auth.status !== "authed" ||
               !auth.supabaseReady ||
-              !conversations.online
+              !conversations.online ||
+              !conversations.activeConversationId
             }
             attachmentBusy={attachments.busy}
             syncStatus={conversations.syncStatus}
@@ -1875,6 +1981,73 @@ export function ChatApp() {
         open={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}
       />
+
+      <AnimatePresence>
+        {confirmDeleteAllOpen && (
+          <motion.div
+            className="dialog-backdrop"
+            role="presentation"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={() => setConfirmDeleteAllOpen(false)}
+          >
+            <motion.div
+              className="dialog-panel danger-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Apagar todas as conversas"
+              initial={{ opacity: 0, y: 16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.98 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <header className="dialog-header">
+                <div>
+                  <h2>Apagar todas as conversas?</h2>
+                  <p>
+                    {conversations.conversations.length} conversa
+                    {conversations.conversations.length === 1 ? "" : "s"} serão removidas
+                    deste histórico.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="dialog-close"
+                  aria-label="Fechar"
+                  onClick={() => setConfirmDeleteAllOpen(false)}
+                >
+                  <X size={18} />
+                </button>
+              </header>
+              <div className="dialog-section">
+                <div className="dialog-alert">
+                  <AlertCircle size={15} />
+                  <span>Esta ação limpa a lista, mensagens carregadas e estado local.</span>
+                </div>
+                <div className="dialog-field-actions">
+                  <button
+                    type="button"
+                    className="secondary-action"
+                    onClick={() => setConfirmDeleteAllOpen(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className="danger-action"
+                    onClick={() => void handleDeleteAllConversations()}
+                  >
+                    Apagar todas
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
