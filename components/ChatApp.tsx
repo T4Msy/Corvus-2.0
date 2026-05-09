@@ -1546,7 +1546,7 @@ export function ChatApp() {
             </button>
 
             <div className="topbar-conversation">
-              <span className="topbar-kicker">Conversa ativa</span>
+              <span className="topbar-kicker">Workspace ativo</span>
               <div className="topbar-title">
                 {topbarEditing ? (
                   <form
@@ -1587,7 +1587,7 @@ export function ChatApp() {
 
           <div className="topbar-status-board" aria-label="Estado da sessão">
             <span className="topbar-mode">
-              {mode === "fenrir" ? "Fenrir" : "Corvus"}
+              {mode === "fenrir" ? "Fenrir · criativo" : "Corvus · preciso"}
             </span>
             <SyncPill status={conversations.syncStatus} />
           </div>

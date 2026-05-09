@@ -126,6 +126,10 @@ export function ChatInput({
             onChange={(event) => setValue(event.target.value)}
             onKeyDown={handleKeyDown}
           />
+          <div className="composer-input-meta" aria-hidden="true">
+            <span>{mode === "fenrir" ? "Modo Fenrir" : "Modo Corvus"}</span>
+            <small>Enter cria linha · Ctrl+Enter envia</small>
+          </div>
         </div>
 
         <div className="composer-toolbar">
@@ -156,6 +160,7 @@ export function ChatInput({
               }}
             >
               {attachmentBusy ? <Loader2 size={16} /> : <Plus size={18} />}
+              <span>{attachmentBusy ? "Enviando" : "Arquivo"}</span>
             </button>
             <SyncStatus status={syncStatus} />
           </div>
@@ -228,6 +233,7 @@ export function ChatInput({
               ) : (
                 <Send size={16} />
               )}
+              <span>{sendLocked ? "Enviando" : "Enviar"}</span>
             </button>
           </div>
         </div>

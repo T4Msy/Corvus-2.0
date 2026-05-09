@@ -127,6 +127,13 @@ export function CommandPalette({
   const panelRef = useRef<HTMLDivElement>(null);
   const restoreFocusRef = useRef<HTMLElement | null>(null);
 
+  function getCommandItems() {
+    if (!panelRef.current) return [] as HTMLButtonElement[];
+    return Array.from(
+      panelRef.current.querySelectorAll<HTMLButtonElement>("button.command-item")
+    );
+  }
+
   useEffect(() => {
     if (!open) {
       setQuery("");
@@ -142,6 +149,45 @@ export function CommandPalette({
         onClose();
         return;
       }
+
+      const commandItems = getCommandItems();
+      const active = document.activeElement as HTMLElement | null;
+
+      if (event.key === "ArrowDown") {
+        if (commandItems.length === 0) return;
+        event.preventDefault();
+        if (active === inputRef.current) {
+          commandItems[0]?.focus();
+          return;
+        }
+        const currentIndex = commandItems.findIndex((item) => item === active);
+        const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % commandItems.length;
+        commandItems[nextIndex]?.focus();
+        return;
+      }
+
+      if (event.key === "ArrowUp") {
+        if (commandItems.length === 0) return;
+        event.preventDefault();
+        if (active === inputRef.current) {
+          commandItems[commandItems.length - 1]?.focus();
+          return;
+        }
+        const currentIndex = commandItems.findIndex((item) => item === active);
+        const nextIndex = currentIndex <= 0 ? commandItems.length - 1 : currentIndex - 1;
+        commandItems[nextIndex]?.focus();
+        return;
+      }
+
+      if (event.key === "Enter" && active === inputRef.current) {
+        const firstItem = commandItems[0];
+        if (firstItem) {
+          event.preventDefault();
+          firstItem.click();
+        }
+        return;
+      }
+
       if (event.key !== "Tab") return;
       const panel = panelRef.current;
       if (!panel) return;
@@ -153,7 +199,6 @@ export function CommandPalette({
       if (focusable.length === 0) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
-      const active = document.activeElement as HTMLElement | null;
 
       if (event.shiftKey && active === first) {
         event.preventDefault();
@@ -227,7 +272,7 @@ export function CommandPalette({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.14 }}
-          onMouseDown={onClose}
+          onClick={onClose}
         >
           <motion.div
             ref={panelRef}

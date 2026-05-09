@@ -197,8 +197,25 @@ export function ChatMessages({
               <span className="welcome-msy-mark" aria-hidden="true" />
               <span>{welcomeName}</span>
             </h1>
+            <p className="welcome-subtitle">
+              Central privada para analisar, decidir e executar com memória contextual,
+              precisão institucional e silêncio visual.
+            </p>
+            <div className="welcome-context" aria-label="Contexto inicial do Corvus">
+              <span>
+                <strong>Privado</strong>
+                <small>sessão protegida</small>
+              </span>
+              <span>
+                <strong>Persistente</strong>
+                <small>histórico e contexto</small>
+              </span>
+              <span>
+                <strong>Operacional</strong>
+                <small>ações e execução</small>
+              </span>
+            </div>
           </div>
-
         </motion.section>
       )}
 

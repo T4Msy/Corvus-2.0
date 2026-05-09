@@ -66,7 +66,8 @@ export function LoginScreen({ logoSrc, onLogin, onGuest, supabaseError }: Props)
             Inteligência privada MSY
           </span>
           <p>
-            Ambiente institucional para análise, decisão e memória estratégica.
+            Workspace premium para análise, decisão e memória estratégica com uma
+            experiência silenciosa, precisa e profundamente contextual.
           </p>
         </div>
 
@@ -77,11 +78,11 @@ export function LoginScreen({ logoSrc, onLogin, onGuest, supabaseError }: Props)
           </span>
           <span>
             <strong>Contextual</strong>
-            <small>perfil MSY</small>
+            <small>perfil e memória</small>
           </span>
           <span>
             <strong>Operacional</strong>
-            <small>n8n + Supabase</small>
+            <small>execução e persistência</small>
           </span>
         </div>
       </motion.section>
