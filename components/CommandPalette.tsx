@@ -124,20 +124,51 @@ export function CommandPalette({
 }: Props) {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) {
       setQuery("");
       return;
     }
+
+    restoreFocusRef.current = document.activeElement as HTMLElement | null;
     const id = window.setTimeout(() => inputRef.current?.focus(), 40);
+
     function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusable = Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
     }
+
     window.addEventListener("keydown", onKey);
     return () => {
       window.clearTimeout(id);
       window.removeEventListener("keydown", onKey);
+      restoreFocusRef.current?.focus();
     };
   }, [open, onClose]);
 
@@ -199,7 +230,8 @@ export function CommandPalette({
           onMouseDown={onClose}
         >
           <motion.div
-            className="command-panel"
+            ref={panelRef}
+            className="command-panel rebuilt-command-panel"
             role="dialog"
             aria-modal="true"
             aria-label="Paleta de comandos"
@@ -209,6 +241,11 @@ export function CommandPalette({
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
             onMouseDown={(event) => event.stopPropagation()}
           >
+            <div className="command-panel-head">
+              <span>Command center</span>
+              <strong>Executar no Corvus</strong>
+            </div>
+
             <label className="command-search" htmlFor="command-search-input">
               <Search size={17} />
               <input

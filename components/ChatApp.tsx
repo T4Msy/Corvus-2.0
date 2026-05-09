@@ -58,7 +58,6 @@ import {
   uploadUserFile,
 } from "@/integrations/supabase/storage";
 import { exportConversationAsMarkdown } from "@/lib/export";
-import { getGreeting } from "@/lib/utils/getGreeting";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import type {
   AgentMode,
@@ -79,8 +78,6 @@ const HISTORY_FILTERS: Array<{ value: HistoryFilter; label: string }> = [
   { value: "tagged", label: "Tags" },
   { value: "archived", label: "Arquivo" },
 ];
-
-const GREETING_REFRESH_MS = 60 * 1000;
 
 export function ChatApp() {
   const { preference, setPreference, logoSrc } = useTheme();
@@ -109,7 +106,6 @@ export function ChatApp() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmDeleteAllOpen, setConfirmDeleteAllOpen] = useState(false);
   const [topbarEditing, setTopbarEditing] = useState(false);
-  const [welcomeGreeting, setWelcomeGreeting] = useState("Olá.");
   const [historyLoading, setHistoryLoading] = useState(false);
   const [sendBusy, setSendBusy] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
@@ -161,14 +157,6 @@ export function ChatApp() {
     auth.profile?.nome ||
     (auth.status === "guest" ? "Convidado" : "Operador");
 
-  const greetingName = useMemo(
-    () =>
-      auth.status === "guest"
-        ? null
-        : auth.profile?.nome_interno || auth.profile?.nome || null,
-    [auth.profile?.nome, auth.profile?.nome_interno, auth.status]
-  );
-
   const userContext: UserContext = useMemo(
     () => ({
       nome: userName,
@@ -179,14 +167,6 @@ export function ChatApp() {
     }),
     [auth.profile, auth.status, userName]
   );
-
-  useEffect(() => {
-    const updateGreeting = () => setWelcomeGreeting(getGreeting(greetingName));
-    updateGreeting();
-
-    const interval = window.setInterval(updateGreeting, GREETING_REFRESH_MS);
-    return () => window.clearInterval(interval);
-  }, [greetingName]);
 
   // Reset chat ao deslogar
   useEffect(() => {
@@ -1036,8 +1016,16 @@ export function ChatApp() {
     );
   }
 
+  const emptyHome = chat.messages.length === 0 && !chat.pending && !historyLoading;
+  const homeHeadline =
+    auth.status === "guest" ? "Corvus está pronto." : `${userName} está de volta!`;
+
   return (
-    <div className={`corvus-shell${focusMode ? " focus-mode" : ""}`}>
+    <div
+      className={`corvus-shell${focusMode ? " focus-mode" : ""}${
+        emptyHome ? " empty-home" : ""
+      }`}
+    >
       <AnimatePresence>
         {sidebarOpen && (
           <motion.button
@@ -1052,10 +1040,18 @@ export function ChatApp() {
         )}
       </AnimatePresence>
 
-      <aside className={`corvus-sidebar${sidebarOpen ? " open" : ""}`}>
-        <div className="sidebar-brand">
-          <Image src={logoSrc} alt="Corvus" width={26} height={26} priority />
-          <strong>Corvus</strong>
+      <aside className={`corvus-sidebar rebuilt-sidebar${sidebarOpen ? " open" : ""}`}>
+        <div className="sidebar-top-panel">
+          <div className="sidebar-brand rebuilt-brand">
+            <span className="brand-mark">
+              <Image src={logoSrc} alt="Corvus" width={26} height={26} priority />
+            </span>
+            <span className="brand-copy">
+              <strong>Corvus</strong>
+              <small>MSY private intelligence</small>
+            </span>
+            <span className="brand-badge">V3</span>
+          </div>
           <button
             type="button"
             className="icon-button mobile-only"
@@ -1064,16 +1060,31 @@ export function ChatApp() {
           >
             <X size={16} />
           </button>
-        </div>
 
-        <button
-          type="button"
-          className="new-chat-button"
-          onClick={createConversation}
-        >
-          <Plus size={15} />
-          <span>Novo chat</span>
-        </button>
+          <div className="sidebar-primary-actions">
+            <button
+              type="button"
+              className="new-chat-button"
+              onClick={createConversation}
+            >
+              <Plus size={15} />
+              <span>
+                <strong>Nova consulta</strong>
+                <small>Rascunho privado</small>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              className="sidebar-command-button"
+              onClick={() => setCommandOpen(true)}
+            >
+              <Command size={14} />
+              <span>Comandos</span>
+              <kbd>Ctrl K</kbd>
+            </button>
+          </div>
+        </div>
 
         <label className="sidebar-search" htmlFor="conversation-search">
           <Search size={14} />
@@ -1102,6 +1113,9 @@ export function ChatApp() {
               <small>{historyFilterCounts[filter.value]}</small>
             </button>
           ))}
+        </div>
+
+        <div className="sidebar-tools-row" aria-label="Ferramentas do histórico">
           <button
             type="button"
             className={`select-toggle-btn${selectionMode ? " active" : ""}`}
@@ -1110,18 +1124,18 @@ export function ChatApp() {
             onClick={() => { selectionMode ? exitSelectionMode() : setSelectionMode(true); }}
           >
             <CheckSquare size={12} />
+            <span>{selectionMode ? "Cancelar" : "Selecionar"}</span>
+          </button>
+          <button
+            type="button"
+            className="delete-all-conversations-button"
+            disabled={conversations.conversations.length === 0}
+            onClick={() => setConfirmDeleteAllOpen(true)}
+          >
+            <Trash2 size={13} />
+            <span>Limpar histórico</span>
           </button>
         </div>
-
-        <button
-          type="button"
-          className="delete-all-conversations-button"
-          disabled={conversations.conversations.length === 0}
-          onClick={() => setConfirmDeleteAllOpen(true)}
-        >
-          <Trash2 size={13} />
-          <span>Apagar todas as conversas</span>
-        </button>
 
         <div className="conversation-stack">
           {conversations.loading && conversations.conversations.length === 0 && (
@@ -1231,19 +1245,32 @@ export function ChatApp() {
                             : void selectConversation(conversation.id)
                         }
                       >
-                        {selectionMode ? (
-                          isSelected ? <CheckSquare size={14} /> : <Square size={14} />
-                        ) : conversation.pinned ? (
-                          <Pin size={14} />
-                        ) : conversation.favorite ? (
-                          <Star size={14} />
-                        ) : conversation.archived ? (
-                          <Archive size={14} />
-                        ) : (
-                          <MessageSquare size={14} />
+                        <span className="conversation-icon">
+                          {selectionMode ? (
+                            isSelected ? <CheckSquare size={14} /> : <Square size={14} />
+                          ) : conversation.pinned ? (
+                            <Pin size={14} />
+                          ) : conversation.favorite ? (
+                            <Star size={14} />
+                          ) : conversation.archived ? (
+                            <Archive size={14} />
+                          ) : (
+                            <MessageSquare size={14} />
+                          )}
+                        </span>
+                        <span className="conversation-copy">
+                          <span className="conversation-title">{conversation.title}</span>
+                          <span className="conversation-meta">
+                            {(conversation.tags ?? []).length > 0
+                              ? (conversation.tags ?? []).slice(0, 2).map((tag) => `#${tag}`).join(" ")
+                              : conversation.summary || "Conversa MSY"}
+                          </span>
+                        </span>
+                        {!selectionMode && (
+                          <small className="conversation-time">
+                            {formatRelative(conversation.updatedAt)}
+                          </small>
                         )}
-                        <span>{conversation.title}</span>
-                        {!selectionMode && <small>{formatRelative(conversation.updatedAt)}</small>}
                       </button>
                     )}
 
@@ -1270,93 +1297,115 @@ export function ChatApp() {
                       {menuOpen && !confirming && (
                         <motion.div
                           className="conversation-menu"
+                          role="menu"
+                          aria-label={`Opções de ${conversation.title}`}
                           initial={{ opacity: 0, y: 4, scale: 0.98 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: 4, scale: 0.98 }}
                           transition={{ duration: 0.12 }}
                         >
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateConversation(conversation.id, {
-                                pinned: !conversation.pinned,
-                              })
-                            }
-                          >
-                            <Pin size={13} />
-                            <span>
-                              {conversation.pinned ? "Desafixar" : "Fixar"}
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateConversation(conversation.id, {
-                                favorite: !conversation.favorite,
-                              })
-                            }
-                          >
-                            <Star size={13} />
-                            <span>
-                              {conversation.favorite
-                                ? "Remover favorito"
-                                : "Favoritar"}
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => startRename(conversation)}
-                          >
-                            <Pencil size={13} />
-                            <span>Renomear</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => openTagEditor(conversation)}
-                          >
-                            <Tag size={13} />
-                            <span>Tags</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              exportConversationAsMarkdown(conversation);
-                              setOpenMenuId(null);
-                            }}
-                          >
-                            <Download size={13} />
-                            <span>Exportar</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateConversation(conversation.id, {
-                                archived: !conversation.archived,
-                              })
-                            }
-                          >
-                            {conversation.archived ? (
-                              <ArchiveRestore size={13} />
-                            ) : (
-                              <Archive size={13} />
-                            )}
-                            <span>
-                              {conversation.archived
-                                ? "Restaurar"
-                                : "Arquivar"}
-                            </span>
-                          </button>
-                          <button
-                            type="button"
-                            className="danger"
-                            onClick={() => {
-                              setConfirmDeleteId(conversation.id);
-                              setOpenMenuId(null);
-                            }}
-                          >
-                            <Trash2 size={13} />
-                            <span>Excluir</span>
-                          </button>
+                          <div className="conversation-menu-header">
+                            <span>Opções</span>
+                            <small>{formatRelative(conversation.updatedAt)}</small>
+                          </div>
+                          <div className="conversation-menu-section">
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className={conversation.pinned ? "is-active" : undefined}
+                              onClick={() =>
+                                updateConversation(conversation.id, {
+                                  pinned: !conversation.pinned,
+                                })
+                              }
+                            >
+                              <Pin size={13} />
+                              <span>
+                                {conversation.pinned ? "Desafixar" : "Fixar"}
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className={conversation.favorite ? "is-active" : undefined}
+                              onClick={() =>
+                                updateConversation(conversation.id, {
+                                  favorite: !conversation.favorite,
+                                })
+                              }
+                            >
+                              <Star size={13} />
+                              <span>
+                                {conversation.favorite
+                                  ? "Remover favorito"
+                                  : "Favoritar"}
+                              </span>
+                            </button>
+                          </div>
+                          <div className="conversation-menu-section">
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => startRename(conversation)}
+                            >
+                              <Pencil size={13} />
+                              <span>Renomear</span>
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => openTagEditor(conversation)}
+                            >
+                              <Tag size={13} />
+                              <span>Tags</span>
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                exportConversationAsMarkdown(conversation);
+                                setOpenMenuId(null);
+                              }}
+                            >
+                              <Download size={13} />
+                              <span>Exportar</span>
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className={conversation.archived ? "is-active" : undefined}
+                              onClick={() =>
+                                updateConversation(conversation.id, {
+                                  archived: !conversation.archived,
+                                })
+                              }
+                            >
+                              {conversation.archived ? (
+                                <ArchiveRestore size={13} />
+                              ) : (
+                                <Archive size={13} />
+                              )}
+                              <span>
+                                {conversation.archived
+                                  ? "Restaurar"
+                                  : "Arquivar"}
+                              </span>
+                            </button>
+                          </div>
+                          <div className="conversation-menu-section danger-zone">
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="danger"
+                              onClick={() => {
+                                setConfirmDeleteId(conversation.id);
+                                setOpenMenuId(null);
+                              }}
+                            >
+                              <Trash2 size={13} />
+                              <span>Excluir</span>
+                            </button>
+                          </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -1483,107 +1532,116 @@ export function ChatApp() {
         </div>
       </aside>
 
-      <section className="workspace">
-        <header className="topbar">
-          <button
-            type="button"
-            className="icon-button desktop-hidden"
-            title="Menu"
-            aria-label="Abrir menu"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu size={18} />
-          </button>
+      <section className="workspace rebuilt-workspace">
+        <header className="topbar rebuilt-topbar">
+          <div className="topbar-left">
+            <button
+              type="button"
+              className="icon-button desktop-hidden"
+              title="Menu"
+              aria-label="Abrir menu"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu size={18} />
+            </button>
 
-          <div className="topbar-title">
-            {topbarEditing ? (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  commitTopbarRename();
-                }}
-              >
-                <input
-                  className="topbar-rename-input"
-                  autoFocus
-                  value={renameValue}
-                  aria-label="Renomear conversa"
-                  onChange={(e) => setRenameValue(e.target.value)}
-                  onBlur={commitTopbarRename}
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") {
+            <div className="topbar-conversation">
+              <span className="topbar-kicker">Conversa ativa</span>
+              <div className="topbar-title">
+                {topbarEditing ? (
+                  <form
+                    onSubmit={(e) => {
                       e.preventDefault();
-                      setTopbarEditing(false);
-                    }
-                  }}
-                />
-              </form>
-            ) : (
-              <button
-                type="button"
-                className="topbar-title-btn"
-                title="Clique para renomear"
-                onClick={startTopbarRename}
-                disabled={!conversations.activeConversation}
-              >
-                {conversations.activeConversation?.title ?? "Novo chat"}
-              </button>
-            )}
+                      commitTopbarRename();
+                    }}
+                  >
+                    <input
+                      className="topbar-rename-input"
+                      autoFocus
+                      value={renameValue}
+                      aria-label="Renomear conversa"
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={commitTopbarRename}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          setTopbarEditing(false);
+                        }
+                      }}
+                    />
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    className="topbar-title-btn"
+                    title="Clique para renomear"
+                    onClick={startTopbarRename}
+                    disabled={!conversations.activeConversation}
+                  >
+                    {conversations.activeConversation?.title ?? "Novo chat"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="topbar-status-board" aria-label="Estado da sessão">
             <span className="topbar-mode">
               {mode === "fenrir" ? "Fenrir" : "Corvus"}
             </span>
             <SyncPill status={conversations.syncStatus} />
           </div>
 
-          <label className="conversation-message-search" htmlFor="message-search">
-            <Search size={14} />
-            <input
-              ref={messageSearchInputRef}
-              id="message-search"
-              type="search"
-              placeholder="Buscar na conversa"
-              value={messageSearch.query}
-              disabled={chat.messages.length === 0}
-              onChange={(event) => messageSearch.setQuery(event.target.value)}
-            />
-            {messageSearch.query && (
-              <>
-                <span className="message-search-count">
-                  {messageSearch.total > 0
-                    ? `${messageSearch.activeIndex + 1}/${messageSearch.total}`
-                    : "0/0"}
-                </span>
-                <button
-                  type="button"
-                  title="Resultado anterior"
-                  aria-label="Resultado anterior"
-                  disabled={messageSearch.total === 0}
-                  onClick={messageSearch.previous}
-                >
-                  <ChevronUp size={13} />
-                </button>
-                <button
-                  type="button"
-                  title="Próximo resultado"
-                  aria-label="Próximo resultado"
-                  disabled={messageSearch.total === 0}
-                  onClick={messageSearch.next}
-                >
-                  <ChevronDown size={13} />
-                </button>
-                <button
-                  type="button"
-                  title="Limpar busca"
-                  aria-label="Limpar busca"
-                  onClick={messageSearch.clear}
-                >
-                  <X size={13} />
-                </button>
-              </>
-            )}
-          </label>
+          <div className="topbar-right">
+            <label className="conversation-message-search" htmlFor="message-search">
+              <Search size={14} />
+              <input
+                ref={messageSearchInputRef}
+                id="message-search"
+                type="search"
+                placeholder="Buscar na conversa"
+                value={messageSearch.query}
+                disabled={chat.messages.length === 0}
+                onChange={(event) => messageSearch.setQuery(event.target.value)}
+              />
+              {messageSearch.query && (
+                <>
+                  <span className="message-search-count">
+                    {messageSearch.total > 0
+                      ? `${messageSearch.activeIndex + 1}/${messageSearch.total}`
+                      : "0/0"}
+                  </span>
+                  <button
+                    type="button"
+                    title="Resultado anterior"
+                    aria-label="Resultado anterior"
+                    disabled={messageSearch.total === 0}
+                    onClick={messageSearch.previous}
+                  >
+                    <ChevronUp size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    title="Próximo resultado"
+                    aria-label="Próximo resultado"
+                    disabled={messageSearch.total === 0}
+                    onClick={messageSearch.next}
+                  >
+                    <ChevronDown size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    title="Limpar busca"
+                    aria-label="Limpar busca"
+                    onClick={messageSearch.clear}
+                  >
+                    <X size={13} />
+                  </button>
+                </>
+              )}
+            </label>
 
-          <div className="topbar-actions">
+            <div className="topbar-actions">
             <button
               type="button"
               className="icon-button"
@@ -1625,6 +1683,7 @@ export function ChatApp() {
             >
               <Settings size={17} />
             </button>
+            </div>
           </div>
         </header>
 
@@ -1632,7 +1691,6 @@ export function ChatApp() {
           <div
             className="persistence-banner"
             role="alert"
-            style={{ margin: "8px auto 0", maxWidth: "var(--content-max)" }}
           >
             <AlertCircle size={14} />
             <span>{auth.error}</span>
@@ -1648,9 +1706,8 @@ export function ChatApp() {
             onRetry={chat.retryLast}
             profile={auth.profile}
             logoSrc={logoSrc}
-            showWelcome
-            welcomeName={welcomeGreeting}
-            welcomeSubtitle="Pergunte algo. Ou escolha uma sugestão."
+            showWelcome={emptyHome}
+            welcomeName={homeHeadline}
             onSuggest={requestSend}
             onEditMessage={
               auth.status === "authed" || auth.status === "guest"
@@ -1692,6 +1749,7 @@ export function ChatApp() {
             }
             attachmentBusy={attachments.busy}
             syncStatus={conversations.syncStatus}
+            showSuggestions={emptyHome}
           />
         </main>
       </section>
@@ -1719,7 +1777,7 @@ export function ChatApp() {
       <AnimatePresence>
         {detailsOpen && (
           <motion.aside
-            className="conversation-details"
+            className="conversation-details rebuilt-details"
             role="dialog"
             aria-modal="true"
             aria-label="Detalhes da conversa"
@@ -1729,7 +1787,7 @@ export function ChatApp() {
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
           >
             <div className="details-header">
-              <div>
+              <div className="details-title-block">
                 <p className="eyebrow">Histórico</p>
                 <h2>{conversations.activeConversation?.title ?? "Nova conversa"}</h2>
               </div>
@@ -1745,6 +1803,21 @@ export function ChatApp() {
 
             {conversations.activeConversation ? (
               <div className="details-body">
+                <div className="details-stat-row" aria-label="Resumo da conversa">
+                  <span>
+                    <strong>{chat.messages.length}</strong>
+                    <small>mensagens</small>
+                  </span>
+                  <span>
+                    <strong>{attachments.activeAttachments.length}</strong>
+                    <small>arquivos</small>
+                  </span>
+                  <span>
+                    <strong>{(conversations.activeConversation.tags ?? []).length}</strong>
+                    <small>tags</small>
+                  </span>
+                </div>
+
                 <section className="details-section">
                   <h3>Resumo</h3>
                   <textarea

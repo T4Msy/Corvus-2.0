@@ -10,6 +10,14 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   typedRoutes: true,
+  async rewrites() {
+    return [
+      {
+        source: "/space-travel",
+        destination: "/space-travel/index.html",
+      },
+    ];
+  },
   env: {
     NEXT_PUBLIC_SUPABASE_URL: publicSupabaseUrl,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: publicSupabaseAnonKey,

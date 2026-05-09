@@ -77,80 +77,11 @@ interface Props {
   logoSrc: string;
   showWelcome: boolean;
   welcomeName: string;
-  welcomeSubtitle?: string;
   onSuggest: (prompt: string) => void;
   onEditMessage?: (createdAt: number, newText: string) => void;
   searchQuery?: string;
   searchMatches?: MessageSearchMatch[];
   activeSearchMatchId?: string | null;
-}
-
-const SUGGESTION_POOL = [
-  {
-    tag: "Síntese",
-    label: "Resumo institucional",
-    prompt:
-      "Sintetize a estrutura da Ordem Masayoshi em blocos objetivos, com riscos e próximos passos.",
-  },
-  {
-    tag: "Plano",
-    label: "Construir plano de ação",
-    prompt:
-      "Monte um plano de ação para a operação atual da MSY com prioridades e sequência.",
-  },
-  {
-    tag: "Decisão",
-    label: "Avaliar uma decisão",
-    prompt:
-      "Ajude a analisar uma decisão importante usando critérios, tradeoffs e recomendação.",
-  },
-  {
-    tag: "Revisão",
-    label: "Refinar comunicação",
-    prompt:
-      "Revise o texto a seguir para ficar mais claro, institucional e objetivo.",
-  },
-  {
-    tag: "Análise",
-    label: "Resumo executivo",
-    prompt:
-      "Elabore um resumo executivo do contexto atual da MSY — estado, prioridades e riscos.",
-  },
-  {
-    tag: "Estratégia",
-    label: "Ideias estratégicas",
-    prompt:
-      "Gere 8 ideias estratégicas para expandir a atuação institucional da MSY no próximo trimestre.",
-  },
-  {
-    tag: "Risco",
-    label: "Mapeamento de riscos",
-    prompt:
-      "Mapeie os principais riscos operacionais e estratégicos e sugira mitigações objetivas.",
-  },
-  {
-    tag: "Reunião",
-    label: "Pauta estruturada",
-    prompt:
-      "Monte uma pauta estruturada para uma reunião de alinhamento estratégico — objetivos, tópicos e encaminhamentos.",
-  },
-  {
-    tag: "Processo",
-    label: "Diagnóstico de processo",
-    prompt:
-      "Analise um processo interno e identifique gargalos, redundâncias e oportunidades de melhoria.",
-  },
-  {
-    tag: "Comunicado",
-    label: "Redigir comunicado",
-    prompt:
-      "Redija um comunicado interno claro e objetivo sobre uma mudança ou decisão recente.",
-  },
-];
-
-function pickSuggestions(pool: typeof SUGGESTION_POOL, count: number) {
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
 }
 
 export function ChatMessages({
@@ -163,7 +94,6 @@ export function ChatMessages({
   logoSrc,
   showWelcome,
   welcomeName,
-  welcomeSubtitle,
   onSuggest,
   onEditMessage,
   searchQuery = "",
@@ -173,7 +103,6 @@ export function ChatMessages({
   const containerRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
-  const suggestions = useMemo(() => pickSuggestions(SUGGESTION_POOL, 4), []);
 
   useEffect(() => {
     const c = containerRef.current;
@@ -258,40 +187,18 @@ export function ChatMessages({
 
       {empty && (
         <motion.section
-          className="welcome-panel"
+          className="welcome-panel rebuilt-welcome"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         >
-          <div className="welcome-mark">
-            <Image src={logoSrc} alt="" width={36} height={36} priority />
+          <div className="welcome-copy">
+            <h1>
+              <span className="welcome-msy-mark" aria-hidden="true" />
+              <span>{welcomeName}</span>
+            </h1>
           </div>
-          <p className="eyebrow">MSY · Corvus</p>
-          <h1>{welcomeName}</h1>
-          {welcomeSubtitle && (
-            <p className="welcome-subtitle">{welcomeSubtitle}</p>
-          )}
-          <div className="welcome-context" aria-label="Memória da sessão">
-            <span>{profile?.cargo || "Sessão institucional"}</span>
-            <span>{profile?.sigla_cargo || profile?.tipo || "MSY"}</span>
-            <span>Contexto ativo</span>
-          </div>
-          <div className="suggestion-row">
-            {suggestions.map((s) => (
-              <button
-                key={s.label}
-                type="button"
-                className="suggestion-pill"
-                onClick={() => onSuggest(s.prompt)}
-              >
-                <span className="suggestion-pill-label">
-                  <Sparkles size={10} />
-                  {s.tag}
-                </span>
-                <span className="suggestion-pill-title">{s.label}</span>
-              </button>
-            ))}
-          </div>
+
         </motion.section>
       )}
 
@@ -474,30 +381,38 @@ function MessageBubble({
 
   return (
     <motion.article
-      className={`message-row ${isCorvus ? "corvus" : "user"}`}
+      className={`message-row thread-message ${isCorvus ? "corvus" : "user"}`}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div className="message-avatar" aria-hidden="true">
-        {isCorvus ? (
-          <Image src={logoSrc} alt="" width={20} height={20} />
-        ) : (
-          <span>{userInitial}</span>
-        )}
+      <div className="message-avatar-wrap" aria-hidden="true">
+        <div className="message-avatar">
+          {isCorvus ? (
+            <Image src={logoSrc} alt="" width={20} height={20} />
+          ) : (
+            <span>{userInitial}</span>
+          )}
+        </div>
+        {isCorvus && <span className="assistant-state-dot" />}
       </div>
-      <div className="message-card">
+      <div className={`message-card${isCorvus ? " assistant-card" : " user-card"}`}>
         <div className="message-meta">
-          <span>{isCorvus ? "Corvus" : "Você"}</span>
+          <span className="message-role">
+            <strong>{isCorvus ? "Corvus" : "Você"}</strong>
+            <small>{isCorvus ? "Resposta institucional" : "Prompt"}</small>
+          </span>
           <time>{timestamp}</time>
         </div>
         {isCorvus ? (
-          <div
-            ref={markdownRef}
-            className="message-text markdown"
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
+          <div className="assistant-answer">
+            <div
+              ref={markdownRef}
+              className="message-text markdown"
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          </div>
         ) : editing ? (
           <div className="message-edit-wrap">
             <textarea
@@ -524,13 +439,15 @@ function MessageBubble({
           </div>
         ) : (
           <div className="message-user-wrap">
-            <p className="message-text">
-              <HighlightedText
-                text={message.text}
-                matches={searchMatches}
-                activeSearchMatchId={activeSearchMatchId}
-              />
-            </p>
+            <div className="user-message-surface">
+              <p className="message-text">
+                <HighlightedText
+                  text={message.text}
+                  matches={searchMatches}
+                  activeSearchMatchId={activeSearchMatchId}
+                />
+              </p>
+            </div>
             {canEdit && (
               <button
                 type="button"
@@ -540,12 +457,13 @@ function MessageBubble({
                 onClick={startEdit}
               >
                 <Pencil size={12} />
+                <span>Editar</span>
               </button>
             )}
           </div>
         )}
         {isCorvus && (
-          <div className="message-tools">
+          <div className="message-tools answer-toolbar">
             <button
               type="button"
               className="copy-button"
@@ -651,19 +569,34 @@ function MessageAction({
 function TypingIndicator({ logoSrc }: { logoSrc: string }) {
   return (
     <motion.div
-      className="message-row corvus"
+      className="message-row thread-message corvus typing-row"
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
     >
-      <div className="message-avatar" aria-hidden="true">
-        <Image src={logoSrc} alt="" width={20} height={20} />
+      <div className="message-avatar-wrap" aria-hidden="true">
+        <div className="message-avatar">
+          <Image src={logoSrc} alt="" width={20} height={20} />
+        </div>
+        <span className="assistant-state-dot active" />
       </div>
-      <div className="message-card">
-        <div className="typing-label">Corvus processando</div>
+      <div className="message-card assistant-card">
+        <div className="message-meta">
+          <span className="message-role">
+            <strong>Corvus</strong>
+            <small>Gerando resposta</small>
+          </span>
+        </div>
         <div className="typing-card">
-          <span />
-          <span />
-          <span />
+          <div className="typing-lines">
+            <span />
+            <span />
+            <span />
+          </div>
+          <div className="typing-dots">
+            <span />
+            <span />
+            <span />
+          </div>
         </div>
       </div>
     </motion.div>

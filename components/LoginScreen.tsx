@@ -3,7 +3,15 @@
 import Image from "next/image";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, LockKeyhole, Mail, ShieldAlert, UserRound } from "lucide-react";
+import {
+  ArrowRight,
+  Fingerprint,
+  LockKeyhole,
+  Mail,
+  ShieldAlert,
+  Sparkles,
+  UserRound,
+} from "lucide-react";
 
 interface Props {
   logoSrc: string;
@@ -35,19 +43,64 @@ export function LoginScreen({ logoSrc, onLogin, onGuest, supabaseError }: Props)
   }
 
   return (
-    <main className="login-screen">
+    <main className="login-screen rebuilt-login">
       <div className="login-bg" aria-hidden="true" />
+
       <motion.section
-        className="login-panel"
+        className="login-hero-panel"
+        initial={{ opacity: 0, x: -18 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="login-brand-lockup">
+          <Image src={logoSrc} alt="Corvus" width={62} height={62} priority />
+          <div>
+            <p className="eyebrow">Ordem Masayoshi</p>
+            <h1>Corvus</h1>
+          </div>
+        </div>
+
+        <div className="login-hero-copy">
+          <span className="login-system-pill">
+            <Sparkles size={14} />
+            Inteligência privada MSY
+          </span>
+          <p>
+            Ambiente institucional para análise, decisão e memória estratégica.
+          </p>
+        </div>
+
+        <div className="login-signal-grid" aria-label="Capacidades">
+          <span>
+            <strong>Privado</strong>
+            <small>sessão protegida</small>
+          </span>
+          <span>
+            <strong>Contextual</strong>
+            <small>perfil MSY</small>
+          </span>
+          <span>
+            <strong>Operacional</strong>
+            <small>n8n + Supabase</small>
+          </span>
+        </div>
+      </motion.section>
+
+      <motion.section
+        className="login-panel auth-panel"
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="login-brand">
-          <Image src={logoSrc} alt="Corvus" width={56} height={56} priority />
-          <p className="eyebrow">MSY · Corvus</p>
-          <h1>Acesso</h1>
-          <span>Inteligência institucional</span>
+        <div className="auth-card-header">
+          <span className="auth-access-chip">
+            <Fingerprint size={14} />
+            Acesso restrito
+          </span>
+          <div>
+            <h2>Entrar no Corvus</h2>
+            <p>Use suas credenciais MSY ou continue em modo convidado.</p>
+          </div>
         </div>
 
         {(error || supabaseError) && (

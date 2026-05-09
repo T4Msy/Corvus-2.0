@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Keyboard, X } from "lucide-react";
 
@@ -41,13 +41,49 @@ interface Props {
 }
 
 export function ShortcutsDialog({ open, onClose }: Props) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (!open) return;
+
+    restoreFocusRef.current = document.activeElement as HTMLElement | null;
+    const id = window.setTimeout(() => closeButtonRef.current?.focus(), 20);
+
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusable = Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
     }
+
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.clearTimeout(id);
+      window.removeEventListener("keydown", onKey);
+      restoreFocusRef.current?.focus();
+    };
   }, [open, onClose]);
 
   return (
@@ -63,6 +99,7 @@ export function ShortcutsDialog({ open, onClose }: Props) {
           role="presentation"
         >
           <motion.div
+            ref={panelRef}
             className="dialog-panel shortcuts-panel"
             role="dialog"
             aria-modal="true"
@@ -74,14 +111,15 @@ export function ShortcutsDialog({ open, onClose }: Props) {
             onClick={(e) => e.stopPropagation()}
           >
             <header className="dialog-header">
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <Keyboard size={18} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+              <div className="shortcuts-heading">
+                <Keyboard size={18} className="shortcuts-heading-icon" />
                 <div>
                   <h2>Atalhos de teclado</h2>
                   <p>Comandos rápidos disponíveis no Corvus.</p>
                 </div>
               </div>
               <button
+                ref={closeButtonRef}
                 type="button"
                 className="dialog-close"
                 aria-label="Fechar"

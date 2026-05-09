@@ -7,7 +7,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Loader2,
-  Paperclip,
+  Plus,
   Send,
   Sparkles,
   TriangleAlert,
@@ -25,29 +25,33 @@ interface Props {
   attachmentDisabled?: boolean;
   attachmentBusy?: boolean;
   syncStatus: SyncStatusType;
+  showSuggestions?: boolean;
 }
 
 const MAX_HEIGHT = 200;
-const QUICK_ACTIONS = [
+const HOME_SUGGESTIONS = [
   {
-    label: "Síntese",
+    label: "Código",
     prompt:
-      "Faça uma síntese institucional objetiva do contexto atual, com decisões e próximos passos.",
+      "Ajude com uma tarefa de código de forma objetiva, explicando apenas o necessário.",
   },
   {
-    label: "Plano",
-    prompt:
-      "Transforme este contexto em um plano de ação com prioridades, sequência e riscos.",
+    label: "Aprender",
+    prompt: "Explique este tema de forma clara, estruturada e progressiva.",
   },
   {
-    label: "Decisão",
+    label: "Estratégias",
     prompt:
-      "Analise esta decisão com critérios, tradeoffs, riscos e recomendação final.",
+      "Analise este contexto estrategicamente, com opções, tradeoffs e próximos passos.",
   },
   {
-    label: "Revisão",
+    label: "Escrever",
     prompt:
-      "Revise o texto a seguir para ficar mais claro, institucional e direto.",
+      "Ajude a escrever ou revisar um texto com clareza, elegância e precisão.",
+  },
+  {
+    label: "Assuntos pessoais",
+    prompt: "Ajude a organizar um assunto pessoal com discrição e praticidade.",
   },
 ];
 
@@ -61,12 +65,15 @@ export function ChatInput({
   attachmentDisabled,
   attachmentBusy,
   syncStatus,
+  showSuggestions = false,
 }: Props) {
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
+  const trimmedValue = value.trim();
+  const sendLocked = disabled && trimmedValue.length > 0;
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -101,139 +108,145 @@ export function ChatInput({
 
   return (
     <motion.footer
-      className="composer-shell"
+      className="composer-shell rebuilt-composer"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div className="composer-quick-actions" aria-label="Ações rápidas">
-        {QUICK_ACTIONS.map((action) => (
-          <button
-            key={action.label}
-            type="button"
-            disabled={disabled}
-            onClick={() => onSend(action.prompt)}
-          >
-            <Sparkles size={12} />
-            <span>{action.label}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="composer">
-        <div className="agent-picker" ref={pickerRef}>
-          <button
-            type="button"
-            className="agent-picker-button"
-            aria-haspopup="listbox"
-            aria-expanded={open}
-            title="Selecionar agente"
-            onClick={(event) => {
-              event.stopPropagation();
-              setOpen((current) => !current);
-            }}
-          >
-            {mode === "fenrir" ? <Zap size={15} /> : <Bot size={15} />}
-            <span>{mode === "fenrir" ? "Fenrir" : "Corvus"}</span>
-            <ChevronDown size={13} />
-          </button>
-
-          <AnimatePresence>
-            {open && (
-              <motion.div
-                className="agent-menu"
-                role="listbox"
-                initial={{ opacity: 0, y: 6, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 6, scale: 0.98 }}
-                transition={{ duration: 0.14 }}
-              >
-                <ModeOption
-                  active={mode === "corvus"}
-                  icon={<Bot size={15} />}
-                  label="Corvus"
-                  description="Institucional · preciso"
-                  onClick={() => {
-                    onModeChange("corvus");
-                    setOpen(false);
-                  }}
-                />
-                <ModeOption
-                  active={mode === "fenrir"}
-                  icon={<Zap size={15} />}
-                  label="Fenrir"
-                  description="Criativo · expansivo"
-                  onClick={() => {
-                    onModeChange("fenrir");
-                    setOpen(false);
-                  }}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        <textarea
-          ref={textareaRef}
-          rows={1}
-          className="composer-textarea"
-          placeholder={
-            mode === "fenrir"
-              ? "Acione Fenrir..."
-              : "Pergunte ao Corvus..."
-          }
-          aria-label="Mensagem"
-          spellCheck
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          onKeyDown={handleKeyDown}
-        />
-
-        <div className="composer-actions">
-          <input
-            ref={fileRef}
-            type="file"
-            className="sr-only"
-            aria-label="Selecionar arquivo"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              event.target.value = "";
-              if (file) onAttachFile?.(file);
-            }}
+      <div className="composer-dock">
+        <div className="composer-input-row">
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            className="composer-textarea"
+            placeholder="Como posso ajudar você hoje?"
+            aria-label="Mensagem"
+            spellCheck
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            onKeyDown={handleKeyDown}
           />
-          <button
-            type="button"
-            className="attachment-button"
-            aria-label="Anexar arquivo"
-            title="Anexar arquivo"
-            disabled={attachmentBusy}
-            onClick={() => {
-              if (attachmentDisabled) {
-                onAttachBlocked?.();
-                return;
-              }
-              fileRef.current?.click();
-            }}
-          >
-            {attachmentBusy ? <Loader2 size={16} /> : <Paperclip size={16} />}
-          </button>
-          <button
-            type="button"
-            className="send-button"
-            aria-label="Enviar"
-            title="Enviar (Ctrl+Enter)"
-            disabled={disabled || !value.trim()}
-            onClick={commitSend}
-          >
-            {disabled ? <Sparkles size={16} /> : <Send size={16} />}
-          </button>
+        </div>
+
+        <div className="composer-toolbar">
+          <div className="composer-tool-group">
+            <input
+              ref={fileRef}
+              type="file"
+              className="sr-only"
+              aria-label="Selecionar arquivo"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (file) onAttachFile?.(file);
+              }}
+            />
+            <button
+              type="button"
+              className={`attachment-button${attachmentDisabled ? " restricted" : ""}`}
+              aria-label="Anexar arquivo"
+              title="Anexar arquivo"
+              disabled={attachmentBusy}
+              onClick={() => {
+                if (attachmentDisabled) {
+                  onAttachBlocked?.();
+                  return;
+                }
+                fileRef.current?.click();
+              }}
+            >
+              {attachmentBusy ? <Loader2 size={16} /> : <Plus size={18} />}
+            </button>
+            <SyncStatus status={syncStatus} />
+          </div>
+
+          <div className="composer-tool-group composer-send-group">
+            <div className="agent-picker compact-agent-picker" ref={pickerRef}>
+              <button
+                type="button"
+                className="agent-picker-button"
+                aria-haspopup="listbox"
+                aria-expanded={open}
+                title="Selecionar agente"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setOpen((current) => !current);
+                }}
+              >
+                <span className="agent-picker-copy">
+                  <strong>{mode === "fenrir" ? "Fenrir" : "Corvus"}</strong>
+                </span>
+                <ChevronDown size={12} />
+              </button>
+
+              <AnimatePresence>
+                {open && (
+                  <motion.div
+                    className="agent-menu"
+                    role="listbox"
+                    initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                    transition={{ duration: 0.14 }}
+                  >
+                    <ModeOption
+                      active={mode === "corvus"}
+                      icon={<Bot size={15} />}
+                      label="Corvus"
+                      description="Institucional · preciso"
+                      onClick={() => {
+                        onModeChange("corvus");
+                        setOpen(false);
+                      }}
+                    />
+                    <ModeOption
+                      active={mode === "fenrir"}
+                      icon={<Zap size={15} />}
+                      label="Fenrir"
+                      description="Criativo · expansivo"
+                      onClick={() => {
+                        onModeChange("fenrir");
+                        setOpen(false);
+                      }}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+            <button
+              type="button"
+              className="send-button"
+              aria-label="Enviar"
+              title="Enviar (Ctrl+Enter)"
+              disabled={disabled || !trimmedValue}
+              onClick={commitSend}
+            >
+              {sendLocked ? (
+                <Loader2 size={16} className="spin-icon" />
+              ) : disabled ? (
+                <Sparkles size={16} />
+              ) : (
+                <Send size={16} />
+              )}
+            </button>
+          </div>
         </div>
       </div>
-
-      <div className="composer-hint">
-        <span>Ctrl+Enter envia</span>
-        <SyncStatus status={syncStatus} />
-      </div>
+      {showSuggestions && (
+        <div className="home-suggestion-row" aria-label="Sugestões">
+          {HOME_SUGGESTIONS.map((suggestion) => (
+            <button
+              key={suggestion.label}
+              type="button"
+              className="home-suggestion-pill"
+              disabled={disabled}
+              onClick={() => onSend(suggestion.prompt)}
+            >
+              <span>{suggestion.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </motion.footer>
   );
 }

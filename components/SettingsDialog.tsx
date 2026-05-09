@@ -69,6 +69,9 @@ export function SettingsDialog({
   } | null>(null);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -82,11 +85,44 @@ export function SettingsDialog({
 
   useEffect(() => {
     if (!open) return;
+
+    restoreFocusRef.current = document.activeElement as HTMLElement | null;
+    const id = window.setTimeout(() => closeButtonRef.current?.focus(), 20);
+
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusable = Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
     }
+
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.clearTimeout(id);
+      window.removeEventListener("keydown", onKey);
+      restoreFocusRef.current?.focus();
+    };
   }, [open, onClose]);
 
   async function handleSaveProfile() {
@@ -157,7 +193,8 @@ export function SettingsDialog({
           role="presentation"
         >
           <motion.div
-            className="dialog-panel"
+            ref={panelRef}
+            className="dialog-panel settings-panel"
             role="dialog"
             aria-modal="true"
             aria-label="Configurações"
@@ -167,12 +204,18 @@ export function SettingsDialog({
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             onClick={(e) => e.stopPropagation()}
           >
-            <header className="dialog-header">
-              <div>
-                <h2>Configurações</h2>
-                <p>Perfil e preferências da sua sessão.</p>
+            <header className="dialog-header settings-dialog-header">
+              <div className="settings-title-lockup">
+                <span className="settings-header-mark">
+                  <Monitor size={17} />
+                </span>
+                <div>
+                  <h2>Configurações</h2>
+                  <p>Identidade, aparência e sessão do Corvus.</p>
+                </div>
               </div>
               <button
+                ref={closeButtonRef}
                 type="button"
                 className="dialog-close"
                 aria-label="Fechar"
@@ -192,7 +235,7 @@ export function SettingsDialog({
             <section className="dialog-section">
               <h3>Perfil</h3>
 
-              <div className="profile-card">
+              <div className="profile-card settings-profile-card">
                 <div className="profile-card-avatar">
                   {avatarSrc ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
@@ -211,6 +254,9 @@ export function SettingsDialog({
                         : "Membro"}
                   </span>
                 </div>
+                <span className="settings-profile-badge">
+                  {isGuest ? "Local" : "Sincronizado"}
+                </span>
               </div>
 
               {!isGuest && (
