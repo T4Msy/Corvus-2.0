@@ -115,17 +115,19 @@ export function ChatInput({
     >
       <div className="composer-dock">
         <div className="composer-input-row">
-          <textarea
-            ref={textareaRef}
-            rows={1}
-            className="composer-textarea"
-            placeholder="Como posso ajudar você hoje?"
-            aria-label="Mensagem"
-            spellCheck
-            value={value}
-            onChange={(event) => setValue(event.target.value)}
-            onKeyDown={handleKeyDown}
-          />
+          <div className="composer-text-field">
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              className="composer-textarea"
+              placeholder="Como posso ajudar você hoje?"
+              aria-label="Mensagem"
+              spellCheck
+              value={value}
+              onChange={(event) => setValue(event.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+          </div>
           <div className="composer-input-meta" aria-hidden="true">
             <span>{mode === "fenrir" ? "Modo Fenrir" : "Modo Corvus"}</span>
             <small>Enter cria linha · Ctrl+Enter envia</small>

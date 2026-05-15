@@ -535,7 +535,27 @@ textarea {
   gap: 18px;
 }
 
-.composer-input-row .composer-textarea,
+.composer-text-field {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  padding: 10px 12px;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.composer-text-field:focus-within {
+  border-color: rgba(216, 180, 98, 0.84);
+  background: rgba(216, 180, 98, 0.035);
+  box-shadow:
+    0 0 0 1px rgba(216, 180, 98, 0.32),
+    0 0 22px rgba(216, 180, 98, 0.16);
+}
+
+.composer-text-field .composer-textarea,
 .composer-textarea {
   width: 100%;
   max-width: 100%;
