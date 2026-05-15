@@ -670,59 +670,83 @@ function RavenHeadingMark() {
   return (
     <svg viewBox="0 0 96 96" role="img" aria-hidden="true">
       <defs>
-        <radialGradient id="raven-bg" cx="50%" cy="47%" r="56%">
-          <stop offset="0%" stopColor="#26060d" />
-          <stop offset="64%" stopColor="#070405" />
-          <stop offset="100%" stopColor="#020203" />
+        <radialGradient id="raven-bg" cx="47%" cy="45%" r="62%">
+          <stop offset="0%" stopColor="#5e0716" />
+          <stop offset="44%" stopColor="#160307" />
+          <stop offset="100%" stopColor="#010102" />
         </radialGradient>
-        <linearGradient id="raven-ring" x1="15" y1="10" x2="82" y2="86">
-          <stop stopColor="#f4d98c" />
-          <stop offset="0.42" stopColor="#e31b3f" />
-          <stop offset="1" stopColor="#b8893f" />
+        <linearGradient id="raven-red" x1="13" y1="12" x2="84" y2="86">
+          <stop stopColor="#ff6a82" />
+          <stop offset="0.46" stopColor="#e31b3f" />
+          <stop offset="1" stopColor="#7a0415" />
         </linearGradient>
-        <linearGradient id="raven-beak" x1="58" y1="33" x2="91" y2="46">
-          <stop stopColor="#fff0bc" />
-          <stop offset="0.42" stopColor="#d7a84d" />
-          <stop offset="1" stopColor="#12090a" />
+        <linearGradient id="raven-black" x1="25" y1="20" x2="75" y2="75">
+          <stop stopColor="#141419" />
+          <stop offset="0.48" stopColor="#050506" />
+          <stop offset="1" stopColor="#000000" />
         </linearGradient>
+        <filter id="raven-glow" x="-24%" y="-24%" width="148%" height="148%">
+          <feDropShadow dx="0" dy="0" stdDeviation="3.2" floodColor="#e31b3f" floodOpacity="0.72" />
+        </filter>
       </defs>
 
-      <circle cx="48" cy="48" r="42" fill="url(#raven-bg)" stroke="url(#raven-ring)" strokeWidth="2.4" />
-      <circle cx="48" cy="48" r="34" fill="none" stroke="#e31b3f" strokeWidth="1.4" opacity="0.72" />
+      <circle cx="48" cy="48" r="43" fill="url(#raven-bg)" stroke="url(#raven-red)" strokeWidth="2.8" />
+      <circle cx="48" cy="48" r="35" fill="none" stroke="#ff365c" strokeWidth="1.15" opacity="0.48" />
 
       <path
-        d="M21 64C29 48 40 37 53 32C63 28 73 29 84 35C74 36 65 38 56 42C43 47 32 54 21 64Z"
-        fill="#0b0b0d"
-        stroke="#d8b462"
-        strokeWidth="1.8"
+        d="M16 66C24 52 35 42 49 35C36 38 25 44 15 54C27 51 38 52 49 57C36 57 25 60 16 66Z"
+        fill="#070708"
+        stroke="#e31b3f"
+        strokeLinecap="round"
         strokeLinejoin="round"
-      />
-      <path
-        d="M48 25C57 22 67 25 78 34C68 33 59 35 51 39C40 45 31 55 24 68C34 61 44 58 54 59C49 63 46 67 45 72C54 67 64 66 74 69C68 62 66 56 69 50C75 48 82 43 89 35C76 29 65 26 55 27L50 19L47 28L41 25Z"
-        fill="#050506"
-        stroke="#f0cc78"
         strokeWidth="2"
-        strokeLinejoin="round"
+        opacity="0.92"
       />
       <path
-        d="M66 39C72 35 80 34 91 35C82 43 75 48 68 50C63 51 59 50 55 48C58 44 61 41 66 39Z"
-        fill="#050506"
-        stroke="url(#raven-beak)"
-        strokeWidth="2.2"
+        d="M23 73C32 61 42 54 55 53C48 59 45 66 47 76C55 69 64 66 76 68C67 59 64 50 68 41C62 43 55 45 48 49C38 54 30 62 23 73Z"
+        fill="#020203"
+        stroke="#ff365c"
+        strokeLinecap="round"
         strokeLinejoin="round"
+        strokeWidth="2"
+        opacity="0.9"
       />
       <path
-        d="M71 40C75 39 79 39 85 40C80 43 76 44 73 44C70 43 68 43 67 42C68 41 69 40 71 40Z"
-        fill="#fff0bc"
+        d="M30 59C39 54 49 52 60 54"
+        fill="none"
+        stroke="#ff6a82"
+        strokeLinecap="round"
+        strokeWidth="1.6"
       />
-      <circle cx="58" cy="38" r="6.4" fill="#e31b3f" />
-      <circle cx="58" cy="38" r="3" fill="#ff4464" />
-      <circle cx="60" cy="36" r="1.1" fill="#ffe1e6" />
+      <path
+        d="M36 48C44 44 53 43 63 46"
+        fill="none"
+        stroke="#e31b3f"
+        strokeLinecap="round"
+        strokeWidth="1.5"
+      />
 
-      <path d="M24 59C34 55 45 54 56 56" stroke="#c99b4a" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M31 50C41 47 51 47 60 50" stroke="#e31b3f" strokeWidth="1.45" strokeLinecap="round" opacity="0.9" />
-      <path d="M39 40C47 39 55 40 62 44" stroke="#d8b462" strokeWidth="1.25" strokeLinecap="round" />
-      <path d="M37 68C44 63 52 61 60 61" stroke="#d8b462" strokeWidth="1.25" strokeLinecap="round" opacity="0.78" />
+      <path
+        d="M43 27C53 20 67 23 82 33L74 34C82 35 89 37 94 40C85 47 76 51 67 52C60 52 53 49 47 44C40 50 33 59 27 72C31 58 37 48 45 42L39 34L47 35L50 20L57 31C53 29 48 28 43 27Z"
+        fill="url(#raven-black)"
+        filter="url(#raven-glow)"
+        stroke="#ff4968"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2.25"
+      />
+      <path
+        d="M69 38C76 35 84 36 94 40C84 45 76 47 69 47C64 46 60 44 56 41C60 40 64 39 69 38Z"
+        fill="#050506"
+        stroke="#ff6a82"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.75"
+      />
+      <path d="M73 40C78 39 83 40 88 41C82 43 78 44 73 44C70 43 67 42 65 41C67 40 70 40 73 40Z" fill="#e31b3f" />
+      <circle cx="59" cy="38" r="6.6" fill="#e31b3f" />
+      <circle cx="59" cy="38" r="2.55" fill="#fff1f4" />
+      <path d="M51 31L59 37L50 38" fill="none" stroke="#ff6a82" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
     </svg>
   );
 }
