@@ -33,6 +33,7 @@ interface Props {
   onSelectConversation: (conversationId: string) => void;
   onSetMode: (mode: AgentMode) => void;
   onOpenSettings: () => void;
+  onOpenCustomLetters: () => void;
   onToggleFocus: () => void;
   onQuickPrompt: (prompt: string) => void;
   onSetHistoryFilter: (filter: HistoryFilter) => void;
@@ -116,6 +117,7 @@ export function CommandPalette({
   onSelectConversation,
   onSetMode,
   onOpenSettings,
+  onOpenCustomLetters,
   onToggleFocus,
   onQuickPrompt,
   onSetHistoryFilter,
@@ -336,6 +338,12 @@ export function CommandPalette({
                   label="Configurações"
                   description="Perfil, tema e sessão"
                   onClick={() => run(onOpenSettings)}
+                />
+                <CommandItem
+                  icon={<Sparkles size={15} />}
+                  label="Letras personalizadas"
+                  description="Fontes Unicode e símbolos aesthetic"
+                  onClick={() => run(onOpenCustomLetters)}
                 />
               </section>
 

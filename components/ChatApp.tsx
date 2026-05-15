@@ -26,6 +26,7 @@ import {
   Plus,
   Search,
   Settings,
+  Sparkles,
   Square,
   Star,
   Tag,
@@ -35,6 +36,7 @@ import {
 import { ChatInput } from "@/components/ChatInput";
 import { ChatMessages } from "@/components/ChatMessages";
 import { CommandPalette } from "@/components/CommandPalette";
+import { CustomLettersPanel } from "@/components/CustomLettersPanel";
 import { LoginScreen } from "@/components/LoginScreen";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { ShortcutsDialog } from "@/components/ShortcutsDialog";
@@ -89,6 +91,7 @@ export function ChatApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const [customLettersOpen, setCustomLettersOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
@@ -1083,6 +1086,19 @@ export function ChatApp() {
               <span>Comandos</span>
               <kbd>Ctrl K</kbd>
             </button>
+
+            <button
+              type="button"
+              className="sidebar-command-button sidebar-custom-letters-button"
+              onClick={() => {
+                setCustomLettersOpen(true);
+                setSidebarOpen(false);
+              }}
+            >
+              <Sparkles size={14} />
+              <span>Letras</span>
+              <kbd>MSY</kbd>
+            </button>
           </div>
         </div>
 
@@ -1654,6 +1670,15 @@ export function ChatApp() {
             <button
               type="button"
               className="icon-button"
+              title="Letras personalizadas"
+              aria-label="Abrir letras personalizadas"
+              onClick={() => setCustomLettersOpen(true)}
+            >
+              <Sparkles size={17} />
+            </button>
+            <button
+              type="button"
+              className="icon-button"
               title={focusMode ? "Mostrar sidebar" : "Modo foco"}
               aria-label={focusMode ? "Mostrar sidebar" : "Ativar modo foco"}
               onClick={() => setFocusMode((current) => !current)}
@@ -1766,12 +1791,18 @@ export function ChatApp() {
         }
         onSetMode={setMode}
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenCustomLetters={() => setCustomLettersOpen(true)}
         onToggleFocus={() => setFocusMode((current) => !current)}
         onQuickPrompt={requestSend}
         historyFilter={historyFilter}
         onSetHistoryFilter={setHistoryFilter}
         onSearchTag={searchTag}
         onUpdateActiveConversation={updateActiveConversation}
+      />
+
+      <CustomLettersPanel
+        open={customLettersOpen}
+        onClose={() => setCustomLettersOpen(false)}
       />
 
       <AnimatePresence>
