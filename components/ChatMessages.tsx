@@ -194,7 +194,9 @@ export function ChatMessages({
         >
           <div className="welcome-copy">
             <h1>
-              <span className="welcome-msy-mark" aria-hidden="true" />
+              <span className="welcome-msy-mark" aria-hidden="true">
+                <RavenHeadingMark />
+              </span>
               <span>{welcomeName}</span>
             </h1>
             <p className="welcome-subtitle">
@@ -661,6 +663,67 @@ function DateSeparator({ timestamp }: { timestamp: number }) {
     >
       <span>{label}</span>
     </motion.div>
+  );
+}
+
+function RavenHeadingMark() {
+  return (
+    <svg viewBox="0 0 96 96" role="img" aria-hidden="true">
+      <defs>
+        <radialGradient id="raven-bg" cx="50%" cy="47%" r="56%">
+          <stop offset="0%" stopColor="#26060d" />
+          <stop offset="64%" stopColor="#070405" />
+          <stop offset="100%" stopColor="#020203" />
+        </radialGradient>
+        <linearGradient id="raven-ring" x1="15" y1="10" x2="82" y2="86">
+          <stop stopColor="#f4d98c" />
+          <stop offset="0.42" stopColor="#e31b3f" />
+          <stop offset="1" stopColor="#b8893f" />
+        </linearGradient>
+        <linearGradient id="raven-beak" x1="58" y1="33" x2="91" y2="46">
+          <stop stopColor="#fff0bc" />
+          <stop offset="0.42" stopColor="#d7a84d" />
+          <stop offset="1" stopColor="#12090a" />
+        </linearGradient>
+      </defs>
+
+      <circle cx="48" cy="48" r="42" fill="url(#raven-bg)" stroke="url(#raven-ring)" strokeWidth="2.4" />
+      <circle cx="48" cy="48" r="34" fill="none" stroke="#e31b3f" strokeWidth="1.4" opacity="0.72" />
+
+      <path
+        d="M21 64C29 48 40 37 53 32C63 28 73 29 84 35C74 36 65 38 56 42C43 47 32 54 21 64Z"
+        fill="#0b0b0d"
+        stroke="#d8b462"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M48 25C57 22 67 25 78 34C68 33 59 35 51 39C40 45 31 55 24 68C34 61 44 58 54 59C49 63 46 67 45 72C54 67 64 66 74 69C68 62 66 56 69 50C75 48 82 43 89 35C76 29 65 26 55 27L50 19L47 28L41 25Z"
+        fill="#050506"
+        stroke="#f0cc78"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M66 39C72 35 80 34 91 35C82 43 75 48 68 50C63 51 59 50 55 48C58 44 61 41 66 39Z"
+        fill="#050506"
+        stroke="url(#raven-beak)"
+        strokeWidth="2.2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M71 40C75 39 79 39 85 40C80 43 76 44 73 44C70 43 68 43 67 42C68 41 69 40 71 40Z"
+        fill="#fff0bc"
+      />
+      <circle cx="58" cy="38" r="6.4" fill="#e31b3f" />
+      <circle cx="58" cy="38" r="3" fill="#ff4464" />
+      <circle cx="60" cy="36" r="1.1" fill="#ffe1e6" />
+
+      <path d="M24 59C34 55 45 54 56 56" stroke="#c99b4a" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M31 50C41 47 51 47 60 50" stroke="#e31b3f" strokeWidth="1.45" strokeLinecap="round" opacity="0.9" />
+      <path d="M39 40C47 39 55 40 62 44" stroke="#d8b462" strokeWidth="1.25" strokeLinecap="round" />
+      <path d="M37 68C44 63 52 61 60 61" stroke="#d8b462" strokeWidth="1.25" strokeLinecap="round" opacity="0.78" />
+    </svg>
   );
 }
 
