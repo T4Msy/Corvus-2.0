@@ -13,6 +13,21 @@ export interface UserContext {
   tipo: "membro" | "convidado" | string;
 }
 
+export interface ChatAttachment {
+  id: string;
+  path: string;
+  name: string;
+  type: string;
+  size: number;
+}
+
+export interface N8nImageAttachment {
+  name: string;
+  type: string;
+  size: number;
+  signedUrl: string;
+}
+
 /** Payload que o frontend envia para /api/corvus/chat. */
 export interface ChatRequestBody {
   message: string;
@@ -21,6 +36,8 @@ export interface ChatRequestBody {
   userId: string;
   modo: AgentMode;
   userContext: UserContext;
+  attachments?: ChatAttachment[];
+  imageAttachments?: N8nImageAttachment[];
 }
 
 /** Resposta normalizada que /api/corvus/chat devolve ao frontend. */
