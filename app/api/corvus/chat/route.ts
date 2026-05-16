@@ -146,9 +146,10 @@ export async function POST(req: Request) {
 
   const conversationId = asString(b.conversationId, "");
   const attachments = parseAttachments(b.attachments);
+  const supportedImageAttachments = attachments.filter(isSupportedImage);
   let imageAttachments: N8nImageAttachment[] = [];
 
-  if (attachments.length > 0) {
+  if (supportedImageAttachments.length > 0) {
     if (!token || !userSupabase) {
       return bad("Anexos exigem sessao autenticada.", 401);
     }
@@ -156,12 +157,17 @@ export async function POST(req: Request) {
       return bad("Conversa obrigatoria para enviar anexos.");
     }
 
-    const acceptedImages = attachments
-      .filter(isSupportedImage)
+    const acceptedImages = supportedImageAttachments
       .filter((attachment) =>
         attachmentBelongsToConversation(attachment, resolvedUserId, conversationId)
       )
       .slice(0, MAX_IMAGE_ATTACHMENTS);
+
+    if (acceptedImages.length === 0) {
+      return bad(
+        "Nenhuma imagem valida foi anexada. Use PNG, JPG, WebP ou GIF da conversa atual."
+      );
+    }
 
     imageAttachments = (
       await Promise.all(
@@ -182,6 +188,10 @@ export async function POST(req: Request) {
         })
       )
     ).filter((item): item is N8nImageAttachment => Boolean(item));
+
+    if (imageAttachments.length === 0) {
+      return bad("Nao foi possivel gerar acesso temporario para a imagem.");
+    }
   }
 
   const payload: ChatRequestBody = {

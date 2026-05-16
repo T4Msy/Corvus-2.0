@@ -52,7 +52,15 @@ A nova API layer (`/api/corvus/chat`) envia o seguinte payload ao webhook de cha
     "cargo": "string",
     "sigla": "string",
     "tipo": "membro" | "convidado"
-  }
+  },
+  "imageAttachments": [
+    {
+      "name": "string",
+      "type": "image/png | image/jpeg | image/webp | image/gif",
+      "size": 12345,
+      "signedUrl": "https://..." // URL Supabase temporaria, expira em 10 min
+    }
+  ]
 }
 ```
 
@@ -67,6 +75,8 @@ E espera de volta:
 ```
 
 Esse contrato **já é o que o workflow atual produz** via `Format Response` + `Respond to Webhook`. ✅
+
+Para imagens, o workflow precisa preservar `imageAttachments` no node **Normalize Input**. O export sanitizado em `n8n/workflow.json` já mantém esses campos e adiciona um bloco `[Imagens anexadas]` ao `chatInput`. Para visão real, acrescente um node **OpenAI → Image → Analyze Image** antes do AI Agent e use `imageAttachments[].signedUrl` como `Image URL(s)`; o resultado da análise deve ser concatenado ao `chatInput`. Sem esse node de análise, o agente recebe apenas metadados/URLs e pode não interpretar o conteúdo visual.
 
 ---
 
@@ -120,7 +130,18 @@ O node `Format Response` retorna `"Sem resposta do agente."` quando `output` est
 - Quando falhar, retorne `{ ok: false, error: "...", code: "agent_failed" }` ao invés de uma string vazia que vira reply.
 - A V3 trata `ok: false` corretamente — só precisa que o n8n envie esse formato em caso de erro.
 
-### F. Renomear o caminho do webhook (opcional, recomendado)
+### F. Imagens — habilitar visão real
+
+A API já envia imagens como URLs assinadas em `imageAttachments`. Para o agente realmente analisar o conteúdo visual, adicione no n8n um node **OpenAI → Image → Analyze Image** antes do AI Agent:
+
+- **Input Type**: `Image URL(s)`.
+- **Image URL(s)**: expressão juntando `imageAttachments[].signedUrl`.
+- **Text Input**: a pergunta do usuário.
+- Concatene a resposta desse node ao `chatInput` antes de entrar no AI Agent.
+
+O node OpenAI de análise é necessário porque o AI Agent atual recebe uma mensagem textual. Só colocar a URL no prompt não garante visão multimodal.
+
+### G. Renomear o caminho do webhook (opcional, recomendado)
 
 `/webhook/corvus-ingestao` é confuso porque "ingestão" remete ao formulário, não ao chat. Sugestão:
 
