@@ -96,7 +96,7 @@
         "promptType": "define",
         "text": "={{ $json.chatInput }}\n",
         "options": {
-          "systemMessage": "={{ $json.corvus_system }}"
+          "systemMessage": "={{ $json.corvus_system + ($json.hasImages ? \"\\n\\nINSTRUCAO DE IMAGEM\\nQuando houver [Imagens anexadas] no pedido, trate as imagens como parte do contexto do usuario. Nao responda que nao possui capacidade de imagem. Se o conteudo visual ainda nao tiver sido analisado por um node de visao, diga objetivamente que a analise visual precisa ser ativada no workflow n8n.\" : \"\") }}"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
@@ -336,7 +336,7 @@
         "promptType": "define",
         "text": "={{ $json.chatInput }}\n",
         "options": {
-          "systemMessage": "={{ $json.corvus_system }}"
+          "systemMessage": "={{ $json.corvus_system + ($json.hasImages ? \"\\n\\nINSTRUCAO DE IMAGEM\\nQuando houver [Imagens anexadas] no pedido, trate as imagens como parte do contexto do usuario. Nao responda que nao possui capacidade de imagem. Se o conteudo visual ainda nao tiver sido analisado por um node de visao, diga objetivamente que a analise visual precisa ser ativada no workflow n8n.\" : \"\") }}"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
