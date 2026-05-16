@@ -194,9 +194,7 @@ export function ChatMessages({
         >
           <div className="welcome-copy">
             <h1>
-              <span className="welcome-msy-mark" aria-hidden="true">
-                <RavenHeadingMark />
-              </span>
+              <RavenHeadingMark />
               <span>{welcomeName}</span>
             </h1>
             <p className="welcome-subtitle">
@@ -667,49 +665,27 @@ function DateSeparator({ timestamp }: { timestamp: number }) {
 }
 
 function RavenHeadingMark() {
+  const [showMotto, setShowMotto] = useState(false);
+
   return (
-    <svg viewBox="0 0 96 96" role="img" aria-hidden="true">
-      <defs>
-        <radialGradient id="raven-bg" cx="46%" cy="42%" r="62%">
-          <stop offset="0%" stopColor="#e31b3f" />
-          <stop offset="48%" stopColor="#530714" />
-          <stop offset="100%" stopColor="#030102" />
-        </radialGradient>
-        <linearGradient id="raven-ring" x1="15" y1="10" x2="82" y2="84">
-          <stop stopColor="#ff6a82" />
-          <stop offset="0.58" stopColor="#e31b3f" />
-          <stop offset="1" stopColor="#8d0718" />
-        </linearGradient>
-        <filter id="raven-shadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="4" stdDeviation="3" floodColor="#000000" floodOpacity="0.7" />
-        </filter>
-      </defs>
-
-      <circle cx="48" cy="48" r="43" fill="url(#raven-bg)" stroke="url(#raven-ring)" strokeWidth="3" />
-      <circle cx="48" cy="48" r="34" fill="none" stroke="#ff536f" strokeWidth="1.4" opacity="0.42" />
-
-      <path
-        d="M18 67C27 54 38 45 51 40C44 40 35 42 25 47C35 36 47 30 60 30C70 30 80 35 91 43C79 44 69 48 61 55C51 64 37 68 18 67Z"
-        fill="#030304"
-        filter="url(#raven-shadow)"
-        stroke="#120508"
-        strokeLinejoin="round"
-        strokeWidth="1.6"
+    <button
+      type="button"
+      className={`welcome-msy-mark${showMotto ? " motto-visible" : ""}`}
+      aria-label="Revelar lema do Corvus"
+      aria-pressed={showMotto}
+      onClick={() => setShowMotto((current) => !current)}
+    >
+      <img
+        className="corvao-emblem-image"
+        src="/corvao-emblem.png"
+        alt=""
+        draggable={false}
+        decoding="async"
       />
-      <path
-        d="M49 35C57 25 73 29 91 43C81 42 72 44 64 49C57 53 50 49 45 42C45 39 46 37 49 35Z"
-        fill="#050506"
-        stroke="#ff405f"
-        strokeLinejoin="round"
-        strokeWidth="2"
-      />
-      <path d="M67 40C74 38 82 39 91 43C81 46 74 47 67 46C63 45 60 43 58 41C61 41 64 40 67 40Z" fill="#e31b3f" />
-      <circle cx="58" cy="38" r="3.1" fill="#ffeff2" />
-      <circle cx="59" cy="38" r="1.25" fill="#070405" />
-      <path d="M28 63C39 56 50 54 61 55" fill="none" stroke="#ff405f" strokeLinecap="round" strokeWidth="2" opacity="0.9" />
-      <path d="M35 52C45 48 54 48 63 51" fill="none" stroke="#ff7c92" strokeLinecap="round" strokeWidth="1.5" opacity="0.72" />
-      <path d="M33 70C42 66 51 64 61 64" fill="none" stroke="#1a080d" strokeLinecap="round" strokeWidth="3" opacity="0.85" />
-    </svg>
+      <span className="raven-motto" aria-hidden={!showMotto}>
+        Rise of renascense
+      </span>
+    </button>
   );
 }
 
