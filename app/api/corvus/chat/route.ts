@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
+import { createAttachmentSignedUrl } from "@/integrations/supabase/storage";
 import { sendChatToN8n } from "@/lib/n8n/client";
 import type {
   AgentMode,
+  ChatAttachment,
   ChatErrorResponse,
   ChatRequestBody,
   ChatResponse,
+  N8nImageAttachment,
   UserContext,
 } from "@/lib/types";
 
@@ -13,7 +16,16 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_MESSAGE_CHARS = 8_000;
+const MAX_IMAGE_ATTACHMENTS = 4;
+const IMAGE_URL_EXPIRES_IN = 10 * 60;
 const VALID_MODES: ReadonlySet<AgentMode> = new Set(["corvus", "fenrir"]);
+const SUPPORTED_IMAGE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/gif",
+]);
 
 function bad(message: string, status = 400): NextResponse<ChatErrorResponse> {
   return NextResponse.json<ChatErrorResponse>(
@@ -40,6 +52,36 @@ function parseUserContext(raw: unknown): UserContext {
     sigla: asString(obj.sigla, ""),
     tipo: asString(obj.tipo, "convidado"),
   };
+}
+
+function parseAttachments(raw: unknown): ChatAttachment[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item): ChatAttachment | null => {
+      if (!item || typeof item !== "object") return null;
+      const value = item as Partial<ChatAttachment>;
+      const id = asString(value.id).trim();
+      const path = asString(value.path).trim();
+      const name = asString(value.name).trim();
+      const type = asString(value.type, "application/octet-stream").trim();
+      const size = typeof value.size === "number" ? value.size : 0;
+      if (!id || !path || !name || !size) return null;
+      return { id, path, name, type, size };
+    })
+    .filter((item): item is ChatAttachment => Boolean(item));
+}
+
+function isSupportedImage(attachment: ChatAttachment): boolean {
+  return SUPPORTED_IMAGE_TYPES.has(attachment.type.toLowerCase());
+}
+
+function attachmentBelongsToConversation(
+  attachment: ChatAttachment,
+  userId: string,
+  conversationId: string
+): boolean {
+  const expectedPrefix = `${userId}/${conversationId}/`;
+  return attachment.path.startsWith(expectedPrefix);
 }
 
 function statusForError(err: ChatErrorResponse): number {
@@ -82,11 +124,12 @@ export async function POST(req: Request) {
   const requestedUserId = asString(b.userId, "anonymous");
   let resolvedUserId = requestedUserId;
   const token = bearerToken(req);
+  let userSupabase: ReturnType<typeof createServerSupabaseClient> | null = null;
 
   if (token) {
     try {
-      const supabase = createServerSupabaseClient(token);
-      const { data, error } = await supabase.auth.getUser(token);
+      userSupabase = createServerSupabaseClient(token);
+      const { data, error } = await userSupabase.auth.getUser(token);
       if (error || !data.user) {
         return bad("Sessao Supabase invalida ou expirada.", 401);
       }
@@ -101,13 +144,54 @@ export async function POST(req: Request) {
     }
   }
 
+  const conversationId = asString(b.conversationId, "");
+  const attachments = parseAttachments(b.attachments);
+  let imageAttachments: N8nImageAttachment[] = [];
+
+  if (attachments.length > 0) {
+    if (!token || !userSupabase) {
+      return bad("Anexos exigem sessao autenticada.", 401);
+    }
+    if (!conversationId) {
+      return bad("Conversa obrigatoria para enviar anexos.");
+    }
+
+    const acceptedImages = attachments
+      .filter(isSupportedImage)
+      .filter((attachment) =>
+        attachmentBelongsToConversation(attachment, resolvedUserId, conversationId)
+      )
+      .slice(0, MAX_IMAGE_ATTACHMENTS);
+
+    imageAttachments = (
+      await Promise.all(
+        acceptedImages.map(async (attachment) => {
+          const signedUrl = await createAttachmentSignedUrl(
+            userSupabase,
+            attachment.path,
+            undefined,
+            IMAGE_URL_EXPIRES_IN
+          );
+          if (!signedUrl) return null;
+          return {
+            name: attachment.name,
+            type: attachment.type,
+            size: attachment.size,
+            signedUrl,
+          };
+        })
+      )
+    ).filter((item): item is N8nImageAttachment => Boolean(item));
+  }
+
   const payload: ChatRequestBody = {
     message,
-    conversationId: asString(b.conversationId, ""),
-    sessionId: asString(b.sessionId, asString(b.conversationId, "")),
+    conversationId,
+    sessionId: asString(b.sessionId, conversationId),
     userId: resolvedUserId,
     modo,
     userContext: parseUserContext(b.userContext),
+    ...(imageAttachments.length > 0 ? { imageAttachments } : {}),
   };
 
   let result: ChatResponse;

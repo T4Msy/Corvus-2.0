@@ -155,6 +155,18 @@ export function ChatApp() {
     online: conversations.online,
   });
 
+  const chatAttachments = useMemo(
+    () =>
+      attachments.activeAttachments.map((attachment) => ({
+        id: attachment.id,
+        path: attachment.path,
+        name: attachment.name,
+        type: attachment.type,
+        size: attachment.size,
+      })),
+    [attachments.activeAttachments]
+  );
+
   const userName =
     auth.profile?.nome_interno ||
     auth.profile?.nome ||
@@ -492,11 +504,14 @@ export function ChatApp() {
           sessionId: conversation.sessionId,
           userId: auth.userId,
           userContext,
+          attachments: chatAttachments,
           accessToken: auth.accessToken,
           onUserMessage: (message) =>
             conversations.persistMessage(conversation.id, message),
-          onAssistantMessage: (message) =>
-            conversations.persistMessage(conversation.id, message),
+          onAssistantMessage: async (message, response) => {
+            await conversations.persistMessage(conversation.id, message);
+            applyResponseMeta(conversation, response.meta);
+          },
         });
       } finally {
         sendBusyRef.current = false;
@@ -506,6 +521,7 @@ export function ChatApp() {
     [
       auth.accessToken,
       auth.userId,
+      chatAttachments,
       chat,
       conversations,
       ensureConversationForSend,
@@ -583,6 +599,34 @@ export function ChatApp() {
     },
     [conversations.activeConversationId, updateConversation]
   );
+
+  function applyResponseMeta(
+    conversation: Conversation,
+    meta: Record<string, unknown> | undefined
+  ) {
+      if (!meta) return;
+
+      const patch: Parameters<typeof conversations.updateConversation>[1] = {};
+      const summary =
+        typeof meta.summaryCandidate === "string"
+          ? meta.summaryCandidate.trim()
+          : "";
+      const tags = Array.isArray(meta.tags)
+        ? normalizeTags(
+            meta.tags.filter((tag): tag is string => typeof tag === "string")
+          )
+        : [];
+
+      if (summary && summary !== (conversation.summary ?? "")) {
+        patch.summary = summary.slice(0, 1_200);
+      }
+      if (tags.length > 0) {
+        patch.tags = normalizeTags([...(conversation.tags ?? []), ...tags]);
+      }
+      if (Object.keys(patch).length > 0) {
+        updateConversation(conversation.id, patch);
+      }
+  }
 
   const openTagEditor = useCallback((conversation: Conversation) => {
     setTagEditorId(conversation.id);
@@ -935,17 +979,8 @@ export function ChatApp() {
         return;
       }
 
-      let conversationId = conversations.activeConversationId;
-      if (!conversationId) {
-        toast.push({
-          tone: "warning",
-          title: "Conversa ainda não criada",
-          message: "Envie a primeira mensagem antes de anexar arquivos.",
-        });
-        return;
-      }
-
-      const attachment = await attachments.upload(file, conversationId);
+      const conversation = await ensureConversationForSend();
+      const attachment = await attachments.upload(file, conversation.id);
       if (!attachment) {
         toast.push({
           tone: "error",
@@ -964,8 +999,8 @@ export function ChatApp() {
       attachments,
       auth.status,
       auth.supabaseReady,
-      chat,
       conversations,
+      ensureConversationForSend,
       toast,
     ]
   );
@@ -1752,15 +1787,11 @@ export function ChatApp() {
               toast.push({
                 tone: "warning",
                 title:
-                  !conversations.activeConversationId
-                    ? "Conversa ainda não criada"
-                    : auth.status === "guest"
-                    ? "Login necessário"
-                    : "Anexo indisponível",
+                  auth.status === "guest"
+                    ? "Login necessario"
+                    : "Anexo indisponivel",
                 message:
-                  !conversations.activeConversationId
-                    ? "Envie a primeira mensagem antes de anexar arquivos."
-                    : auth.status === "guest"
+                  auth.status === "guest"
                     ? "Entre com sua conta para anexar arquivos."
                     : "Reconecte para anexar arquivos.",
               });
@@ -1769,8 +1800,7 @@ export function ChatApp() {
             attachmentDisabled={
               auth.status !== "authed" ||
               !auth.supabaseReady ||
-              !conversations.online ||
-              !conversations.activeConversationId
+              !conversations.online
             }
             attachmentBusy={attachments.busy}
             syncStatus={conversations.syncStatus}

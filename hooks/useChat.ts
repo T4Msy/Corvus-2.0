@@ -3,9 +3,11 @@
 import { useCallback, useRef, useState } from "react";
 import type {
   AgentMode,
+  ChatAttachment,
   ChatMessage,
   ChatRequestBody,
   ChatResponse,
+  ChatSuccessResponse,
   UserContext,
 } from "@/lib/types";
 
@@ -16,9 +18,13 @@ interface SendArgs {
   sessionId: string;
   userId: string;
   userContext: UserContext;
+  attachments?: ChatAttachment[];
   accessToken?: string | null;
   onUserMessage?: (message: ChatMessage) => void | Promise<void>;
-  onAssistantMessage?: (message: ChatMessage) => void | Promise<void>;
+  onAssistantMessage?: (
+    message: ChatMessage,
+    response: ChatSuccessResponse
+  ) => void | Promise<void>;
 }
 
 interface SendError {
@@ -70,6 +76,7 @@ export function useChat() {
       userId: args.userId,
       modo: args.mode,
       userContext: args.userContext,
+      attachments: args.attachments,
     };
 
     try {
@@ -103,7 +110,7 @@ export function useChat() {
         createdAt: Date.now(),
       };
       setMessages((prev) => [...prev, assistantMessage]);
-      void args.onAssistantMessage?.(assistantMessage);
+      void args.onAssistantMessage?.(assistantMessage, data);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro de rede.";
       setError({ message: `Falha de conexao: ${msg}`, retryable: true });
