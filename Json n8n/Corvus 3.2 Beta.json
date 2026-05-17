@@ -265,6 +265,18 @@
             {
               "name": "hasDocuments",
               "value": "={{ $json.hasDocuments === true }}"
+            },
+            {
+              "name": "hasImages",
+              "value": "={{ $json.hasImages === true }}"
+            },
+            {
+              "name": "visionError",
+              "value": "={{ $json.visionError || \"\" }}"
+            },
+            {
+              "name": "imageAttachments",
+              "value": "={{ JSON.stringify($json.imageAttachments || []) }}"
             }
           ]
         },
@@ -338,6 +350,18 @@
             {
               "name": "hasDocuments",
               "value": "={{ $json.hasDocuments === true }}"
+            },
+            {
+              "name": "hasImages",
+              "value": "={{ $json.hasImages === true }}"
+            },
+            {
+              "name": "visionError",
+              "value": "={{ $json.visionError || \"\" }}"
+            },
+            {
+              "name": "imageAttachments",
+              "value": "={{ JSON.stringify($json.imageAttachments || []) }}"
             }
           ]
         },
@@ -411,6 +435,18 @@
             {
               "name": "hasDocuments",
               "value": "={{ $json.hasDocuments === true }}"
+            },
+            {
+              "name": "hasImages",
+              "value": "={{ $json.hasImages === true }}"
+            },
+            {
+              "name": "visionError",
+              "value": "={{ $json.visionError || \"\" }}"
+            },
+            {
+              "name": "imageAttachments",
+              "value": "={{ JSON.stringify($json.imageAttachments || []) }}"
             }
           ]
         },
@@ -1303,6 +1339,18 @@
             {
               "name": "hasDocuments",
               "value": "={{ $json.hasDocuments === true }}"
+            },
+            {
+              "name": "hasImages",
+              "value": "={{ $json.hasImages === true }}"
+            },
+            {
+              "name": "visionError",
+              "value": "={{ $json.visionError || \"\" }}"
+            },
+            {
+              "name": "imageAttachments",
+              "value": "={{ JSON.stringify($json.imageAttachments || []) }}"
             }
           ]
         },

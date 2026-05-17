@@ -434,6 +434,28 @@ export async function POST(req: Request) {
     imageAttachments.length > 0 &&
     looksLikeImageRefusal(result.reply)
   ) {
+    const fallbackVision =
+      visualContext ?? (await analyzeImagesWithOpenAI(message, imageAttachments));
+    const visionError =
+      typeof result.meta?.visionError === "string"
+        ? result.meta.visionError
+        : "";
+
+    if (fallbackVision) {
+      return NextResponse.json(
+        {
+          ok: true,
+          reply: directVisionReply(fallbackVision.text),
+          meta: {
+            ...(result.meta ?? {}),
+            usedVision: true,
+            visionFallback: true,
+          },
+        },
+        { status: 200 }
+      );
+    }
+
     if (!visualContext) {
       return NextResponse.json<ChatErrorResponse>(
         {
@@ -441,6 +463,7 @@ export async function POST(req: Request) {
           error: {
             code: "upstream_invalid_response",
             message:
+              visionError ||
               "O workflow recebeu a imagem, mas nao retornou contexto visual. Verifique o Vision Analyzer no n8n.",
             retryable: false,
           },
@@ -448,18 +471,6 @@ export async function POST(req: Request) {
         { status: 502 }
       );
     }
-    return NextResponse.json(
-      {
-        ok: true,
-        reply: directVisionReply(visualContext.text),
-        meta: {
-          ...(result.meta ?? {}),
-          usedVision: true,
-          visionFallback: true,
-        },
-      },
-      { status: 200 }
-    );
   }
 
   return NextResponse.json(result, { status: 200 });
