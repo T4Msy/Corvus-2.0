@@ -27,6 +27,7 @@ export type MessageRow = {
   conversa_id: string;
   role: string;
   texto: string;
+  attachments?: Json | null;
   created_at: string | null;
 };
 
@@ -78,6 +79,7 @@ export interface Database {
           conversa_id: string;
           role: string;
           texto: string;
+          attachments?: Json | null;
           created_at?: string | null;
         };
         Update: Partial<MessageRow>;

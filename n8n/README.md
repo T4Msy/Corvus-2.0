@@ -53,6 +53,10 @@ A nova API layer (`/api/corvus/chat`) envia o seguinte payload ao webhook de cha
     "sigla": "string",
     "tipo": "membro" | "convidado"
   },
+  "hasImages": true,
+  "imageUrl": "data:image/... ou https://...",    // primeira imagem
+  "imageUrls": ["data:image/... ou https://..."], // atalhos para nodes simples
+  "images": [/* mesmo conteudo de imageAttachments */],
   "imageAttachments": [
     {
       "name": "string",

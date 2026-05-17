@@ -233,7 +233,25 @@ export async function POST(req: Request) {
     userId: resolvedUserId,
     modo,
     userContext: parseUserContext(b.userContext),
-    ...(imageAttachments.length > 0 ? { imageAttachments } : {}),
+    ...(imageAttachments.length > 0
+      ? {
+          imageAttachments,
+          images: imageAttachments,
+          imageUrls: imageAttachments.map(
+            (attachment) =>
+              attachment.dataUrl ||
+              attachment.imageUrl ||
+              attachment.url ||
+              attachment.signedUrl
+          ),
+          imageUrl:
+            imageAttachments[0].dataUrl ||
+            imageAttachments[0].imageUrl ||
+            imageAttachments[0].url ||
+            imageAttachments[0].signedUrl,
+          hasImages: true,
+        }
+      : {}),
   };
 
   let result: ChatResponse;

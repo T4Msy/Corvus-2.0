@@ -41,6 +41,10 @@ export interface ChatRequestBody {
   userContext: UserContext;
   attachments?: ChatAttachment[];
   imageAttachments?: N8nImageAttachment[];
+  hasImages?: boolean;
+  imageUrl?: string;
+  imageUrls?: string[];
+  images?: N8nImageAttachment[];
 }
 
 /** Resposta normalizada que /api/corvus/chat devolve ao frontend. */

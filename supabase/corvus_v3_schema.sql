@@ -96,6 +96,7 @@ create table if not exists public.msy_mensagens (
   conversa_id text not null,
   role text not null,
   texto text not null,
+  attachments jsonb default '[]'::jsonb,
   created_at timestamptz default now()
 );
 
@@ -103,6 +104,7 @@ alter table if exists public.msy_mensagens
   add column if not exists conversa_id text,
   add column if not exists role text,
   add column if not exists texto text,
+  add column if not exists attachments jsonb default '[]'::jsonb,
   add column if not exists created_at timestamptz default now();
 
 create index if not exists msy_conversas_usuario_updated_idx

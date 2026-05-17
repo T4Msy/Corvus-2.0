@@ -1,5 +1,11 @@
-import type { CorvusSupabaseClient } from "@/integrations/supabase/types";
-import type { ChatMessage, Conversation, MessageRole } from "@/lib/types";
+import { createAttachmentSignedUrl, removeConversationFiles } from "@/integrations/supabase/storage";
+import type { CorvusSupabaseClient, Json } from "@/integrations/supabase/types";
+import type {
+  ChatMessage,
+  Conversation,
+  ConversationAttachment,
+  MessageRole,
+} from "@/lib/types";
 
 const DEFAULT_TITLE = "Nova conversa";
 const BASE_CONVERSATION_SELECT = "id,titulo,session_id,updated_at";
@@ -49,6 +55,103 @@ function isMissingMetadataColumn(error: unknown): boolean {
     message.includes("tags") ||
     message.includes("summary")
   );
+}
+
+function isMissingAttachmentsColumn(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const record = error as { code?: unknown; message?: unknown; details?: unknown };
+  const code = typeof record.code === "string" ? record.code : "";
+  const message = `${String(record.message ?? "")} ${String(record.details ?? "")}`.toLowerCase();
+  return code === "42703" || code === "PGRST204" || message.includes("attachments");
+}
+
+function normalizeAttachments(
+  raw: unknown,
+  conversationId: string
+): ConversationAttachment[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item): ConversationAttachment | null => {
+      if (!item || typeof item !== "object") return null;
+      const value = item as Partial<ConversationAttachment>;
+      const id = typeof value.id === "string" ? value.id.trim() : "";
+      const path = typeof value.path === "string" ? value.path.trim() : "";
+      const name = typeof value.name === "string" ? value.name.trim() : "";
+      const type =
+        typeof value.type === "string" && value.type.trim()
+          ? value.type.trim()
+          : "application/octet-stream";
+      const size =
+        typeof value.size === "number" && Number.isFinite(value.size)
+          ? value.size
+          : 0;
+      const createdAt =
+        typeof value.createdAt === "number" && Number.isFinite(value.createdAt)
+          ? value.createdAt
+          : Date.now();
+      if (!id || !path || !name || size <= 0) return null;
+      return {
+        id,
+        conversationId,
+        path,
+        url: typeof value.url === "string" ? value.url : null,
+        name,
+        type,
+        size,
+        createdAt,
+      };
+    })
+    .filter((item): item is ConversationAttachment => Boolean(item));
+}
+
+function messageRowToModel(row: {
+  id?: string | number | null;
+  conversa_id?: string | null;
+  role: string;
+  texto: string;
+  attachments?: unknown;
+  created_at: string | null;
+}): ChatMessage {
+  const conversationId = row.conversa_id ?? "";
+  const attachments = normalizeAttachments(row.attachments, conversationId);
+  return {
+    id: row.id ? String(row.id) : undefined,
+    role: normalizeRole(row.role),
+    text: row.texto,
+    createdAt: toTime(row.created_at),
+    ...(attachments.length > 0 ? { attachments } : {}),
+  };
+}
+
+async function refreshAttachmentUrls(
+  supabase: CorvusSupabaseClient,
+  message: ChatMessage
+): Promise<ChatMessage> {
+  if (!message.attachments?.length) return message;
+  const attachments = await Promise.all(
+    message.attachments.map(async (attachment) => {
+      try {
+        const url = await createAttachmentSignedUrl(supabase, attachment.path);
+        return { ...attachment, url };
+      } catch {
+        return attachment;
+      }
+    })
+  );
+  return { ...message, attachments };
+}
+
+function attachmentsToJson(attachments: ConversationAttachment[]): Json {
+  return attachments.map((attachment) => ({
+    id: attachment.id,
+    conversationId: attachment.conversationId,
+    path: attachment.path,
+    url: attachment.url ?? null,
+    name: attachment.name,
+    type: attachment.type,
+    size: attachment.size,
+    createdAt: attachment.createdAt,
+  }));
 }
 
 function conversationRowToModel(row: {
@@ -335,6 +438,8 @@ export async function deleteOwnedConversationRecord(
     throw new Error("Conversa nao encontrada para este usuario.");
   }
 
+  await removeConversationFiles(supabase, userId, conversationId);
+
   const messageDelete = await supabase
     .from("msy_mensagens")
     .delete()
@@ -364,6 +469,12 @@ export async function deleteAllOwnedConversationRecords(
 
   const ids = (data ?? []).map((row) => row.id as string);
   if (ids.length === 0) return;
+
+  await Promise.all(
+    ids.map((conversationId) =>
+      removeConversationFiles(supabase, userId, conversationId)
+    )
+  );
 
   const messageDelete = await supabase
     .from("msy_mensagens")
@@ -405,17 +516,26 @@ export async function loadMessages(
 ): Promise<ChatMessage[]> {
   const { data, error } = await supabase
     .from("msy_mensagens")
-    .select("role,texto,created_at")
+    .select("id,conversa_id,role,texto,attachments,created_at")
     .eq("conversa_id", conversationId)
     .order("created_at", { ascending: true });
 
+  if (error && isMissingAttachmentsColumn(error)) {
+    const fallback = await supabase
+      .from("msy_mensagens")
+      .select("id,conversa_id,role,texto,created_at")
+      .eq("conversa_id", conversationId)
+      .order("created_at", { ascending: true });
+    if (fallback.error) throw fallback.error;
+    return (fallback.data ?? []).map(messageRowToModel);
+  }
   if (error) throw error;
 
-  return (data ?? []).map((row) => ({
-    role: normalizeRole(row.role),
-    text: row.texto,
-    createdAt: toTime(row.created_at),
-  }));
+  return Promise.all(
+    (data ?? [])
+      .map(messageRowToModel)
+      .map((message) => refreshAttachmentUrls(supabase, message))
+  );
 }
 
 export async function saveMessage(
@@ -423,12 +543,28 @@ export async function saveMessage(
   conversationId: string,
   message: ChatMessage
 ): Promise<void> {
-  const { error } = await supabase.from("msy_mensagens").insert({
+  const row = {
     conversa_id: conversationId,
     role: serializeRole(message.role),
     texto: message.text,
+    attachments: attachmentsToJson(
+      normalizeAttachments(message.attachments, conversationId)
+    ),
     created_at: new Date(message.createdAt).toISOString(),
-  });
+  };
+
+  const { error } = await supabase.from("msy_mensagens").insert(row);
+
+  if (error && isMissingAttachmentsColumn(error)) {
+    const fallback = await supabase.from("msy_mensagens").insert({
+      conversa_id: row.conversa_id,
+      role: row.role,
+      texto: row.texto,
+      created_at: row.created_at,
+    });
+    if (fallback.error) throw fallback.error;
+    return;
+  }
 
   if (error) throw error;
 }

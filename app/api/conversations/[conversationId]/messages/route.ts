@@ -15,7 +15,12 @@ import {
   upsertConversation,
   userCanAccessConversation,
 } from "@/integrations/supabase/conversations";
-import type { ChatMessage, Conversation, MessageRole } from "@/lib/types";
+import type {
+  ChatMessage,
+  Conversation,
+  ConversationAttachment,
+  MessageRole,
+} from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,6 +57,45 @@ function asTags(value: unknown): string[] {
     .map((item) => item.trim())
     .filter(Boolean)
     .slice(0, 8);
+}
+
+function parseAttachments(
+  raw: unknown,
+  conversationId: string
+): ConversationAttachment[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item): ConversationAttachment | null => {
+      if (!item || typeof item !== "object") return null;
+      const value = item as Partial<ConversationAttachment>;
+      const id = typeof value.id === "string" ? value.id.trim() : "";
+      const path = typeof value.path === "string" ? value.path.trim() : "";
+      const name = typeof value.name === "string" ? value.name.trim() : "";
+      const type =
+        typeof value.type === "string" && value.type.trim()
+          ? value.type.trim()
+          : "application/octet-stream";
+      const size =
+        typeof value.size === "number" && Number.isFinite(value.size)
+          ? value.size
+          : 0;
+      const createdAt =
+        typeof value.createdAt === "number" && Number.isFinite(value.createdAt)
+          ? value.createdAt
+          : Date.now();
+      if (!id || !path || !name || size <= 0) return null;
+      return {
+        id,
+        conversationId,
+        path,
+        url: typeof value.url === "string" ? value.url : null,
+        name,
+        type,
+        size,
+        createdAt,
+      };
+    })
+    .filter((item): item is ConversationAttachment => Boolean(item));
 }
 
 function parseConversation(
@@ -133,6 +177,7 @@ export async function POST(req: Request, { params }: RouteContext) {
     role: parseRole(rawMessage.role),
     text,
     createdAt,
+    attachments: parseAttachments(rawMessage.attachments, conversationId),
   };
 
   const requestedTitle =

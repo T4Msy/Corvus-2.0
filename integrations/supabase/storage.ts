@@ -87,6 +87,27 @@ export async function removeConversationFile(
   if (error) throw error;
 }
 
+export async function removeConversationFiles(
+  supabase: CorvusSupabaseClient,
+  userId: string,
+  conversationId: string,
+  bucket = DEFAULT_ATTACHMENTS_BUCKET
+): Promise<void> {
+  const prefix = `${userId}/${conversationId}`;
+  const { data, error } = await supabase.storage.from(bucket).list(prefix, {
+    limit: 1000,
+  });
+  if (error) throw error;
+
+  const paths = (data ?? [])
+    .filter((item) => item.name)
+    .map((item) => `${prefix}/${item.name}`);
+  if (paths.length === 0) return;
+
+  const removed = await supabase.storage.from(bucket).remove(paths);
+  if (removed.error) throw removed.error;
+}
+
 export function isStoragePath(value: string | null | undefined): value is string {
   if (!value) return false;
   return !/^(https?:|data:|blob:)/i.test(value);
