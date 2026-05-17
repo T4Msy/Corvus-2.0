@@ -359,6 +359,8 @@ textarea {
   border-radius: 999px;
   background: transparent;
   position: relative;
+  left: -4px;
+  top: -3px;
   padding: 0;
   cursor: pointer;
   box-shadow: none;
