@@ -389,7 +389,7 @@ textarea {
   object-position: center;
   transform-origin: center;
   --emblem-x: -6px;
-  --emblem-y: -5px;
+  --emblem-y: -11px;
   filter:
     drop-shadow(0 0 8px rgba(227, 27, 63, 0.5))
     drop-shadow(0 8px 16px rgba(0, 0, 0, 0.76));
