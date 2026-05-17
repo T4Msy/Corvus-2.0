@@ -222,7 +222,7 @@ export function ChatInput({
               }}
             >
               {attachmentBusy ? <Loader2 size={16} /> : <Plus size={18} />}
-              <span>{attachmentBusy ? "Enviando" : "Arquivo"}</span>
+              <span>{attachmentBusy ? "..." : "Anexos"}</span>
             </button>
             <SyncStatus status={syncStatus} />
           </div>
@@ -295,7 +295,7 @@ export function ChatInput({
               ) : (
                 <Send size={16} />
               )}
-              <span>{sendLocked ? "Enviando" : "Enviar"}</span>
+              <span>{sendLocked ? "..." : "Enviar"}</span>
             </button>
           </div>
         </div>

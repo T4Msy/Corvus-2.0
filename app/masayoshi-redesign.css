@@ -1441,24 +1441,35 @@ textarea {
 
 .attachment-button,
 .send-button {
-  min-width: 0 !important;
-  max-width: 112px;
-  height: 34px;
-  padding-inline: 10px !important;
-  gap: 7px;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-wrap: nowrap !important;
+  min-width: 76px !important;
+  max-width: 92px !important;
+  width: auto !important;
+  height: 34px !important;
+  padding: 0 9px !important;
+  gap: 6px !important;
+  line-height: 1 !important;
 }
 
 .attachment-button span,
 .send-button span {
+  display: inline-block !important;
   min-width: 0;
-  max-width: 58px;
+  max-width: 48px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 11px !important;
+  line-height: 1 !important;
 }
 
 .send-button {
-  width: auto !important;
+  min-width: 68px !important;
+  max-width: 82px !important;
 }
 
 .message-card,
@@ -1507,5 +1518,12 @@ textarea {
 
   .agent-menu {
     right: -4px !important;
+  }
+}
+
+@media (min-width: 621px) {
+  .attachment-button span,
+  .send-button span {
+    display: inline-block !important;
   }
 }
