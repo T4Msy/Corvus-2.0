@@ -384,7 +384,8 @@ textarea {
 
 .corvao-emblem-image {
   object-fit: contain;
-  transform-origin: 54% 52%;
+  object-position: center;
+  transform-origin: center;
   filter:
     drop-shadow(0 0 8px rgba(227, 27, 63, 0.5))
     drop-shadow(0 8px 16px rgba(0, 0, 0, 0.76));
@@ -442,10 +443,10 @@ textarea {
 @keyframes raven-emblem-drift {
   0%,
   100% {
-    transform: translateY(0) rotate(-0.45deg);
+    transform: translateY(0);
   }
   50% {
-    transform: translateY(-2px) rotate(0.45deg);
+    transform: translateY(-2px);
   }
 }
 
