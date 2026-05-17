@@ -12024,6 +12024,77 @@ body {
   font-size: 15px;
 }
 
+.composer-attachment-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.composer-attachment-chip {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  min-width: min(100%, 260px);
+  max-width: min(100%, 360px);
+  gap: 8px;
+  padding: 7px 8px;
+  border: 1px solid rgba(216, 180, 98, 0.22);
+  border-radius: 10px;
+  background: rgba(216, 180, 98, 0.055);
+}
+
+.composer-attachment-icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  color: var(--msy-gold, var(--accent));
+  background: rgba(216, 180, 98, 0.12);
+}
+
+.composer-attachment-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.composer-attachment-copy strong,
+.composer-attachment-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-attachment-copy strong {
+  color: var(--ui-text, var(--text));
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.composer-attachment-copy small {
+  color: var(--text-dim);
+  font-size: 11.5px;
+}
+
+.composer-attachment-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  color: var(--text-dim);
+  transition: color var(--transition), background var(--transition);
+}
+
+.composer-attachment-chip button:hover {
+  color: var(--ui-text, var(--text));
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .composer-toolbar {
   min-height: 46px;
   padding: 8px 10px 10px;
@@ -12087,6 +12158,11 @@ body {
 
   .composer-dock {
     min-height: 106px;
+  }
+
+  .composer-attachment-chip {
+    min-width: 100%;
+    max-width: 100%;
   }
 }
 

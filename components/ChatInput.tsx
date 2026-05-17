@@ -6,14 +6,22 @@ import {
   Bot,
   CheckCircle2,
   ChevronDown,
+  ExternalLink,
+  FileText,
+  Image as ImageIcon,
   Loader2,
   Plus,
   Send,
   Sparkles,
   TriangleAlert,
+  X,
   Zap,
 } from "lucide-react";
-import type { AgentMode, SyncStatus as SyncStatusType } from "@/lib/types";
+import type {
+  AgentMode,
+  ConversationAttachment,
+  SyncStatus as SyncStatusType,
+} from "@/lib/types";
 
 interface Props {
   mode: AgentMode;
@@ -24,6 +32,9 @@ interface Props {
   disabled: boolean;
   attachmentDisabled?: boolean;
   attachmentBusy?: boolean;
+  attachments?: ConversationAttachment[];
+  onOpenAttachment?: (attachment: ConversationAttachment) => void;
+  onRemoveAttachment?: (attachment: ConversationAttachment) => void;
   syncStatus: SyncStatusType;
   showSuggestions?: boolean;
 }
@@ -64,6 +75,9 @@ export function ChatInput({
   disabled,
   attachmentDisabled,
   attachmentBusy,
+  attachments = [],
+  onOpenAttachment,
+  onRemoveAttachment,
   syncStatus,
   showSuggestions = false,
 }: Props) {
@@ -74,6 +88,7 @@ export function ChatInput({
   const pickerRef = useRef<HTMLDivElement>(null);
   const trimmedValue = value.trim();
   const sendLocked = disabled && trimmedValue.length > 0;
+  const hasAttachments = attachments.length > 0;
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -127,6 +142,51 @@ export function ChatInput({
               onChange={(event) => setValue(event.target.value)}
               onKeyDown={handleKeyDown}
             />
+            {hasAttachments && (
+              <div className="composer-attachment-strip" aria-label="Arquivos anexados">
+                {attachments.map((attachment) => (
+                  <div className="composer-attachment-chip" key={attachment.id}>
+                    <span className="composer-attachment-icon" aria-hidden="true">
+                      {attachment.type.startsWith("image/") ? (
+                        <ImageIcon size={14} />
+                      ) : (
+                        <FileText size={14} />
+                      )}
+                    </span>
+                    <span className="composer-attachment-copy">
+                      <strong>
+                        {attachment.type.startsWith("image/")
+                          ? "Imagem anexada"
+                          : "Arquivo anexado"}
+                      </strong>
+                      <small>
+                        {attachment.name} · {formatFileSize(attachment.size)}
+                      </small>
+                    </span>
+                    {onOpenAttachment && (
+                      <button
+                        type="button"
+                        aria-label="Abrir anexo"
+                        title="Abrir anexo"
+                        onClick={() => onOpenAttachment(attachment)}
+                      >
+                        <ExternalLink size={13} />
+                      </button>
+                    )}
+                    {onRemoveAttachment && (
+                      <button
+                        type="button"
+                        aria-label="Remover anexo"
+                        title="Remover anexo"
+                        onClick={() => onRemoveAttachment(attachment)}
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div className="composer-input-meta" aria-hidden="true">
             <span>{mode === "fenrir" ? "Modo Fenrir" : "Modo Corvus"}</span>
@@ -257,6 +317,19 @@ export function ChatInput({
       )}
     </motion.footer>
   );
+}
+
+function formatFileSize(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const index = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(1024)),
+    units.length - 1
+  );
+  const value = bytes / 1024 ** index;
+  return `${value >= 10 || index === 0 ? value.toFixed(0) : value.toFixed(1)} ${
+    units[index]
+  }`;
 }
 
 function SyncStatus({

@@ -1803,6 +1803,9 @@ export function ChatApp() {
               !conversations.online
             }
             attachmentBusy={attachments.busy}
+            attachments={attachments.activeAttachments}
+            onOpenAttachment={(attachment) => void openAttachment(attachment)}
+            onRemoveAttachment={(attachment) => void removeAttachment(attachment)}
             syncStatus={conversations.syncStatus}
             showSuggestions={emptyHome}
           />
