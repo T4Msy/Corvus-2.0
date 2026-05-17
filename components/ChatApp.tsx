@@ -1255,7 +1255,21 @@ export function ChatApp() {
 
           {conversationSections.map((section) => (
             <div className="conversation-group" key={section.label}>
-              <p>{section.label}</p>
+              <div className="conversation-group-heading">
+                <p>{section.label}</p>
+                {section.label === "Recentes" && (
+                  <button
+                    type="button"
+                    className="conversation-clear-all"
+                    title="Apagar todas as conversas"
+                    aria-label="Apagar todas as conversas"
+                    disabled={conversations.conversations.length === 0}
+                    onClick={() => setConfirmDeleteAllOpen(true)}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                )}
+              </div>
               {section.items.map((conversation) => {
                 const active =
                   conversation.id === conversations.activeConversationId;

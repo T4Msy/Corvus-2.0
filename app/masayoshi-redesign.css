@@ -1388,6 +1388,41 @@ textarea {
   pointer-events: auto;
 }
 
+.conversation-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 8px 2px;
+}
+
+.conversation-group-heading p {
+  margin: 0 !important;
+  padding: 9px 2px 4px !important;
+}
+
+.conversation-clear-all {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid color-mix(in srgb, var(--danger) 26%, transparent);
+  border-radius: 8px;
+  color: color-mix(in srgb, var(--danger) 70%, #ffffff);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+.conversation-clear-all:hover:not(:disabled) {
+  color: #fff;
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+}
+
+.conversation-clear-all:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .sidebar-tools-row {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
   gap: 8px !important;
@@ -1446,8 +1481,8 @@ textarea {
   align-items: center !important;
   justify-content: center !important;
   flex-wrap: nowrap !important;
-  min-width: 76px !important;
-  max-width: 92px !important;
+  min-width: 96px !important;
+  max-width: 112px !important;
   width: auto !important;
   height: 34px !important;
   padding: 0 9px !important;
@@ -1459,17 +1494,17 @@ textarea {
 .send-button span {
   display: inline-block !important;
   min-width: 0;
-  max-width: 48px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
   white-space: nowrap;
   font-size: 11px !important;
   line-height: 1 !important;
 }
 
 .send-button {
-  min-width: 68px !important;
-  max-width: 82px !important;
+  min-width: 88px !important;
+  max-width: 98px !important;
 }
 
 .message-card,
