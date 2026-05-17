@@ -58,7 +58,10 @@ A nova API layer (`/api/corvus/chat`) envia o seguinte payload ao webhook de cha
       "name": "string",
       "type": "image/png | image/jpeg | image/webp | image/gif",
       "size": 12345,
-      "signedUrl": "https://..." // URL Supabase temporaria, expira em 10 min
+      "signedUrl": "https://...", // URL Supabase temporaria, expira em 10 min
+      "imageUrl": "https://...",  // alias para nodes OpenAI/n8n
+      "url": "https://...",       // alias para compatibilidade
+      "dataUrl": "data:image/..." // inline quando a imagem tem ate 5 MB
     }
   ]
 }
@@ -132,10 +135,10 @@ O node `Format Response` retorna `"Sem resposta do agente."` quando `output` est
 
 ### F. Imagens — habilitar visão real
 
-A API já envia imagens como URLs assinadas em `imageAttachments`. Para o agente realmente analisar o conteúdo visual, adicione no n8n um node **OpenAI → Image → Analyze Image** antes do AI Agent:
+A API já envia imagens em `imageAttachments` com URL assinada e, para imagens até 5 MB, também como `dataUrl`. Para o agente realmente analisar o conteúdo visual, adicione no n8n um node **OpenAI → Image → Analyze Image** antes do AI Agent:
 
 - **Input Type**: `Image URL(s)`.
-- **Image URL(s)**: expressão juntando `imageAttachments[].signedUrl`.
+- **Image URL(s)**: expressão juntando `imageAttachments[].dataUrl || imageAttachments[].imageUrl || imageAttachments[].signedUrl`.
 - **Text Input**: a pergunta do usuário.
 - Concatene a resposta desse node ao `chatInput` antes de entrar no AI Agent.
 

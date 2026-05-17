@@ -17,6 +17,7 @@ export const dynamic = "force-dynamic";
 
 const MAX_MESSAGE_CHARS = 8_000;
 const MAX_IMAGE_ATTACHMENTS = 4;
+const MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
 const IMAGE_URL_EXPIRES_IN = 10 * 60;
 const VALID_MODES: ReadonlySet<AgentMode> = new Set(["corvus", "fenrir"]);
 const SUPPORTED_IMAGE_TYPES = new Set([
@@ -82,6 +83,29 @@ function attachmentBelongsToConversation(
 ): boolean {
   const expectedPrefix = `${userId}/${conversationId}/`;
   return attachment.path.startsWith(expectedPrefix);
+}
+
+async function createImageDataUrl(
+  signedUrl: string,
+  type: string,
+  size: number
+): Promise<string | undefined> {
+  if (size > MAX_INLINE_IMAGE_BYTES) return undefined;
+
+  try {
+    const response = await fetch(signedUrl, { cache: "no-store" });
+    if (!response.ok) return undefined;
+
+    const contentType = response.headers.get("content-type") || type;
+    if (!contentType.toLowerCase().startsWith("image/")) return undefined;
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.byteLength > MAX_INLINE_IMAGE_BYTES) return undefined;
+
+    return `data:${contentType};base64,${buffer.toString("base64")}`;
+  } catch {
+    return undefined;
+  }
 }
 
 function statusForError(err: ChatErrorResponse): number {
@@ -171,7 +195,7 @@ export async function POST(req: Request) {
 
     imageAttachments = (
       await Promise.all(
-        acceptedImages.map(async (attachment) => {
+        acceptedImages.map(async (attachment): Promise<N8nImageAttachment | null> => {
           const signedUrl = await createAttachmentSignedUrl(
             userSupabase,
             attachment.path,
@@ -179,11 +203,19 @@ export async function POST(req: Request) {
             IMAGE_URL_EXPIRES_IN
           );
           if (!signedUrl) return null;
+          const dataUrl = await createImageDataUrl(
+            signedUrl,
+            attachment.type,
+            attachment.size
+          );
           return {
             name: attachment.name,
             type: attachment.type,
             size: attachment.size,
             signedUrl,
+            imageUrl: signedUrl,
+            url: signedUrl,
+            ...(dataUrl ? { dataUrl } : {}),
           };
         })
       )

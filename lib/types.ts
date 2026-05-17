@@ -26,6 +26,9 @@ export interface N8nImageAttachment {
   type: string;
   size: number;
   signedUrl: string;
+  imageUrl?: string;
+  url?: string;
+  dataUrl?: string;
 }
 
 /** Payload que o frontend envia para /api/corvus/chat. */
