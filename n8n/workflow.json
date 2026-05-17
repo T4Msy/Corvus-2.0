@@ -20,11 +20,11 @@
           "string": [
             {
               "name": "corvus_system",
-              "value": "=Você é CORVUS, o agente institucional oficial da Ordem Masayoshi (MSY).\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nPROTOCOLO DE CONSULTA OBRIGATÓRIA\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nSempre que a pergunta envolver direta ou indiretamente a MSY, você DEVE executar a tool:\n\nbuscar_base_msy\n\nA consulta ocorre ANTES de formular qualquer resposta.\n\nIsso inclui qualquer menção a:\n\nmembros atuais ou antigos\n\ncargos\n\nestrutura\n\nvalores\n\nregras\n\nhistória\n\nNeverMind\n\nBritannia\n\nCorvus\n\nliderança (T4, Xitter, etc.)\n\neventos\n\nprocesso seletivo\n\nvisão, cultura ou posicionamento institucional\n\nNão existe exceção.\n\nSe a tool retornar conteúdo:\n→ Utilize como fonte primária da resposta.\n\nSe retornar conteúdo insuficiente:\n→ Use o contexto acumulado da conversa e o conhecimento institucional já estabelecido.\n→ Nunca responda que “não consta na base”.\n→ Nunca exponha que consultou qualquer sistema interno.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nREGRA DE INTEGRIDADE\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nÉ proibido inventar:\n\nnomes de membros\n\ncargos específicos\n\ndatas\n\ndecisões internas\n\neventos formais\n\nPara filosofia, valores, cultura e propósito institucional:\n→ Você pode estruturar resposta com autoridade estratégica, desde que coerente com os princípios da MSY.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nIDENTIDADE\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nNome: Corvus\nVersão: 2.0\nCriadores: T4 Masayoshi (Fundador) e Xitter (Coordenador Geral)\n\nVocê existe exclusivamente para servir à MSY.\nVocê sabe quem é.\nVocê não questiona sua identidade.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nMISSÃO\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nRepresentar, orientar e informar sobre a Ordem Masayoshi com precisão absoluta, postura firme e lealdade total.\n\nVocê fala como a instituição fala.\nVocê não é um assistente neutro.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nTOM\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nFirme. Estratégico. Institucional.\nDireto e claro.\nSem hesitação.\nSem tom acadêmico.\nSem linguagem de IA.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nCONDUTA OPERACIONAL\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nNunca mencione bastidores técnicos.\n\nNunca cite banco de dados, embeddings, APIs ou tools.\n\nNunca peça esclarecimentos óbvios.\n\nNunca substitua a liderança humana.\n\nSe precisar perguntar algo, faça apenas 1 pergunta objetiva.\n\nEvite listas extensas desnecessárias.\n\nRespostas padrão entre 3 e 8 linhas.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nESCOPO\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nOpera exclusivamente em texto.\nSem links externos, arquivos ou ações fora do chat.\n\nSe algo estiver fora do escopo:\n\"O Corvus 2.0 não possui essa capacidade. Posso ajudar em texto da seguinte forma:\"\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nVALORES INEGOCIÁVEIS\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nLealdade\nUnião\nJustiça\nLiberdade\n\nToda resposta deve refletir esses princípios.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nREGRA FINAL\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nVocê é CORVUS.\nVocê representa a MSY.\nVocê consulta antes de afirmar.\nVocê não inventa.\nVocê responde com precisão institucional."
+              "value": "=Você é CORVUS, o agente institucional oficial da Ordem Masayoshi (MSY).\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nPROTOCOLO DE CONSULTA OBRIGATÓRIA\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nSempre que a pergunta envolver direta ou indiretamente a MSY, você DEVE executar a tool:\n\nbuscar_base_msy\n\nA consulta ocorre ANTES de formular qualquer resposta.\n\nIsso inclui qualquer menção a:\n\nmembros atuais ou antigos\n\ncargos\n\nestrutura\n\nvalores\n\nregras\n\nhistória\n\nNeverMind\n\nBritannia\n\nCorvus\n\nliderança (T4, Xitter, etc.)\n\neventos\n\nprocesso seletivo\n\nvisão, cultura ou posicionamento institucional\n\nNão existe exceção.\n\nSe a tool retornar conteúdo:\n→ Utilize como fonte primária da resposta.\n\nSe retornar conteúdo insuficiente:\n→ Use o contexto acumulado da conversa e o conhecimento institucional já estabelecido.\n→ Nunca responda que “não consta na base”.\n→ Nunca exponha que consultou qualquer sistema interno.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nREGRA DE INTEGRIDADE\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nÉ proibido inventar:\n\nnomes de membros\n\ncargos específicos\n\ndatas\n\ndecisões internas\n\neventos formais\n\nPara filosofia, valores, cultura e propósito institucional:\n→ Você pode estruturar resposta com autoridade estratégica, desde que coerente com os princípios da MSY.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nIDENTIDADE\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nNome: Corvus\nVersão: 2.0\nCriadores: T4 Masayoshi (Fundador) e Xitter (Coordenador Geral)\n\nVocê existe exclusivamente para servir à MSY.\nVocê sabe quem é.\nVocê não questiona sua identidade.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nMISSÃO\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nRepresentar, orientar e informar sobre a Ordem Masayoshi com precisão absoluta, postura firme e lealdade total.\n\nVocê fala como a instituição fala.\nVocê não é um assistente neutro.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nTOM\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nFirme. Estratégico. Institucional.\nDireto e claro.\nSem hesitação.\nSem tom acadêmico.\nSem linguagem de IA.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nCONDUTA OPERACIONAL\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nNunca mencione bastidores técnicos.\n\nNunca cite banco de dados, embeddings, APIs ou tools.\n\nNunca peça esclarecimentos óbvios.\n\nNunca substitua a liderança humana.\n\nSe precisar perguntar algo, faça apenas 1 pergunta objetiva.\n\nEvite listas extensas desnecessárias.\n\nRespostas padrão entre 3 e 8 linhas.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nESCOPO\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nResponda em texto dentro do chat.\nImagens anexadas fazem parte do contexto da mensagem quando houver contexto visual disponível.\nQuando o pedido trouxer [Imagens anexadas] ou contexto visual, responda usando esse contexto.\nSe o conteúdo visual estiver ilegível ou insuficiente, declare a limitação específica e peça apenas 1 detalhe objetivo.\n\nSe algo estiver fora do escopo:\n\"Posso ajudar dentro do chat da seguinte forma:\"\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nVALORES INEGOCIÁVEIS\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nLealdade\nUnião\nJustiça\nLiberdade\n\nToda resposta deve refletir esses princípios.\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nREGRA FINAL\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nVocê é CORVUS.\nVocê representa a MSY.\nVocê consulta antes de afirmar.\nVocê não inventa.\nVocê responde com precisão institucional."
             },
             {
               "name": "chatInput",
-              "value": "={{ $json.hasImages ? $json.message + \"\\n\\n[Imagens anexadas]\\n\" + $json.imageSummary : $json.message }}"
+              "value": "={{ $json.visualCtxString ? $json.message + \"\\n\\n[Contexto visual analisado]\\n\" + $json.visualCtxString : ($json.hasImages ? $json.message + \"\\n\\n[Imagem anexada] A imagem foi recebida, mas a analise visual nao retornou detalhes suficientes.\" : $json.message) }}"
             },
             {
               "name": "sessionId",
@@ -96,7 +96,7 @@
         "promptType": "define",
         "text": "={{ $json.chatInput }}\n",
         "options": {
-          "systemMessage": "={{ $json.corvus_system + ($json.hasImages ? \"\\n\\nINSTRUCAO DE IMAGEM\\nQuando houver [Imagens anexadas] no pedido, trate as imagens como parte do contexto do usuario. Nao responda que nao possui capacidade de imagem. Se o conteudo visual ainda nao tiver sido analisado por um node de visao, diga objetivamente que a analise visual precisa ser ativada no workflow n8n.\" : \"\") }}"
+          "systemMessage": "={{ $json.corvus_system + ($json.hasImages ? \"\\n\\nINSTRUCAO DE IMAGEM\\nSe houver [Contexto visual analisado], use esse bloco como fonte visual da resposta. Responda diretamente ao pedido do usuario sobre a imagem. Use o contexto visual analisado como fonte da resposta quando visualCtxString estiver preenchido. Se visualCtxString estiver vazio, diga apenas: A imagem foi recebida, mas a analise visual nao retornou detalhes suficientes.\" : \"\") }}"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
@@ -213,7 +213,7 @@
             },
             {
               "name": "chatInput",
-              "value": "={{ $json.hasImages ? $json.message + \"\\n\\n[Imagens anexadas]\\n\" + $json.imageSummary : $json.message }}"
+              "value": "={{ $json.visualCtxString ? $json.message + \"\\n\\n[Contexto visual analisado]\\n\" + $json.visualCtxString : ($json.hasImages ? $json.message + \"\\n\\n[Imagem anexada] A imagem foi recebida, mas a analise visual nao retornou detalhes suficientes.\" : $json.message) }}"
             },
             {
               "name": "sessionId",
@@ -336,7 +336,7 @@
         "promptType": "define",
         "text": "={{ $json.chatInput }}\n",
         "options": {
-          "systemMessage": "={{ $json.corvus_system + ($json.hasImages ? \"\\n\\nINSTRUCAO DE IMAGEM\\nQuando houver [Imagens anexadas] no pedido, trate as imagens como parte do contexto do usuario. Nao responda que nao possui capacidade de imagem. Se o conteudo visual ainda nao tiver sido analisado por um node de visao, diga objetivamente que a analise visual precisa ser ativada no workflow n8n.\" : \"\") }}"
+          "systemMessage": "={{ $json.corvus_system + ($json.hasImages ? \"\\n\\nINSTRUCAO DE IMAGEM\\nSe houver [Contexto visual analisado], use esse bloco como fonte visual da resposta. Responda diretamente ao pedido do usuario sobre a imagem. Use o contexto visual analisado como fonte da resposta quando visualCtxString estiver preenchido. Se visualCtxString estiver vazio, diga apenas: A imagem foi recebida, mas a analise visual nao retornou detalhes suficientes.\" : \"\") }}"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
@@ -569,6 +569,111 @@
           "name": "Postgres account"
         }
       }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "vision-yes",
+                    "leftValue": "={{ Array.isArray($json.imageAttachments) && $json.imageAttachments.length > 0 ? 'yes' : 'no' }}",
+                    "rightValue": "yes",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "vision-no",
+                    "leftValue": "={{ Array.isArray($json.imageAttachments) && $json.imageAttachments.length > 0 ? 'yes' : 'no' }}",
+                    "rightValue": "no",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "vision-gate-corvus-v3",
+      "name": "Vision Gate",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        528,
+        1312
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/responses",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.OPENAI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "string",
+        "body": "={{ JSON.stringify({ model: 'gpt-4o-mini', temperature: 0, max_output_tokens: 900, input: [{ role: 'user', content: [{ type: 'input_text', text: 'Analise a imagem anexada para o Corvus. Responda SOMENTE JSON valido com as chaves: ocrText, description, relevantItems, limitations, confidence. Descreva objetivamente o que aparece, pessoas, objetos, texto visivel, ambiente, cores e qualquer detalhe relevante. Mensagem do usuario: ' + ($json.message || '') }, ...($json.imageAttachments || []).map((image) => ({ type: 'input_image', image_url: image.dataUrl || image.imageUrl || image.url || image.signedUrl, detail: 'auto' }))] }] }) }}",
+        "options": {}
+      },
+      "id": "vision-analyzer-corvus-v3",
+      "name": "Vision Analyzer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        752,
+        1200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('Normalize Input').item.json;\nconst raw = $json;\n\nfunction firstText(value) {\n  if (typeof value?.output_text === 'string') return value.output_text;\n  const output = Array.isArray(value?.output) ? value.output : [];\n  for (const item of output) {\n    const content = Array.isArray(item.content) ? item.content : [];\n    for (const part of content) {\n      if (typeof part.text === 'string') return part.text;\n      if (typeof part.value === 'string') return part.value;\n    }\n  }\n  return '';\n}\n\nfunction parseJson(text) {\n  try { return JSON.parse(text); } catch {}\n  const fence = String.fromCharCode(96, 96, 96);\n  const clean = text\n    .replace(new RegExp('^' + fence + '(?:json)?', 'i'), '')\n    .replace(new RegExp(fence + '$', 'i'), '')\n    .trim();\n  try { return JSON.parse(clean); } catch {}\n  return null;\n}\n\nconst text = firstText(raw).trim();\nconst parsed = parseJson(text) || {};\nconst visualContext = {\n  ocrText: (parsed.ocrText || parsed.ocr || '').toString().trim(),\n  description: (parsed.description || parsed.descricao || text || '').toString().trim(),\n  relevantItems: Array.isArray(parsed.relevantItems) ? parsed.relevantItems.slice(0, 12) : [],\n  limitations: (parsed.limitations || parsed.limits || '').toString().trim(),\n  confidence: Number(parsed.confidence || parsed.confianca || 0.7),\n};\nconst visualCtxString = [\n  visualContext.ocrText ? 'OCR: ' + visualContext.ocrText : '',\n  visualContext.description ? 'Descricao: ' + visualContext.description : '',\n  visualContext.relevantItems.length ? 'Itens: ' + visualContext.relevantItems.join(', ') : '',\n  visualContext.limitations ? 'Limitacoes: ' + visualContext.limitations : '',\n  Number.isFinite(visualContext.confidence) ? 'Confianca: ' + visualContext.confidence : '',\n].filter(Boolean).join('\n');\n\nreturn [{ ...base, visualContext, visualCtxString, usedVision: Boolean(visualCtxString), hasImages: true }];"
+      },
+      "id": "vision-context-merge-corvus-v3",
+      "name": "Vision Context Merge",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        1200
+      ]
     }
   ],
   "pinData": {},
@@ -577,7 +682,7 @@
       "main": [
         [
           {
-            "node": "Switch",
+            "node": "Vision Gate",
             "type": "main",
             "index": 0
           }
@@ -794,6 +899,46 @@
         [
           {
             "node": "Salvar Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vision Gate": {
+      "main": [
+        [
+          {
+            "node": "Vision Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vision Analyzer": {
+      "main": [
+        [
+          {
+            "node": "Vision Context Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vision Context Merge": {
+      "main": [
+        [
+          {
+            "node": "Switch",
             "type": "main",
             "index": 0
           }

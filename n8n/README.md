@@ -148,6 +148,39 @@ A API já envia imagens em `imageAttachments` com URL assinada e, para imagens a
 
 O node OpenAI de análise é necessário porque o AI Agent atual recebe uma mensagem textual. Só colocar a URL no prompt não garante visão multimodal.
 
+### Sintoma: "Descreva a imagem para que eu possa ajudar"
+
+Esse retorno significa que o anexo chegou, mas o **AI Agent** ainda não recebeu uma análise visual. Não basta usar `gpt-4o` no Chat Model do Agent, porque o Agent está recebendo `chatInput` como texto. O fluxo precisa ter um passo antes do Agent que envie a imagem para visão e grave o resultado em `visualContext`.
+
+Checklist no n8n:
+
+1. Depois de **Normalize Input**, confirme que `imageAttachments.length > 0`.
+2. Adicione/posicione um node **HTTP Request** ou **OpenAI Responses** antes do roteamento para os AI Agents.
+3. No body, envie cada imagem como `input_image` usando:
+
+```js
+image.dataUrl || image.imageUrl || image.url || image.signedUrl
+```
+
+4. Depois do node de visão, faça merge para:
+
+```js
+{
+  ...base,
+  visualContext: {
+    ocrText,
+    description,
+    relevantItems,
+    limitations,
+    confidence
+  },
+  visualCtxString,
+  usedVision: true
+}
+```
+
+5. No prompt do Agent, o bloco `CONTEXTO VISUAL` precisa receber `visualCtxString`. Se esse campo estiver vazio, o Agent vai pedir para o usuário descrever a imagem.
+
 ### G. Renomear o caminho do webhook (opcional, recomendado)
 
 `/webhook/corvus-ingestao` é confuso porque "ingestão" remete ao formulário, não ao chat. Sugestão:
