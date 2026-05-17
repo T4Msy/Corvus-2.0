@@ -1388,6 +1388,29 @@ textarea {
   pointer-events: auto;
 }
 
+.sidebar-tools-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  gap: 8px !important;
+}
+
+.sidebar-tools-row .select-toggle-btn,
+.sidebar-tools-row .delete-all-conversations-button {
+  height: 34px !important;
+  border-radius: 10px !important;
+  font-size: 11.5px !important;
+}
+
+.sidebar-tools-row .delete-all-conversations-button {
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent) !important;
+  background: color-mix(in srgb, var(--danger) 10%, transparent) !important;
+  color: color-mix(in srgb, var(--danger) 72%, #ffffff) !important;
+}
+
+.sidebar-tools-row .delete-all-conversations-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 16%, transparent) !important;
+  color: #fff !important;
+}
+
 .composer-dock,
 .composer-toolbar,
 .composer-send-group,

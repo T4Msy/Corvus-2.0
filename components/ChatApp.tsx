@@ -1195,6 +1195,8 @@ export function ChatApp() {
             className="delete-all-conversations-button"
             disabled={conversations.conversations.length === 0}
             onClick={() => setConfirmDeleteAllOpen(true)}
+            title="Apagar todas as conversas"
+            aria-label="Apagar todas as conversas"
           >
             <Trash2 size={13} />
             <span>Limpar histórico</span>
