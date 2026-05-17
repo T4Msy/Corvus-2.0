@@ -176,6 +176,21 @@ export function useConversationAttachments({
     [enabled, online, persist]
   );
 
+  const clearConversation = useCallback(
+    (conversationId = activeConversationId): void => {
+      if (!conversationId) return;
+      setItemsByConversation((current) => {
+        const next = {
+          ...current,
+          [conversationId]: [],
+        };
+        persist(next);
+        return next;
+      });
+    },
+    [activeConversationId, persist]
+  );
+
   const open = useCallback(
     async (attachment: ConversationAttachment): Promise<boolean> => {
       setError(null);
@@ -208,6 +223,7 @@ export function useConversationAttachments({
     error,
     upload,
     remove,
+    clearConversation,
     open,
   };
 }

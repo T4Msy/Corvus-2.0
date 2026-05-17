@@ -107,7 +107,7 @@ export function ChatInput({
 
   function commitSend() {
     const text = value.trim();
-    if (!text || disabled) return;
+    if ((!text && !hasAttachments) || disabled) return;
     const accepted = onSend(text);
     if (accepted !== false) setValue("");
   }
@@ -285,7 +285,7 @@ export function ChatInput({
               className="send-button"
               aria-label="Enviar"
               title="Enviar (Ctrl+Enter)"
-              disabled={disabled || !trimmedValue}
+              disabled={disabled || (!trimmedValue && !hasAttachments)}
               onClick={commitSend}
             >
               {sendLocked ? (

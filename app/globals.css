@@ -11987,6 +11987,103 @@ body {
   overflow-wrap: anywhere;
 }
 
+.message-attachment-grid {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 9px;
+}
+
+.message-attachment-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-width: min(280px, 100%);
+  padding: 8px;
+  border: 1px solid rgba(216, 180, 98, 0.22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.message-attachment-card.image {
+  position: relative;
+  display: block;
+  width: min(360px, 100%);
+  padding: 6px;
+}
+
+.message-attachment-image {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.message-attachment-card.image .message-attachment-info {
+  padding: 7px 4px 2px;
+}
+
+.message-attachment-card.image a {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.46);
+  backdrop-filter: blur(10px);
+}
+
+.message-attachment-file-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: var(--msy-gold, var(--accent));
+  background: rgba(216, 180, 98, 0.12);
+}
+
+.message-attachment-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.message-attachment-info strong,
+.message-attachment-info small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-attachment-info strong {
+  color: var(--ui-text);
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+.message-attachment-info small {
+  color: var(--text-dim);
+  font-size: 11.5px;
+}
+
+.message-attachment-card a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  color: var(--text-dim);
+}
+
+.message-attachment-card a:hover {
+  color: var(--ui-text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .message-row.corvus .message-card,
 .message-row.corvus .assistant-card {
   width: min(760px, 100%) !important;

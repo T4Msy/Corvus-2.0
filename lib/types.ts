@@ -84,6 +84,7 @@ export interface ChatMessage {
   role: MessageRole;
   text: string;
   createdAt: number;
+  attachments?: ConversationAttachment[];
 }
 
 export interface Conversation {

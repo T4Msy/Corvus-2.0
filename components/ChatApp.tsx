@@ -496,15 +496,24 @@ export function ChatApp() {
       setSendBusy(true);
       try {
         const conversation = await ensureConversationForSend();
+        const activeAttachments = attachments.activeAttachments;
+        const messageText =
+          text.trim() ||
+          (activeAttachments.some((attachment) =>
+            attachment.type.startsWith("image/")
+          )
+            ? "Analise a imagem anexada."
+            : "Analise o arquivo anexado.");
 
-        await chat.send({
-          text,
+        const sent = await chat.send({
+          text: messageText,
           mode,
           conversationId: conversation.id,
           sessionId: conversation.sessionId,
           userId: auth.userId,
           userContext,
           attachments: chatAttachments,
+          messageAttachments: activeAttachments,
           accessToken: auth.accessToken,
           onUserMessage: (message) =>
             conversations.persistMessage(conversation.id, message),
@@ -513,6 +522,9 @@ export function ChatApp() {
             applyResponseMeta(conversation, response.meta);
           },
         });
+        if (sent && activeAttachments.length > 0) {
+          attachments.clearConversation(conversation.id);
+        }
       } finally {
         sendBusyRef.current = false;
         setSendBusy(false);
@@ -521,6 +533,7 @@ export function ChatApp() {
     [
       auth.accessToken,
       auth.userId,
+      attachments,
       chatAttachments,
       chat,
       conversations,

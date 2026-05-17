@@ -8,6 +8,7 @@ import type {
   ChatRequestBody,
   ChatResponse,
   ChatSuccessResponse,
+  ConversationAttachment,
   UserContext,
 } from "@/lib/types";
 
@@ -19,6 +20,7 @@ interface SendArgs {
   userId: string;
   userContext: UserContext;
   attachments?: ChatAttachment[];
+  messageAttachments?: ConversationAttachment[];
   accessToken?: string | null;
   onUserMessage?: (message: ChatMessage) => void | Promise<void>;
   onAssistantMessage?: (
@@ -55,13 +57,14 @@ export function useChat() {
     });
   }, []);
 
-  const send = useCallback(async (args: SendArgs) => {
+  const send = useCallback(async (args: SendArgs): Promise<boolean> => {
     lastArgsRef.current = args;
 
     const userMessage: ChatMessage = {
       role: "user",
       text: args.text,
       createdAt: Date.now(),
+      attachments: args.messageAttachments,
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -94,14 +97,14 @@ export function useChat() {
 
       if (!data) {
         setError({ message: "Resposta invalida do servidor.", retryable: true });
-        return;
+        return false;
       }
       if (!data.ok) {
         setError({
           message: friendlyError(data.error.code, data.error.message),
           retryable: data.error.retryable,
         });
-        return;
+        return false;
       }
 
       const assistantMessage: ChatMessage = {
@@ -111,9 +114,11 @@ export function useChat() {
       };
       setMessages((prev) => [...prev, assistantMessage]);
       void args.onAssistantMessage?.(assistantMessage, data);
+      return true;
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro de rede.";
       setError({ message: `Falha de conexao: ${msg}`, retryable: true });
+      return false;
     } finally {
       setPending(false);
     }

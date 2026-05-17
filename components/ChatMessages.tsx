@@ -9,6 +9,9 @@ import {
   AlertTriangle,
   Check,
   Copy,
+  ExternalLink,
+  FileText,
+  Image as ImageIcon,
   ListTodo,
   Pencil,
   RefreshCcw,
@@ -457,6 +460,9 @@ function MessageBubble({
         ) : (
           <div className="message-user-wrap">
             <div className="user-message-surface">
+              {message.attachments && message.attachments.length > 0 && (
+                <MessageAttachments attachments={message.attachments} />
+              )}
               <p className="message-text">
                 <HighlightedText
                   text={message.text}
@@ -519,6 +525,70 @@ function MessageBubble({
       </div>
     </motion.article>
   );
+}
+
+function MessageAttachments({
+  attachments,
+}: {
+  attachments: NonNullable<ChatMessage["attachments"]>;
+}) {
+  return (
+    <div className="message-attachment-grid" aria-label="Anexos da mensagem">
+      {attachments.map((attachment) => {
+        const isImage = attachment.type.startsWith("image/");
+        return (
+          <div
+            className={`message-attachment-card${isImage ? " image" : ""}`}
+            key={attachment.id}
+          >
+            {isImage && attachment.url ? (
+              <img
+                src={attachment.url}
+                alt={attachment.name}
+                className="message-attachment-image"
+                loading="lazy"
+              />
+            ) : (
+              <span className="message-attachment-file-icon" aria-hidden="true">
+                {isImage ? <ImageIcon size={18} /> : <FileText size={18} />}
+              </span>
+            )}
+            <span className="message-attachment-info">
+              <strong>{attachment.name}</strong>
+              <small>
+                {attachment.type.startsWith("image/") ? "Imagem" : "Arquivo"} ·{" "}
+                {formatFileSize(attachment.size)}
+              </small>
+            </span>
+            {attachment.url && (
+              <a
+                href={attachment.url}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Abrir anexo"
+                title="Abrir anexo"
+              >
+                <ExternalLink size={14} />
+              </a>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function formatFileSize(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const index = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(1024)),
+    units.length - 1
+  );
+  const value = bytes / 1024 ** index;
+  return `${value >= 10 || index === 0 ? value.toFixed(0) : value.toFixed(1)} ${
+    units[index]
+  }`;
 }
 
 function HighlightedText({
