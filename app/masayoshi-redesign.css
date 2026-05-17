@@ -1351,3 +1351,138 @@ textarea {
     background: rgba(18, 14, 16, 0.98);
   }
 }
+
+/* Usability fixes: menus, composer controls and message actions */
+.conversation-list,
+.conversation-group {
+  overflow: visible;
+}
+
+.conversation-item {
+  position: relative;
+  isolation: isolate;
+}
+
+.conversation-item.menu-open,
+.conversation-item:has(.conversation-confirm),
+.conversation-item:has(.conversation-tag-editor) {
+  z-index: 80;
+}
+
+.conversation-menu,
+.conversation-confirm,
+.conversation-tag-editor {
+  z-index: 2000 !important;
+}
+
+.conversation-menu {
+  top: 32px !important;
+  right: 4px !important;
+  width: min(218px, calc(100vw - 36px)) !important;
+  border-radius: 12px !important;
+}
+
+.conversation-menu button,
+.conversation-confirm button,
+.conversation-tag-editor button {
+  pointer-events: auto;
+}
+
+.composer-dock,
+.composer-toolbar,
+.composer-send-group,
+.agent-picker,
+.compact-agent-picker {
+  overflow: visible !important;
+}
+
+.composer-dock {
+  position: relative;
+  z-index: 20;
+}
+
+.composer-toolbar {
+  position: relative;
+  z-index: 30;
+  gap: 10px;
+}
+
+.agent-menu {
+  z-index: 3000 !important;
+  top: auto !important;
+  bottom: calc(100% + 8px) !important;
+  right: 0 !important;
+  min-width: 176px;
+  max-width: min(220px, calc(100vw - 32px));
+}
+
+.attachment-button,
+.send-button {
+  min-width: 0 !important;
+  max-width: 112px;
+  height: 34px;
+  padding-inline: 10px !important;
+  gap: 7px;
+}
+
+.attachment-button span,
+.send-button span {
+  min-width: 0;
+  max-width: 58px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.send-button {
+  width: auto !important;
+}
+
+.message-card,
+.assistant-card {
+  overflow: visible !important;
+}
+
+.message-row.corvus .message-card,
+.message-row.corvus .assistant-card {
+  padding-bottom: 16px;
+}
+
+.answer-toolbar,
+.message-tools.answer-toolbar {
+  margin-top: 12px !important;
+  padding-top: 2px;
+  transform: none !important;
+  translate: none !important;
+  position: relative;
+  bottom: auto;
+  flex-wrap: wrap;
+}
+
+.message-action-button,
+.copy-button {
+  height: 32px;
+  min-height: 32px;
+}
+
+@media (max-width: 620px) {
+  .composer-toolbar {
+    align-items: flex-end;
+  }
+
+  .attachment-button,
+  .send-button {
+    max-width: 42px;
+    width: 42px !important;
+    padding-inline: 0 !important;
+  }
+
+  .attachment-button span,
+  .send-button span {
+    display: none !important;
+  }
+
+  .agent-menu {
+    right: -4px !important;
+  }
+}

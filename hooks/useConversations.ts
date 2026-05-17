@@ -118,7 +118,9 @@ export function useConversations(auth: AuthLike) {
         const remote = result.conversations;
         conversationsRef.current = remote;
         setConversations(remote);
-        setActiveConversationId((current) => current ?? remote[0]?.id ?? null);
+        setActiveConversationId((current) =>
+          current && remote.some((item) => item.id === current) ? current : null
+        );
         setLastSyncError(null);
         return;
       }
@@ -126,7 +128,9 @@ export function useConversations(auth: AuthLike) {
       const local = readLocalConversations();
       conversationsRef.current = local;
       setConversations(local);
-      setActiveConversationId((current) => current ?? local[0]?.id ?? null);
+      setActiveConversationId((current) =>
+        current && local.some((item) => item.id === current) ? current : null
+      );
       setLastSyncError(null);
     } catch (err) {
       failSync(
