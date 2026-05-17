@@ -176,11 +176,11 @@ function friendlyError(code: string, fallback: string): string {
     case "upstream_unreachable":
       return "Nao consegui falar com o motor do Corvus agora. Tente em instantes.";
     case "upstream_5xx":
-      return "Erro no motor do Corvus. Equipe tecnica notificada.";
+      return fallback || "Erro no motor do Corvus. Equipe tecnica notificada.";
     case "upstream_4xx":
       return "Workflow indisponivel ou desativado.";
     case "upstream_invalid_response":
-      return "O Corvus respondeu em formato inesperado.";
+      return fallback || "O Corvus respondeu em formato inesperado.";
     case "validation":
       return fallback;
     case "internal":

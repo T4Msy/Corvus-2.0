@@ -28,6 +28,8 @@ interface N8nEnvelope {
   message?: string;
   meta?: ChatSuccessResponse["meta"];
   error?: string;
+  code?: string;
+  retryable?: boolean;
   json?: unknown;
 }
 
@@ -110,6 +112,21 @@ function parseResponseText(text: string): unknown {
   }
 }
 
+function asErrorCode(value: unknown, fallback: ChatErrorCode): ChatErrorCode {
+  const valid: ChatErrorCode[] = [
+    "validation",
+    "upstream_unreachable",
+    "upstream_timeout",
+    "upstream_4xx",
+    "upstream_5xx",
+    "upstream_invalid_response",
+    "internal",
+  ];
+  return typeof value === "string" && valid.includes(value as ChatErrorCode)
+    ? (value as ChatErrorCode)
+    : fallback;
+}
+
 export async function sendChatToN8n(
   payload: ChatRequestBody
 ): Promise<ChatSuccessResponse | ChatErrorResponse> {
@@ -170,10 +187,11 @@ export async function sendChatToN8n(
           !Array.isArray(parsed) &&
           (parsed as N8nEnvelope).ok === false
         ) {
+          const envelope = parsed as N8nEnvelope;
           return buildError(
-            "upstream_5xx",
-            (parsed as N8nEnvelope).error || "Workflow retornou erro.",
-            true
+            asErrorCode(envelope.code, "upstream_5xx"),
+            envelope.error || envelope.message || "Workflow retornou erro.",
+            typeof envelope.retryable === "boolean" ? envelope.retryable : true
           );
         }
 

@@ -20,7 +20,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst rawBody = $json.body ?? $json;\nconst message = (rawBody.message ?? rawBody.text ?? '').toString().trim();\nconst userId = (rawBody.userId ?? rawBody.user ?? 'anonymous').toString().trim();\nconst sessionId = (rawBody.sessionId ?? rawBody.conversationId ?? userId).toString().trim();\nconst userContext = rawBody.userContext ?? {};\nconst modo = (rawBody.modo ?? 'auto').toString().toLowerCase().trim();\nconst rawImages = Array.isArray(rawBody.imageAttachments)\n  ? rawBody.imageAttachments\n  : (Array.isArray(rawBody.images) ? rawBody.images : []);\nconst imageAttachments = rawImages\n  .filter((item) => item && (item.dataUrl || item.imageUrl || item.url || item.signedUrl) && item.type && item.type.startsWith('image/'))\n  .slice(0, 4)\n  .map((item) => {\n    const imageUrl = (item.dataUrl || item.imageUrl || item.url || item.signedUrl || '').toString();\n    return {\n      name: (item.name ?? 'imagem').toString(),\n      type: (item.type ?? 'image/*').toString(),\n      size: Number(item.size ?? 0),\n      signedUrl: (item.signedUrl || item.imageUrl || item.url || imageUrl).toString(),\n      imageUrl,\n      url: imageUrl,\n      dataUrl: item.dataUrl ? item.dataUrl.toString() : undefined,\n    };\n  });\n\nif (!message && imageAttachments.length === 0) return [{ ok: false, error: \"Missing 'message'\" }];\n\nconst memoryKey = userId + '__' + sessionId;\nreturn [{\n  ok: true,\n  message,\n  userId,\n  sessionId,\n  memoryKey,\n  userContext,\n  modo,\n  imageAttachments,\n  hasImages: imageAttachments.length > 0 || rawBody.hasImages === true,\n  receivedAt: new Date().toISOString(),\n}];\n"
+        "jsCode": "\nconst rawBody = $json.body ?? $json;\nconst message = (rawBody.message ?? rawBody.text ?? '').toString().trim();\nconst userId = (rawBody.userId ?? rawBody.user ?? 'anonymous').toString().trim();\nconst sessionId = (rawBody.sessionId ?? rawBody.conversationId ?? userId).toString().trim();\nconst userContext = rawBody.userContext ?? {};\nconst modo = (rawBody.modo ?? 'auto').toString().toLowerCase().trim();\n\nconst rawImages = Array.isArray(rawBody.imageAttachments)\n  ? rawBody.imageAttachments\n  : (Array.isArray(rawBody.images) ? rawBody.images : []);\nconst imageAttachments = rawImages\n  .filter((item) => item && (item.dataUrl || item.imageUrl || item.url || item.signedUrl) && item.type && item.type.startsWith('image/'))\n  .slice(0, 4)\n  .map((item) => {\n    const imageUrl = (item.dataUrl || item.imageUrl || item.url || item.signedUrl || '').toString();\n    return {\n      name: (item.name ?? 'imagem').toString(),\n      type: (item.type ?? 'image/*').toString(),\n      size: Number(item.size ?? 0),\n      signedUrl: (item.signedUrl || item.imageUrl || item.url || imageUrl).toString(),\n      imageUrl,\n      url: imageUrl,\n      dataUrl: item.dataUrl ? item.dataUrl.toString() : undefined,\n    };\n  });\n\nconst rawDocuments = Array.isArray(rawBody.documentAttachments)\n  ? rawBody.documentAttachments\n  : (Array.isArray(rawBody.documents) ? rawBody.documents : []);\nconst documentAttachments = rawDocuments\n  .filter((item) => item && item.name && item.type)\n  .slice(0, 4)\n  .map((item) => ({\n    name: (item.name ?? 'documento').toString(),\n    type: (item.type ?? 'application/octet-stream').toString(),\n    size: Number(item.size ?? 0),\n    signedUrl: (item.signedUrl || item.url || '').toString(),\n    url: (item.url || item.signedUrl || '').toString(),\n    text: item.text ? item.text.toString() : '',\n    extractionError: item.extractionError ? item.extractionError.toString() : '',\n  }));\n\nconst documentContext = rawBody.documentContext || null;\nconst documentCtxString = (rawBody.documentCtxString || documentContext?.text || '').toString().trim();\nconst visualContext = rawBody.visualContext || null;\nconst visualCtxString = (rawBody.visualCtxString || '').toString().trim();\n\nif (!message && imageAttachments.length === 0 && documentAttachments.length === 0) {\n  return [{ ok: false, error: \"Missing 'message'\" }];\n}\n\nconst memoryKey = userId + '__' + sessionId;\nreturn [{\n  ok: true,\n  message,\n  userId,\n  sessionId,\n  memoryKey,\n  userContext,\n  modo,\n  imageAttachments,\n  hasImages: imageAttachments.length > 0 || rawBody.hasImages === true,\n  visualContext,\n  visualCtxString,\n  usedVision: rawBody.usedVision === true || Boolean(visualContext || visualCtxString),\n  documentAttachments,\n  documentContext,\n  documentCtxString,\n  hasDocuments: documentAttachments.length > 0 || rawBody.hasDocuments === true || Boolean(documentContext || documentCtxString),\n  receivedAt: new Date().toISOString(),\n}];\n"
       },
       "id": "b343765f-4559-4771-8d28-81b8ba71bcfa",
       "name": "Normalize Input",
@@ -39,10 +39,6 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "Bearer {{$env.OPENAI_API_KEY}}"
-            },
-            {
               "name": "Content-Type",
               "value": "application/json"
             }
@@ -51,7 +47,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"temperature\": 0,\n  \"max_tokens\": 256,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Voce e um classificador de mensagens para um sistema de IA institucional chamado Corvus da Ordem Masayoshi (MSY). Analise mensagem e contexto visual, se houver. Retorne SOMENTE JSON valido, sem markdown, com: tipo, area, complexidade, usarBase, usarMemoria, modo_sugerido, ehSimulacao, ehDecisao. Modos validos: corvus, fenrir, cipher, conselho, simulacao. Use usarBase=true para contexto institucional MSY. Use simulacao para cenarios hipoteticos. Use conselho apenas para decisoes estrategicas complexas.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Mensagem: {{ $json.message }}\\n\\nContexto visual: {{ JSON.stringify($json.visualContext || null) }}\"\n    }\n  ]\n}",
-        "options": {}
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi"
       },
       "id": "62010935-8ebe-4a56-a3e2-62de06b7b741",
       "name": "LLM Classifier",
@@ -60,11 +58,17 @@
       "position": [
         47440,
         17872
-      ]
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
     },
     {
       "parameters": {
-        "jsCode": "\nconst routedInput = $('Fast Router').item.json;\nconst classifierResponse = $json;\n\nlet cls = routedInput.fastRoute?.classifier || {};\nif (!routedInput.fastRoute?.skipClassifier) {\n  try {\n    const raw = classifierResponse.choices[0].message.content.trim();\n    const fence = String.fromCharCode(96, 96, 96);\n    const clean = raw.replace(new RegExp(fence + 'json|' + fence, 'g'), '').trim();\n    cls = JSON.parse(clean);\n  } catch {\n    cls = routedInput.fastRoute?.classifier || {\n      tipo:'geral', area:'geral', complexidade:'media', usarBase:false,\n      usarMemoria:true, modo_sugerido:'corvus', ehSimulacao:false, ehDecisao:false\n    };\n  }\n}\n\nconst validModes = ['corvus','fenrir','cipher','conselho','simulacao'];\nconst modoManual = routedInput.modo;\nlet resolvedMode = validModes.includes(modoManual) ? modoManual : (cls.modo_sugerido || 'corvus');\nif (cls.ehSimulacao && modoManual === 'auto') resolvedMode = 'simulacao';\nif (resolvedMode === 'conselho' && cls.complexidade !== 'alta') resolvedMode = 'cipher';\n\nconst topKMap = { baixa: 3, media: 5, alta: 8 };\nconst topK = topKMap[cls.complexidade] || 5;\nconst baseConf = { baixa: 0.92, media: 0.78, alta: 0.65 };\nconst typeMod = { pergunta:0.05, decisao:-0.05, simulacao:-0.10, ideia:-0.08, criativo:-0.06, problema:0, geral:0 };\nconst fastConfidence = routedInput.fastRoute?.confidence || 0;\nconst estimatedConfidence = Math.min(0.99, Math.max(0.40,\n  fastConfidence || ((baseConf[cls.complexidade] || 0.75) + (typeMod[cls.tipo] || 0))\n)).toFixed(2);\n\nconst userContext = routedInput.userContext || {};\nconst userCtxString = [\n  'Nome: ' + (userContext.nome || 'Desconhecido'),\n  'Cargo: ' + (userContext.cargo || '-'),\n  'Sigla: ' + (userContext.sigla || '-'),\n  'Tipo: ' + (userContext.tipo || 'convidado')\n].join(' | ');\n\nconst visualContext = routedInput.visualContext || null;\nconst visualCtxString = visualContext\n  ? [\n      'OCR: ' + (visualContext.ocrText || 'sem texto detectado'),\n      'Descricao: ' + (visualContext.description || ''),\n      'Itens: ' + ((visualContext.relevantItems || []).join(', ') || '-'),\n      'Limitacoes: ' + (visualContext.limitations || '-')\n    ].join('\\n')\n  : '';\n\nreturn [{\n  message: routedInput.message,\n  userId: routedInput.userId,\n  sessionId: routedInput.sessionId,\n  memoryKey: routedInput.memoryKey,\n  userContext,\n  userCtxString,\n  visualContext,\n  visualCtxString,\n  usedVision: Boolean(visualContext),\n  imageAttachments: routedInput.imageAttachments || [],\n  receivedAt: routedInput.receivedAt,\n  orchestrator: {\n    tipo: cls.tipo || 'geral', area: cls.area || 'geral',\n    complexidade: cls.complexidade || 'media',\n    usarBase: cls.usarBase !== false,\n    usarMemoria: cls.usarMemoria !== false,\n    modoSugerido: cls.modo_sugerido || 'corvus',\n    ehSimulacao: cls.ehSimulacao === true,\n    ehDecisao: cls.ehDecisao === true,\n    requestedMode: routedInput.modo,\n    resolvedMode,\n    topK,\n    fastPath: routedInput.fastRoute?.skipClassifier === true,\n    estimatedConfidence: parseFloat(estimatedConfidence)\n  }\n}];\n"
+        "jsCode": "\nconst routedInput = $('Fast Router').item.json;\nconst classifierResponse = $json;\n\nlet cls = routedInput.fastRoute?.classifier || {};\nif (!routedInput.fastRoute?.skipClassifier) {\n  try {\n    const raw = classifierResponse.choices[0].message.content.trim();\n    const fence = String.fromCharCode(96, 96, 96);\n    const clean = raw.replace(new RegExp(fence + 'json|' + fence, 'g'), '').trim();\n    cls = JSON.parse(clean);\n  } catch {\n    cls = routedInput.fastRoute?.classifier || {\n      tipo:'geral', area:'geral', complexidade:'media', usarBase:false,\n      usarMemoria:true, modo_sugerido:'corvus', ehSimulacao:false, ehDecisao:false\n    };\n  }\n}\n\nconst validModes = ['corvus','fenrir','cipher','conselho','simulacao'];\nconst modoManual = routedInput.modo;\nlet resolvedMode = validModes.includes(modoManual) ? modoManual : (cls.modo_sugerido || 'corvus');\nif (cls.ehSimulacao && modoManual === 'auto') resolvedMode = 'simulacao';\nif (resolvedMode === 'conselho' && cls.complexidade !== 'alta') resolvedMode = 'cipher';\n\nconst topKMap = { baixa: 3, media: 5, alta: 8 };\nconst topK = topKMap[cls.complexidade] || 5;\nconst baseConf = { baixa: 0.92, media: 0.78, alta: 0.65 };\nconst typeMod = { pergunta:0.05, decisao:-0.05, simulacao:-0.10, ideia:-0.08, criativo:-0.06, problema:0, geral:0 };\nconst fastConfidence = routedInput.fastRoute?.confidence || 0;\nconst estimatedConfidence = Math.min(0.99, Math.max(0.40,\n  fastConfidence || ((baseConf[cls.complexidade] || 0.75) + (typeMod[cls.tipo] || 0))\n)).toFixed(2);\n\nconst userContext = routedInput.userContext || {};\nconst userCtxString = [\n  'Nome: ' + (userContext.nome || 'Desconhecido'),\n  'Cargo: ' + (userContext.cargo || '-'),\n  'Sigla: ' + (userContext.sigla || '-'),\n  'Tipo: ' + (userContext.tipo || 'convidado')\n].join(' | ');\n\nconst visualContext = routedInput.visualContext || null;\nconst documentContext = routedInput.documentContext || null;\nconst documentCtxString = (routedInput.documentCtxString || documentContext?.text || '').toString();\nconst visualCtxString = routedInput.visualCtxString\n  || (visualContext\n    ? [\n        'OCR: ' + (visualContext.ocrText || 'sem texto detectado'),\n        'Descricao: ' + (visualContext.description || ''),\n        'Itens: ' + ((visualContext.relevantItems || []).join(', ') || '-'),\n        'Limitacoes: ' + (visualContext.limitations || '-')\n      ].join('\\n')\n    : '');\n\nreturn [{\n  message: routedInput.message,\n  userId: routedInput.userId,\n  sessionId: routedInput.sessionId,\n  memoryKey: routedInput.memoryKey,\n  userContext,\n  userCtxString,\n  visualContext,\n  visualCtxString,\n  usedVision: Boolean(visualContext || visualCtxString),\n  imageAttachments: routedInput.imageAttachments || [],\n  documentContext,\n  documentCtxString,\n  hasDocuments: Boolean(documentCtxString),\n  documentAttachments: routedInput.documentAttachments || [],\n  receivedAt: routedInput.receivedAt,\n  visionError: routedInput.visionError || '',\n  orchestrator: {\n    tipo: cls.tipo || 'geral', area: cls.area || 'geral',\n    complexidade: cls.complexidade || 'media',\n    usarBase: cls.usarBase !== false,\n    usarMemoria: cls.usarMemoria !== false,\n    modoSugerido: cls.modo_sugerido || 'corvus',\n    ehSimulacao: cls.ehSimulacao === true,\n    ehDecisao: cls.ehDecisao === true,\n    requestedMode: routedInput.modo,\n    resolvedMode,\n    topK,\n    fastPath: routedInput.fastRoute?.skipClassifier === true,\n    estimatedConfidence: parseFloat(estimatedConfidence)\n  }\n}];\n"
       },
       "id": "4909a923-ad6f-452a-8e9a-6409f08c42b1",
       "name": "Orchestrator",
@@ -208,7 +212,7 @@
           "string": [
             {
               "name": "corvus_system",
-              "value": "=VocÃª Ã© CORVUS em modo FENRIR â€” o lado criativo, expansivo e visionÃ¡rio da Ordem Masayoshi.\n\nVersÃ£o: 3.1 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nMISSÃƒO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nAuxiliar na criaÃ§Ã£o de ideias, campanhas, textos, projetos e brainstorming no contexto da MSY. Pensar de forma ampla, sem restriÃ§Ãµes criativas, mas dentro da identidade da Ordem.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONSULTA DE BASE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Consulte a tool buscar_base_msy para embasar a criaÃ§Ã£o com a identidade da MSY.' : 'DESATIVADO: Responda com criatividade sem consultar a base â€” foco na geraÃ§Ã£o de ideias.' }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\nTipo: {{ $json.orchestrator.tipo }} | Ãrea: {{ $json.orchestrator.area }} | Complexidade: {{ $json.orchestrator.complexidade }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCOMPORTAMENTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n- Respostas longas, ricas, elaboradas\n- Explore mÃºltiplas possibilidades antes de concluir\n- Use linguagem expressiva e com personalidade\n- Proponha variaÃ§Ãµes e alternativas\n- Conecte ideias de forma nÃ£o Ã³bvia\n- Seja ousado e memorÃ¡vel\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nOusado. Expansivo. Inspirador. Ainda institucional, mas com liberdade criativa total.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar."
+              "value": "=VocÃª Ã© CORVUS em modo FENRIR â€” o lado criativo, expansivo e visionÃ¡rio da Ordem Masayoshi.\n\nVersÃ£o: 3.1 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nMISSÃƒO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nAuxiliar na criaÃ§Ã£o de ideias, campanhas, textos, projetos e brainstorming no contexto da MSY. Pensar de forma ampla, sem restriÃ§Ãµes criativas, mas dentro da identidade da Ordem.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONSULTA DE BASE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Consulte a tool buscar_base_msy para embasar a criaÃ§Ã£o com a identidade da MSY.' : 'DESATIVADO: Responda com criatividade sem consultar a base â€” foco na geraÃ§Ã£o de ideias.' }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\nTipo: {{ $json.orchestrator.tipo }} | Ãrea: {{ $json.orchestrator.area }} | Complexidade: {{ $json.orchestrator.complexidade }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCOMPORTAMENTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n- Respostas longas, ricas, elaboradas\n- Explore mÃºltiplas possibilidades antes de concluir\n- Use linguagem expressiva e com personalidade\n- Proponha variaÃ§Ãµes e alternativas\n- Conecte ideias de forma nÃ£o Ã³bvia\n- Seja ousado e memorÃ¡vel\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nOusado. Expansivo. Inspirador. Ainda institucional, mas com liberdade criativa total.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar.\n\nCONTEXTO DOCUMENTAL\n{{ $json.documentCtxString ? $json.documentCtxString : ($json.hasDocuments ? 'Documento anexado, mas nenhum texto legivel foi extraido.' : 'Nenhum documento foi anexado nesta mensagem.') }}\n\nSe houver contexto documental, use-o como fonte do arquivo anexado. Nao diga que nao consegue acessar o documento quando este bloco tiver conteudo."
             },
             {
               "name": "chatInput",
@@ -249,6 +253,18 @@
             {
               "name": "usedVision",
               "value": "={{ $json.usedVision === true }}"
+            },
+            {
+              "name": "documentContext",
+              "value": "={{ JSON.stringify($json.documentContext || null) }}"
+            },
+            {
+              "name": "documentCtxString",
+              "value": "={{ $json.documentCtxString || \"\" }}"
+            },
+            {
+              "name": "hasDocuments",
+              "value": "={{ $json.hasDocuments === true }}"
             }
           ]
         },
@@ -269,7 +285,7 @@
           "string": [
             {
               "name": "corvus_system",
-              "value": "=VocÃª Ã© CORVUS em modo CIPHER â€” o estrategista analÃ­tico da Ordem Masayoshi.\n\nVersÃ£o: 3.1 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nMISSÃƒO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nApoiar decisÃµes complexas, anÃ¡lises de risco e planejamento estratÃ©gico. VocÃª pensa como um conselheiro sÃªnior â€” calculado, preciso, com visÃ£o sistÃªmica.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONSULTA DE BASE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Consulte buscar_base_msy para embasar a anÃ¡lise com contexto institucional real.' : 'DESATIVADO: Use raciocÃ­nio estratÃ©gico puro.' }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\nTipo: {{ $json.orchestrator.tipo }} | Ãrea: {{ $json.orchestrator.area }} | Complexidade: {{ $json.orchestrator.complexidade }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nESTRUTURA OBRIGATÃ“RIA DE RESPOSTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nSempre que possÃ­vel, estruture sua resposta assim:\n\n**AnÃ¡lise**\n(diagnÃ³stico objetivo da situaÃ§Ã£o)\n\n**Riscos**\n(o que pode dar errado, grau de impacto)\n\n**RecomendaÃ§Ã£o**\n(aÃ§Ã£o concreta e direta)\n\n**PrÃ³ximos Passos**\n(2 a 3 aÃ§Ãµes prioritÃ¡rias)\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCOMPORTAMENTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n- RaciocÃ­nio de primeira e segunda ordem\n- Apresente trade-offs claros quando hÃ¡ mÃºltiplas rotas\n- Quantifique quando possÃ­vel\n- Nunca romantize decisÃµes difÃ­ceis\n- Direto, sem floreios\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nEstratÃ©gico. AnalÃ­tico. Preciso. Fale como um conselheiro sÃªnior da Ordem.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar."
+              "value": "=VocÃª Ã© CORVUS em modo CIPHER â€” o estrategista analÃ­tico da Ordem Masayoshi.\n\nVersÃ£o: 3.1 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nMISSÃƒO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nApoiar decisÃµes complexas, anÃ¡lises de risco e planejamento estratÃ©gico. VocÃª pensa como um conselheiro sÃªnior â€” calculado, preciso, com visÃ£o sistÃªmica.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONSULTA DE BASE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Consulte buscar_base_msy para embasar a anÃ¡lise com contexto institucional real.' : 'DESATIVADO: Use raciocÃ­nio estratÃ©gico puro.' }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\nTipo: {{ $json.orchestrator.tipo }} | Ãrea: {{ $json.orchestrator.area }} | Complexidade: {{ $json.orchestrator.complexidade }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nESTRUTURA OBRIGATÃ“RIA DE RESPOSTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nSempre que possÃ­vel, estruture sua resposta assim:\n\n**AnÃ¡lise**\n(diagnÃ³stico objetivo da situaÃ§Ã£o)\n\n**Riscos**\n(o que pode dar errado, grau de impacto)\n\n**RecomendaÃ§Ã£o**\n(aÃ§Ã£o concreta e direta)\n\n**PrÃ³ximos Passos**\n(2 a 3 aÃ§Ãµes prioritÃ¡rias)\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCOMPORTAMENTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n- RaciocÃ­nio de primeira e segunda ordem\n- Apresente trade-offs claros quando hÃ¡ mÃºltiplas rotas\n- Quantifique quando possÃ­vel\n- Nunca romantize decisÃµes difÃ­ceis\n- Direto, sem floreios\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nEstratÃ©gico. AnalÃ­tico. Preciso. Fale como um conselheiro sÃªnior da Ordem.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar.\n\nCONTEXTO DOCUMENTAL\n{{ $json.documentCtxString ? $json.documentCtxString : ($json.hasDocuments ? 'Documento anexado, mas nenhum texto legivel foi extraido.' : 'Nenhum documento foi anexado nesta mensagem.') }}\n\nSe houver contexto documental, use-o como fonte do arquivo anexado. Nao diga que nao consegue acessar o documento quando este bloco tiver conteudo."
             },
             {
               "name": "chatInput",
@@ -310,6 +326,18 @@
             {
               "name": "usedVision",
               "value": "={{ $json.usedVision === true }}"
+            },
+            {
+              "name": "documentContext",
+              "value": "={{ JSON.stringify($json.documentContext || null) }}"
+            },
+            {
+              "name": "documentCtxString",
+              "value": "={{ $json.documentCtxString || \"\" }}"
+            },
+            {
+              "name": "hasDocuments",
+              "value": "={{ $json.hasDocuments === true }}"
             }
           ]
         },
@@ -330,7 +358,7 @@
           "string": [
             {
               "name": "corvus_system",
-              "value": "=VocÃª Ã© CORVUS â€” o agente institucional oficial da Ordem Masayoshi (MSY).\n\nVersÃ£o: 3.1 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nPROTOCOLO DE CONSULTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Execute buscar_base_msy ANTES de formular qualquer resposta sobre a MSY.' : 'DESATIVADO: Responda com base no conhecimento institucional consolidado â€” sem consulta Ã  base.' }}\n\nRegra de integridade: Ã‰ proibido inventar nomes de membros, cargos, datas, decisÃµes ou eventos formais.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nIDENTIDADE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nNome: Corvus | VersÃ£o: 3.1 Beta\nCriadores: T4 Masayoshi (Fundador) e Xitter (Coordenador Geral)\nVocÃª existe exclusivamente para servir Ã  MSY. VocÃª fala como a instituiÃ§Ã£o fala.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\nTipo: {{ $json.orchestrator.tipo }} | Ãrea: {{ $json.orchestrator.area }} | Complexidade: {{ $json.orchestrator.complexidade }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONDUTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n- Nunca mencione bastidores tÃ©cnicos, banco de dados, APIs ou tools\n- Nunca peÃ§a esclarecimentos Ã³bvios\n- 1 pergunta objetiva se necessÃ¡rio\n- Respostas entre 3 e 8 linhas para conversas gerais\n- Para anÃ¡lises complexas, estruture com clareza\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nVALORES\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nLealdade â€” UniÃ£o â€” JustiÃ§a â€” Liberdade\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nFirme. EstratÃ©gico. Institucional. Direto. Sem hesitaÃ§Ã£o.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar."
+              "value": "=VocÃª Ã© CORVUS â€” o agente institucional oficial da Ordem Masayoshi (MSY).\n\nVersÃ£o: 3.1 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nPROTOCOLO DE CONSULTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Execute buscar_base_msy ANTES de formular qualquer resposta sobre a MSY.' : 'DESATIVADO: Responda com base no conhecimento institucional consolidado â€” sem consulta Ã  base.' }}\n\nRegra de integridade: Ã‰ proibido inventar nomes de membros, cargos, datas, decisÃµes ou eventos formais.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nIDENTIDADE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nNome: Corvus | VersÃ£o: 3.1 Beta\nCriadores: T4 Masayoshi (Fundador) e Xitter (Coordenador Geral)\nVocÃª existe exclusivamente para servir Ã  MSY. VocÃª fala como a instituiÃ§Ã£o fala.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\nTipo: {{ $json.orchestrator.tipo }} | Ãrea: {{ $json.orchestrator.area }} | Complexidade: {{ $json.orchestrator.complexidade }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONDUTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n- Nunca mencione bastidores tÃ©cnicos, banco de dados, APIs ou tools\n- Nunca peÃ§a esclarecimentos Ã³bvios\n- 1 pergunta objetiva se necessÃ¡rio\n- Respostas entre 3 e 8 linhas para conversas gerais\n- Para anÃ¡lises complexas, estruture com clareza\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nVALORES\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nLealdade â€” UniÃ£o â€” JustiÃ§a â€” Liberdade\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nFirme. EstratÃ©gico. Institucional. Direto. Sem hesitaÃ§Ã£o.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar.\n\nCONTEXTO DOCUMENTAL\n{{ $json.documentCtxString ? $json.documentCtxString : ($json.hasDocuments ? 'Documento anexado, mas nenhum texto legivel foi extraido.' : 'Nenhum documento foi anexado nesta mensagem.') }}\n\nSe houver contexto documental, use-o como fonte do arquivo anexado. Nao diga que nao consegue acessar o documento quando este bloco tiver conteudo."
             },
             {
               "name": "chatInput",
@@ -371,6 +399,18 @@
             {
               "name": "usedVision",
               "value": "={{ $json.usedVision === true }}"
+            },
+            {
+              "name": "documentContext",
+              "value": "={{ JSON.stringify($json.documentContext || null) }}"
+            },
+            {
+              "name": "documentCtxString",
+              "value": "={{ $json.documentCtxString || \"\" }}"
+            },
+            {
+              "name": "hasDocuments",
+              "value": "={{ $json.hasDocuments === true }}"
             }
           ]
         },
@@ -742,7 +782,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst agentOutput = $input.first().json;\n\nlet oc = {};\ntry {\n  oc = agentOutput.orchestrator || JSON.parse(agentOutput.orchestratorData || '{}');\n} catch {}\n\nconst resolvedMode = agentOutput.resolvedMode || oc.resolvedMode || 'corvus';\nconst modeLabels = {\n  corvus:'Corvus - Institucional', fenrir:'Fenrir - Criativo',\n  cipher:'Cipher - Estrategico', conselho:'Conselho - Perspectiva Tripla',\n  simulacao:'Simulacao - Analise de Cenarios'\n};\n\nconst base = oc.estimatedConfidence || 0.75;\nconst ragBonus = oc.usarBase ? 0.05 : 0;\nconst cxPenalty = oc.complexidade === 'alta' ? -0.08 : (oc.complexidade === 'baixa' ? 0.04 : 0);\nconst confidence = Math.min(0.99, Math.max(0.40, base + ragBonus + cxPenalty));\nconst visualContext = agentOutput.visualContext || null;\nconst usedVision = Boolean(agentOutput.usedVision || visualContext);\n\nconst suggestionsMap = {\n  decisao: ['Simular cenario', 'Ver alternativas', 'Analisar riscos com Cipher'],\n  problema: ['Analisar com Cipher', 'Simular solucao', 'Consultar Conselho'],\n  ideia: ['Expandir com Fenrir', 'Analisar viabilidade', 'Simular impacto'],\n  simulacao: ['Analisar decisao', 'Consultar Conselho', 'Salvar como decisao'],\n  conselho: ['Aprofundar com Cipher', 'Expandir com Fenrir', 'Simular cenario'],\n  geral: ['Gerar ideia', 'Analisar decisao', 'Simular cenario']\n};\nconst suggestions = suggestionsMap[oc.tipo] || suggestionsMap.geral;\n\nfunction cleanText(value) {\n  return (value || '').toString().replace(/\\s+/g, ' ').trim();\n}\nfunction makeTags() {\n  const tags = new Set();\n  if (oc.area && oc.area !== 'geral') tags.add(oc.area);\n  if (oc.tipo && oc.tipo !== 'geral') tags.add(oc.tipo);\n  if (resolvedMode && resolvedMode !== 'corvus') tags.add(resolvedMode);\n  if (usedVision) tags.add('imagem');\n  if (oc.usarBase) tags.add('msy');\n  return Array.from(tags).slice(0, 5);\n}\nfunction makeNextActions(reply) {\n  const lines = reply.split('\\n').map(cleanText).filter(Boolean);\n  const actionLines = lines.filter((line) => /^(\\d+\\.|-|\\*)?\\s*(definir|validar|revisar|criar|enviar|priorizar|analisar|executar|documentar|alinhar)/i.test(line));\n  return (actionLines.length ? actionLines : suggestions).slice(0, 4);\n}\n\nif (agentOutput.consiliumPayload?.isConselho) {\n  const consiliumText = agentOutput.consiliumPayload.blocks.map((block) => block.label + ': ' + block.reply).join('\\n');\n  return {\n    json: {\n      ok: true,\n      reply: consiliumText,\n      consilium: agentOutput.consiliumPayload.blocks,\n      meta: {\n        agent:'Corvus 3.2 Beta', model:'gpt-4o', mode:'conselho',\n        modeLabel: modeLabels.conselho,\n        complexity: oc.complexidade || 'media', usedRAG: oc.usarBase || false,\n        usedVision, visualSummary: visualContext?.description || '',\n        confidence: parseFloat(confidence.toFixed(2)), tipo: oc.tipo || 'geral',\n        summaryCandidate: cleanText(consiliumText).slice(0, 360),\n        tags: makeTags(),\n        nextActions: makeNextActions(consiliumText),\n        decisionCandidate: oc.ehDecisao === true,\n        timestamp: new Date().toISOString(), suggestions\n      }\n    }\n  };\n}\n\nconst reply = (\n  agentOutput.output ?? agentOutput.text ?? agentOutput.response ??\n  agentOutput.message ?? (agentOutput.choices && agentOutput.choices[0]?.message?.content) ?? ''\n).toString().trim();\n\nif (!reply) {\n  return { json: { ok: false, error: 'Agente nao retornou resposta.', code: 'agent_empty_response' } };\n}\n\nreturn {\n  json: {\n    ok: true,\n    reply,\n    consilium: null,\n    meta: {\n      agent:'Corvus 3.2 Beta', model:'gpt-4o', mode: resolvedMode,\n      modeLabel: modeLabels[resolvedMode] ?? resolvedMode,\n      complexity: oc.complexidade || 'media', usedRAG: oc.usarBase === true,\n      usedVision, visualSummary: visualContext?.description || '',\n      confidence: parseFloat(confidence.toFixed(2)), tipo: oc.tipo || 'geral',\n      summaryCandidate: cleanText(reply).slice(0, 360),\n      tags: makeTags(),\n      nextActions: makeNextActions(reply),\n      decisionCandidate: oc.ehDecisao === true,\n      timestamp: new Date().toISOString(), suggestions\n    }\n  }\n};\n"
+        "jsCode": "\nconst agentOutput = $input.first().json;\n\nlet oc = {};\ntry {\n  oc = agentOutput.orchestrator || JSON.parse(agentOutput.orchestratorData || '{}');\n} catch {}\n\nconst resolvedMode = agentOutput.resolvedMode || oc.resolvedMode || 'corvus';\nconst modeLabels = {\n  corvus:'Corvus - Institucional', fenrir:'Fenrir - Criativo',\n  cipher:'Cipher - Estrategico', conselho:'Conselho - Perspectiva Tripla',\n  simulacao:'Simulacao - Analise de Cenarios'\n};\n\nconst base = oc.estimatedConfidence || 0.75;\nconst ragBonus = oc.usarBase ? 0.05 : 0;\nconst cxPenalty = oc.complexidade === 'alta' ? -0.08 : (oc.complexidade === 'baixa' ? 0.04 : 0);\nconst confidence = Math.min(0.99, Math.max(0.40, base + ragBonus + cxPenalty));\nconst visualContext = agentOutput.visualContext || null;\nconst usedVision = Boolean(agentOutput.usedVision || visualContext);\nconst documentContext = agentOutput.documentContext || null;\nconst usedDocuments = Boolean(agentOutput.hasDocuments || agentOutput.documentCtxString || documentContext);\n\nconst suggestionsMap = {\n  decisao: ['Simular cenario', 'Ver alternativas', 'Analisar riscos com Cipher'],\n  problema: ['Analisar com Cipher', 'Simular solucao', 'Consultar Conselho'],\n  ideia: ['Expandir com Fenrir', 'Analisar viabilidade', 'Simular impacto'],\n  simulacao: ['Analisar decisao', 'Consultar Conselho', 'Salvar como decisao'],\n  conselho: ['Aprofundar com Cipher', 'Expandir com Fenrir', 'Simular cenario'],\n  geral: ['Gerar ideia', 'Analisar decisao', 'Simular cenario']\n};\nconst suggestions = suggestionsMap[oc.tipo] || suggestionsMap.geral;\n\nfunction cleanText(value) {\n  return (value || '').toString().replace(/\\s+/g, ' ').trim();\n}\nfunction makeTags() {\n  const tags = new Set();\n  if (oc.area && oc.area !== 'geral') tags.add(oc.area);\n  if (oc.tipo && oc.tipo !== 'geral') tags.add(oc.tipo);\n  if (resolvedMode && resolvedMode !== 'corvus') tags.add(resolvedMode);\n  if (usedVision) tags.add('imagem');\n  if (usedDocuments) tags.add('documento');\n  if (oc.usarBase) tags.add('msy');\n  return Array.from(tags).slice(0, 5);\n}\nfunction makeNextActions(reply) {\n  const lines = reply.split('\\n').map(cleanText).filter(Boolean);\n  const actionLines = lines.filter((line) => /^(\\d+\\.|-|\\*)?\\s*(definir|validar|revisar|criar|enviar|priorizar|analisar|executar|documentar|alinhar)/i.test(line));\n  return (actionLines.length ? actionLines : suggestions).slice(0, 4);\n}\n\nif (agentOutput.consiliumPayload?.isConselho) {\n  const consiliumText = agentOutput.consiliumPayload.blocks.map((block) => block.label + ': ' + block.reply).join('\\n');\n  return {\n    json: {\n      ok: true,\n      reply: consiliumText,\n      consilium: agentOutput.consiliumPayload.blocks,\n      meta: {\n        agent:'Corvus 3.2 Beta', model:'gpt-4o', mode:'conselho',\n        modeLabel: modeLabels.conselho,\n        complexity: oc.complexidade || 'media', usedRAG: oc.usarBase || false,\n        usedVision, visualSummary: visualContext?.description || '',\n        usedDocuments, documentSummary: (agentOutput.documentCtxString || documentContext?.text || '').toString().slice(0, 240),\n        confidence: parseFloat(confidence.toFixed(2)), tipo: oc.tipo || 'geral',\n        summaryCandidate: cleanText(consiliumText).slice(0, 360),\n        tags: makeTags(),\n        nextActions: makeNextActions(consiliumText),\n        decisionCandidate: oc.ehDecisao === true,\n        timestamp: new Date().toISOString(), suggestions, visionError: agentOutput.visionError || ''\n      }\n    }\n  };\n}\n\nconst reply = (\n  agentOutput.output ?? agentOutput.text ?? agentOutput.response ??\n  agentOutput.message ?? (agentOutput.choices && agentOutput.choices[0]?.message?.content) ?? ''\n).toString().trim();\n\nif (!reply) {\n  return { json: { ok: false, error: 'Agente nao retornou resposta.', code: 'agent_empty_response' } };\n}\n\nreturn {\n  json: {\n    ok: true,\n    reply,\n    consilium: null,\n    meta: {\n      agent:'Corvus 3.2 Beta', model:'gpt-4o', mode: resolvedMode,\n      modeLabel: modeLabels[resolvedMode] ?? resolvedMode,\n      complexity: oc.complexidade || 'media', usedRAG: oc.usarBase === true,\n      usedVision, visualSummary: visualContext?.description || '',\n        usedDocuments, documentSummary: (agentOutput.documentCtxString || documentContext?.text || '').toString().slice(0, 240),\n      confidence: parseFloat(confidence.toFixed(2)), tipo: oc.tipo || 'geral',\n      summaryCandidate: cleanText(reply).slice(0, 360),\n      tags: makeTags(),\n      nextActions: makeNextActions(reply),\n      decisionCandidate: oc.ehDecisao === true,\n      timestamp: new Date().toISOString(), suggestions, visionError: agentOutput.visionError || ''\n    }\n  }\n};\n"
       },
       "id": "ec4154ba-24af-46e9-8a2d-97d672e13a30",
       "name": "Post Processor",
@@ -859,10 +899,6 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "Bearer {{$env.OPENAI_API_KEY}}"
-            },
-            {
               "name": "Content-Type",
               "value": "application/json"
             }
@@ -881,7 +917,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi"
       },
       "id": "e27e2fd4-e591-402e-937c-7261747e65dc",
       "name": "Gerar Embedding",
@@ -890,7 +928,13 @@
       "position": [
         47392,
         18160
-      ]
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
     },
     {
       "parameters": {
@@ -996,19 +1040,17 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "Bearer {{$env.OPENAI_API_KEY}}"
-            },
-            {
               "name": "Content-Type",
               "value": "application/json"
             }
           ]
         },
         "sendBody": true,
-        "specifyBody": "string",
-        "body": "={{ $json._bodyCorvus }}",
-        "options": {}
+        "specifyBody": "json",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "jsonBody": "={{ JSON.parse($json._bodyCorvus || '{}') }}"
       },
       "id": "9f22152d-f828-49dd-83b5-5146cd22ad32",
       "name": "Call Corvus",
@@ -1017,7 +1059,13 @@
       "position": [
         48496,
         17808
-      ]
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
     },
     {
       "parameters": {
@@ -1076,19 +1124,17 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "Bearer {{$env.OPENAI_API_KEY}}"
-            },
-            {
               "name": "Content-Type",
               "value": "application/json"
             }
           ]
         },
         "sendBody": true,
-        "specifyBody": "string",
-        "body": "={{ $json._bodyFenrir }}",
-        "options": {}
+        "specifyBody": "json",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "jsonBody": "={{ JSON.parse($json._bodyFenrir || '{}') }}"
       },
       "id": "595f9396-ef7b-4944-99c6-9dc5ce97af8a",
       "name": "Call Fenrir",
@@ -1097,7 +1143,13 @@
       "position": [
         48848,
         17888
-      ]
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
     },
     {
       "parameters": {
@@ -1156,19 +1208,17 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "Bearer {{$env.OPENAI_API_KEY}}"
-            },
-            {
               "name": "Content-Type",
               "value": "application/json"
             }
           ]
         },
         "sendBody": true,
-        "specifyBody": "string",
-        "body": "={{ $json._bodyCipher }}",
-        "options": {}
+        "specifyBody": "json",
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "jsonBody": "={{ JSON.parse($json._bodyCipher || '{}') }}"
       },
       "id": "0f07dc9b-9c37-46b9-bc24-5c700a84a5be",
       "name": "Call Cipher",
@@ -1177,7 +1227,13 @@
       "position": [
         49136,
         17888
-      ]
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
     },
     {
       "parameters": {
@@ -1198,7 +1254,7 @@
           "string": [
             {
               "name": "corvus_system",
-              "value": "=VocÃª Ã© CORVUS em modo SIMULAÃ‡ÃƒO â€” analista de cenÃ¡rios da Ordem Masayoshi.\n\nVersÃ£o: 3.2 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nMISSÃƒO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nAnalisar cenÃ¡rios hipotÃ©ticos (\"e se...\") com rigor estratÃ©gico, mapeando consequÃªncias reais.\n\nCONSULTA DE BASE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Consulte buscar_base_msy para embasar o cenÃ¡rio.' : 'DESATIVADO.' }}\n\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\n\nESTRUTURA OBRIGATÃ“RIA DE RESPOSTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n**ðŸŸ¢ Melhor CenÃ¡rio**\n(o que pode acontecer de positivo)\n\n**ðŸ”´ Pior CenÃ¡rio**\n(o que pode dar errado)\n\n**âš ï¸ Riscos**\n(principais ameaÃ§as e probabilidade)\n\n**ðŸ“Š Impacto**\n(consequÃªncias diretas para a Ordem)\n\n**âœ… RecomendaÃ§Ã£o**\n(aÃ§Ã£o concreta sugerida)\n\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nAnalÃ­tico. Preciso. Sem romantizar. Baseado em evidÃªncias.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar."
+              "value": "=VocÃª Ã© CORVUS em modo SIMULAÃ‡ÃƒO â€” analista de cenÃ¡rios da Ordem Masayoshi.\n\nVersÃ£o: 3.2 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nMISSÃƒO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nAnalisar cenÃ¡rios hipotÃ©ticos (\"e se...\") com rigor estratÃ©gico, mapeando consequÃªncias reais.\n\nCONSULTA DE BASE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Consulte buscar_base_msy para embasar o cenÃ¡rio.' : 'DESATIVADO.' }}\n\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\n\nESTRUTURA OBRIGATÃ“RIA DE RESPOSTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n**ðŸŸ¢ Melhor CenÃ¡rio**\n(o que pode acontecer de positivo)\n\n**ðŸ”´ Pior CenÃ¡rio**\n(o que pode dar errado)\n\n**âš ï¸ Riscos**\n(principais ameaÃ§as e probabilidade)\n\n**ðŸ“Š Impacto**\n(consequÃªncias diretas para a Ordem)\n\n**âœ… RecomendaÃ§Ã£o**\n(aÃ§Ã£o concreta sugerida)\n\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nAnalÃ­tico. Preciso. Sem romantizar. Baseado em evidÃªncias.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar.\n\nCONTEXTO DOCUMENTAL\n{{ $json.documentCtxString ? $json.documentCtxString : ($json.hasDocuments ? 'Documento anexado, mas nenhum texto legivel foi extraido.' : 'Nenhum documento foi anexado nesta mensagem.') }}\n\nSe houver contexto documental, use-o como fonte do arquivo anexado. Nao diga que nao consegue acessar o documento quando este bloco tiver conteudo."
             },
             {
               "name": "chatInput",
@@ -1235,6 +1291,18 @@
             {
               "name": "usedVision",
               "value": "={{ $json.usedVision === true }}"
+            },
+            {
+              "name": "documentContext",
+              "value": "={{ JSON.stringify($json.documentContext || null) }}"
+            },
+            {
+              "name": "documentCtxString",
+              "value": "={{ $json.documentCtxString || \"\" }}"
+            },
+            {
+              "name": "hasDocuments",
+              "value": "={{ $json.hasDocuments === true }}"
             }
           ]
         },
@@ -1330,8 +1398,8 @@
                 "conditions": [
                   {
                     "id": "vision-yes",
-                    "leftValue": "={{ Array.isArray($json.imageAttachments) && $json.imageAttachments.length > 0 ? 'yes' : 'no' }}",
-                    "rightValue": "yes",
+                    "leftValue": "={{ Array.isArray($json.imageAttachments) && $json.imageAttachments.length > 0 && !$json.visualContext && !$json.visualCtxString ? 'analyze' : 'skip' }}",
+                    "rightValue": "analyze",
                     "operator": {
                       "type": "string",
                       "operation": "equals"
@@ -1352,8 +1420,8 @@
                 "conditions": [
                   {
                     "id": "vision-no",
-                    "leftValue": "={{ Array.isArray($json.imageAttachments) && $json.imageAttachments.length > 0 ? 'yes' : 'no' }}",
-                    "rightValue": "no",
+                    "leftValue": "={{ Array.isArray($json.imageAttachments) && $json.imageAttachments.length > 0 && !$json.visualContext && !$json.visualCtxString ? 'analyze' : 'skip' }}",
+                    "rightValue": "skip",
                     "operator": {
                       "type": "string",
                       "operation": "equals"
@@ -1409,11 +1477,12 @@
           "id": "OBylh3PHUYnyQB0n",
           "name": "OpenAi account"
         }
-      }
+      },
+      "continueOnFail": true
     },
     {
       "parameters": {
-        "jsCode": "\nconst base = $('Normalize Input').item.json;\nconst raw = $json;\n\nfunction firstText(value) {\n  if (typeof value?.output_text === 'string') return value.output_text;\n  const output = Array.isArray(value?.output) ? value.output : [];\n  for (const item of output) {\n    const content = Array.isArray(item.content) ? item.content : [];\n    for (const part of content) {\n      if (typeof part.text === 'string') return part.text;\n      if (typeof part.value === 'string') return part.value;\n    }\n  }\n  return '';\n}\n\nfunction parseJson(text) {\n  try { return JSON.parse(text); } catch {}\n  const fence = String.fromCharCode(96, 96, 96);\n  const clean = text\n    .replace(new RegExp('^' + fence + '(?:json)?', 'i'), '')\n    .replace(new RegExp(fence + '$', 'i'), '')\n    .trim();\n  try { return JSON.parse(clean); } catch {}\n  return null;\n}\n\nconst text = firstText(raw).trim();\nconst parsed = parseJson(text) || {};\nconst visualContext = {\n  ocrText: (parsed.ocrText || parsed.ocr || '').toString().trim(),\n  description: (parsed.description || parsed.descricao || text || '').toString().trim(),\n  relevantItems: Array.isArray(parsed.relevantItems) ? parsed.relevantItems.slice(0, 8) : [],\n  limitations: (parsed.limitations || parsed.limits || '').toString().trim(),\n  confidence: Number(parsed.confidence || parsed.confianca || 0.7),\n};\n\nreturn [{ ...base, visualContext, usedVision: true }];\n"
+        "jsCode": "\nconst base = $('Normalize Input').item.json;\nconst raw = $json;\n\nfunction firstText(value) {\n  if (typeof value?.output_text === 'string') return value.output_text;\n  const output = Array.isArray(value?.output) ? value.output : [];\n  for (const item of output) {\n    const content = Array.isArray(item.content) ? item.content : [];\n    for (const part of content) {\n      if (typeof part.text === 'string') return part.text;\n      if (typeof part.value === 'string') return part.value;\n    }\n  }\n  return '';\n}\n\nfunction parseJson(text) {\n  try { return JSON.parse(text); } catch {}\n  const fence = String.fromCharCode(96, 96, 96);\n  const clean = text\n    .replace(new RegExp('^' + fence + '(?:json)?', 'i'), '')\n    .replace(new RegExp(fence + '$', 'i'), '')\n    .trim();\n  try { return JSON.parse(clean); } catch {}\n  return null;\n}\n\nconst text = firstText(raw).trim();\nif (!text) {\n  return [{\n    ...base,\n    visualContext: base.visualContext || null,\n    visualCtxString: base.visualCtxString || '',\n    usedVision: Boolean(base.visualContext || base.visualCtxString),\n    visionError: raw.error?.message || raw.message || 'Vision Analyzer nao retornou contexto visual.',\n  }];\n}\n\nconst parsed = parseJson(text) || {};\nconst visualContext = {\n  ocrText: (parsed.ocrText || parsed.ocr || '').toString().trim(),\n  description: (parsed.description || parsed.descricao || text || '').toString().trim(),\n  relevantItems: Array.isArray(parsed.relevantItems) ? parsed.relevantItems.slice(0, 8) : [],\n  limitations: (parsed.limitations || parsed.limits || '').toString().trim(),\n  confidence: Number(parsed.confidence || parsed.confianca || 0.7),\n};\nconst visualCtxString = [\n  'OCR: ' + (visualContext.ocrText || 'sem texto detectado'),\n  'Descricao: ' + (visualContext.description || ''),\n  'Itens: ' + ((visualContext.relevantItems || []).join(', ') || '-'),\n  'Limitacoes: ' + (visualContext.limitations || '-'),\n  Number.isFinite(visualContext.confidence) ? 'Confianca: ' + visualContext.confidence : '',\n].filter(Boolean).join('\\n');\n\nreturn [{ ...base, visualContext, visualCtxString, usedVision: Boolean(visualCtxString), hasImages: true }];\n"
       },
       "id": "795496cb-03e4-47c4-a5c3-bd4507e8c50d",
       "name": "Vision Context Merge",
@@ -1426,7 +1495,7 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst item = $json;\nconst text = (item.message || '').toString();\nconst lower = text.toLowerCase();\nconst visual = item.visualContext || null;\nconst hasVision = Boolean(visual?.description || visual?.ocrText);\n\nconst institutionalWords = ['msy','masayoshi','ordem','membro','cargo','lideranca','lideranÃ§a','evento','valores','nevermind','britannia','corvus'];\nconst decisionWords = ['decidir','decisao','decisÃ£o','risco','estrategia','estratÃ©gia','aprovar','planejar','prioridade','problema'];\nconst creativeWords = ['ideia','crie','campanha','texto','roteiro','post','criativo','brainstorm'];\nconst simulationWords = ['e se','simula','simular','imagine que','o que aconteceria','cenario','cenÃ¡rio'];\n\nconst hasInstitutional = institutionalWords.some((word) => lower.includes(word));\nconst hasDecision = decisionWords.some((word) => lower.includes(word));\nconst hasCreative = creativeWords.some((word) => lower.includes(word));\nconst hasSimulation = simulationWords.some((word) => lower.includes(word));\nconst shortCasual = lower.length <= 80 && /^(oi|ola|olÃ¡|bom dia|boa tarde|boa noite|valeu|obrigado|teste)\\b/.test(lower);\nconst manualMode = ['corvus','fenrir','cipher','conselho','simulacao'].includes(item.modo) ? item.modo : '';\n\nlet tipo = 'geral';\nlet area = hasInstitutional ? 'estrutura' : 'geral';\nlet complexidade = lower.length > 550 || hasDecision ? 'alta' : (lower.length > 180 ? 'media' : 'baixa');\nlet modo_sugerido = manualMode || 'corvus';\nif (!manualMode && hasSimulation) modo_sugerido = 'simulacao';\nelse if (!manualMode && hasCreative) modo_sugerido = 'fenrir';\nelse if (!manualMode && hasDecision) modo_sugerido = 'cipher';\n\nif (hasSimulation) tipo = 'simulacao';\nelse if (hasDecision) tipo = 'decisao';\nelse if (hasCreative) tipo = 'ideia';\nelse if (hasInstitutional) tipo = 'pergunta';\n\nconst visualText = (visual?.ocrText || '') + ' ' + (visual?.description || '');\nconst classifier = {\n  tipo,\n  area,\n  complexidade,\n  usarBase: hasInstitutional || (hasVision && /msy|masayoshi|ordem|cargo|membro/i.test(visualText)),\n  usarMemoria: !shortCasual,\n  modo_sugerido,\n  ehSimulacao: hasSimulation,\n  ehDecisao: hasDecision,\n};\n\nconst confidence = shortCasual ? 0.95 : (hasVision || hasInstitutional || hasDecision || hasCreative || hasSimulation ? 0.86 : 0.72);\nreturn [{ ...item, fastRoute: { skipClassifier: confidence >= 0.8, confidence, classifier } }];\n"
+        "jsCode": "\nconst item = $json;\nconst text = (item.message || '').toString();\nconst lower = text.toLowerCase();\nconst visual = item.visualContext || null;\nconst docs = item.documentContext || null;\nconst documentText = (item.documentCtxString || docs?.text || '').toString();\nconst hasVision = Boolean(visual?.description || visual?.ocrText || item.visualCtxString);\nconst hasDocuments = Boolean(documentText);\n\nconst institutionalWords = ['msy','masayoshi','ordem','membro','cargo','lideranca','lideranÃ§a','evento','valores','nevermind','britannia','corvus'];\nconst decisionWords = ['decidir','decisao','decisÃ£o','risco','estrategia','estratÃ©gia','aprovar','planejar','prioridade','problema'];\nconst creativeWords = ['ideia','crie','campanha','texto','roteiro','post','criativo','brainstorm'];\nconst simulationWords = ['e se','simula','simular','imagine que','o que aconteceria','cenario','cenÃ¡rio'];\n\nconst hasInstitutional = institutionalWords.some((word) => lower.includes(word));\nconst hasDecision = decisionWords.some((word) => lower.includes(word));\nconst hasCreative = creativeWords.some((word) => lower.includes(word));\nconst hasSimulation = simulationWords.some((word) => lower.includes(word));\nconst shortCasual = lower.length <= 80 && /^(oi|ola|olÃ¡|bom dia|boa tarde|boa noite|valeu|obrigado|teste)\\b/.test(lower);\nconst manualMode = ['corvus','fenrir','cipher','conselho','simulacao'].includes(item.modo) ? item.modo : '';\n\nlet tipo = 'geral';\nlet area = hasInstitutional ? 'estrutura' : 'geral';\nlet complexidade = lower.length > 550 || hasDecision ? 'alta' : (lower.length > 180 ? 'media' : 'baixa');\nlet modo_sugerido = manualMode || 'corvus';\nif (!manualMode && hasSimulation) modo_sugerido = 'simulacao';\nelse if (!manualMode && hasCreative) modo_sugerido = 'fenrir';\nelse if (!manualMode && hasDecision) modo_sugerido = 'cipher';\n\nif (hasSimulation) tipo = 'simulacao';\nelse if (hasDecision) tipo = 'decisao';\nelse if (hasCreative) tipo = 'ideia';\nelse if (hasInstitutional) tipo = 'pergunta';\n\nconst visualText = (visual?.ocrText || '') + ' ' + (visual?.description || '') + ' ' + documentText;\nconst classifier = {\n  tipo,\n  area,\n  complexidade,\n  usarBase: hasInstitutional || (hasVision && /msy|masayoshi|ordem|cargo|membro/i.test(visualText)),\n  usarMemoria: !shortCasual,\n  modo_sugerido,\n  ehSimulacao: hasSimulation,\n  ehDecisao: hasDecision,\n};\n\nconst confidence = shortCasual ? 0.95 : (hasVision || hasDocuments || hasInstitutional || hasDecision || hasCreative || hasSimulation ? 0.86 : 0.72);\nreturn [{ ...item, fastRoute: { skipClassifier: confidence >= 0.8, confidence, classifier } }];\n"
       },
       "id": "3204534b-63b2-46eb-bfd9-f9f1c333160e",
       "name": "Fast Router",

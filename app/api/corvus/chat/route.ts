@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { createAttachmentSignedUrl } from "@/integrations/supabase/storage";
+import {
+  buildDocumentContext,
+  extractDocumentText,
+  formatDocumentContext,
+  isSupportedDocumentType,
+  supportedDocumentLabel,
+} from "@/lib/documents/extract";
 import { sendChatToN8n } from "@/lib/n8n/client";
 import {
   analyzeImagesWithOpenAI,
@@ -13,6 +20,7 @@ import type {
   ChatErrorResponse,
   ChatRequestBody,
   ChatResponse,
+  N8nDocumentAttachment,
   N8nImageAttachment,
   UserContext,
 } from "@/lib/types";
@@ -22,8 +30,10 @@ export const dynamic = "force-dynamic";
 
 const MAX_MESSAGE_CHARS = 8_000;
 const MAX_IMAGE_ATTACHMENTS = 4;
+const MAX_DOCUMENT_ATTACHMENTS = 4;
 const MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
 const IMAGE_URL_EXPIRES_IN = 10 * 60;
+const DOCUMENT_URL_EXPIRES_IN = 10 * 60;
 const VALID_MODES: ReadonlySet<AgentMode> = new Set(["corvus", "fenrir"]);
 const SUPPORTED_IMAGE_TYPES = new Set([
   "image/png",
@@ -79,6 +89,10 @@ function parseAttachments(raw: unknown): ChatAttachment[] {
 
 function isSupportedImage(attachment: ChatAttachment): boolean {
   return SUPPORTED_IMAGE_TYPES.has(attachment.type.toLowerCase());
+}
+
+function isSupportedDocument(attachment: ChatAttachment): boolean {
+  return isSupportedDocumentType(attachment.type, attachment.name);
 }
 
 function attachmentBelongsToConversation(
@@ -176,18 +190,41 @@ export async function POST(req: Request) {
   const conversationId = asString(b.conversationId, "");
   const attachments = parseAttachments(b.attachments);
   const supportedImageAttachments = attachments.filter(isSupportedImage);
+  const supportedDocumentAttachments = attachments.filter(
+    (attachment) => !isSupportedImage(attachment) && isSupportedDocument(attachment)
+  );
+  const unsupportedAttachments = attachments.filter(
+    (attachment) =>
+      !isSupportedImage(attachment) && !isSupportedDocument(attachment)
+  );
   let imageAttachments: N8nImageAttachment[] = [];
+  let documentAttachments: N8nDocumentAttachment[] = [];
+  let documentContext: ReturnType<typeof buildDocumentContext> = null;
   let visualContext:
     | Awaited<ReturnType<typeof analyzeImagesWithOpenAI>>
     | null = null;
 
-  if (supportedImageAttachments.length > 0) {
+  if (attachments.length > 0) {
     if (!token || !userSupabase) {
       return bad("Anexos exigem sessao autenticada.", 401);
     }
     if (!conversationId) {
       return bad("Conversa obrigatoria para enviar anexos.");
     }
+    if (unsupportedAttachments.length > 0) {
+      const names = unsupportedAttachments
+        .map((attachment) => attachment.name)
+        .slice(0, 4)
+        .join(", ");
+      return bad(
+        `Tipo de anexo ainda nao suportado para analise: ${names}. Use imagens, PDF, DOCX, TXT, MD, CSV ou JSON.`
+      );
+    }
+  }
+
+  if (supportedImageAttachments.length > 0) {
+    const supabase = userSupabase;
+    if (!supabase) return bad("Anexos exigem sessao autenticada.", 401);
 
     const acceptedImages = supportedImageAttachments
       .filter((attachment) =>
@@ -205,7 +242,7 @@ export async function POST(req: Request) {
       await Promise.all(
         acceptedImages.map(async (attachment): Promise<N8nImageAttachment | null> => {
           const signedUrl = await createAttachmentSignedUrl(
-            userSupabase,
+            supabase,
             attachment.path,
             undefined,
             IMAGE_URL_EXPIRES_IN
@@ -233,12 +270,98 @@ export async function POST(req: Request) {
       return bad("Nao foi possivel gerar acesso temporario para a imagem.");
     }
 
-    visualContext = await analyzeImagesWithOpenAI(message, imageAttachments);
+    if (process.env.CORVUS_SERVER_VISION_FALLBACK === "true") {
+      visualContext = await analyzeImagesWithOpenAI(message, imageAttachments);
+    }
   }
 
-  const messageForN8n = visualContext
-    ? `${message}\n\n[Contexto visual analisado]\n${visualContext.text}`
-    : message;
+  if (supportedDocumentAttachments.length > 0) {
+    const supabase = userSupabase;
+    if (!supabase) return bad("Anexos exigem sessao autenticada.", 401);
+
+    const acceptedDocuments = supportedDocumentAttachments
+      .filter((attachment) =>
+        attachmentBelongsToConversation(attachment, resolvedUserId, conversationId)
+      )
+      .slice(0, MAX_DOCUMENT_ATTACHMENTS);
+
+    if (acceptedDocuments.length === 0) {
+      return bad(
+        "Nenhum documento valido foi anexado. Use arquivos da conversa atual."
+      );
+    }
+
+    documentAttachments = await Promise.all(
+      acceptedDocuments.map(async (attachment): Promise<N8nDocumentAttachment> => {
+        const signedUrl = await createAttachmentSignedUrl(
+          supabase,
+          attachment.path,
+          undefined,
+          DOCUMENT_URL_EXPIRES_IN
+        );
+        if (!signedUrl) {
+          return {
+            name: attachment.name,
+            type: attachment.type,
+            size: attachment.size,
+            signedUrl: "",
+            extractionError: "Nao foi possivel gerar acesso temporario.",
+          };
+        }
+
+        try {
+          const extracted = await extractDocumentText(signedUrl, attachment);
+          return {
+            name: attachment.name,
+            type: attachment.type,
+            size: attachment.size,
+            signedUrl,
+            url: signedUrl,
+            text: extracted.text,
+            ...(extracted.truncated
+              ? { extractionError: "Conteudo truncado por limite de tamanho." }
+              : {}),
+          };
+        } catch (err) {
+          return {
+            name: attachment.name,
+            type: attachment.type,
+            size: attachment.size,
+            signedUrl,
+            url: signedUrl,
+            extractionError:
+              err instanceof Error
+                ? err.message
+                : `Nao foi possivel extrair texto do ${supportedDocumentLabel(
+                    attachment.type,
+                    attachment.name
+                  )}.`,
+          };
+        }
+      })
+    );
+
+    documentContext = buildDocumentContext(documentAttachments);
+    if (!documentContext) {
+      const reason =
+        documentAttachments
+          .map((attachment) => attachment.extractionError)
+          .filter(Boolean)
+          .join(" ") || "O documento nao retornou texto legivel.";
+      return bad(`Nao foi possivel analisar o documento anexado. ${reason}`);
+    }
+  }
+
+  const contextBlocks = [
+    visualContext ? `[Contexto visual analisado]\n${visualContext.text}` : "",
+    documentContext
+      ? `[Contexto dos documentos]\n${formatDocumentContext(documentContext)}`
+      : "",
+  ].filter(Boolean);
+  const messageForN8n =
+    contextBlocks.length > 0
+      ? `${message}\n\n${contextBlocks.join("\n\n")}`
+      : message;
 
   const payload: ChatRequestBody = {
     message: messageForN8n,
@@ -273,6 +396,15 @@ export async function POST(req: Request) {
             : {}),
         }
       : {}),
+    ...(documentAttachments.length > 0 && documentContext
+      ? {
+          documentAttachments,
+          documents: documentAttachments,
+          documentContext,
+          documentCtxString: formatDocumentContext(documentContext),
+          hasDocuments: true,
+        }
+      : {}),
   };
 
   let result: ChatResponse;
@@ -300,9 +432,22 @@ export async function POST(req: Request) {
 
   if (
     imageAttachments.length > 0 &&
-    visualContext &&
     looksLikeImageRefusal(result.reply)
   ) {
+    if (!visualContext) {
+      return NextResponse.json<ChatErrorResponse>(
+        {
+          ok: false,
+          error: {
+            code: "upstream_invalid_response",
+            message:
+              "O workflow recebeu a imagem, mas nao retornou contexto visual. Verifique o Vision Analyzer no n8n.",
+            retryable: false,
+          },
+        },
+        { status: 502 }
+      );
+    }
     return NextResponse.json(
       {
         ok: true,

@@ -503,10 +503,6 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "Bearer ${OPENAI_API_KEY}"
-            },
-            {
               "name": "Content-Type",
               "value": "application/json"
             }
@@ -525,7 +521,9 @@
             }
           ]
         },
-        "options": {}
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi"
       },
       "id": "49d79350-3627-4a85-a182-98871d519a11",
       "name": "Gerar Embedding",
@@ -534,7 +532,13 @@
       "position": [
         832,
         1952
-      ]
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
     },
     {
       "parameters": {
