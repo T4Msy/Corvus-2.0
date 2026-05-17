@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { createAttachmentSignedUrl } from "@/integrations/supabase/storage";
 import { sendChatToN8n } from "@/lib/n8n/client";
+import {
+  analyzeImagesWithOpenAI,
+  directVisionReply,
+  looksLikeImageRefusal,
+} from "@/lib/vision/openai";
 import type {
   AgentMode,
   ChatAttachment,
@@ -172,6 +177,9 @@ export async function POST(req: Request) {
   const attachments = parseAttachments(b.attachments);
   const supportedImageAttachments = attachments.filter(isSupportedImage);
   let imageAttachments: N8nImageAttachment[] = [];
+  let visualContext:
+    | Awaited<ReturnType<typeof analyzeImagesWithOpenAI>>
+    | null = null;
 
   if (supportedImageAttachments.length > 0) {
     if (!token || !userSupabase) {
@@ -224,10 +232,16 @@ export async function POST(req: Request) {
     if (imageAttachments.length === 0) {
       return bad("Nao foi possivel gerar acesso temporario para a imagem.");
     }
+
+    visualContext = await analyzeImagesWithOpenAI(message, imageAttachments);
   }
 
+  const messageForN8n = visualContext
+    ? `${message}\n\n[Contexto visual analisado]\n${visualContext.text}`
+    : message;
+
   const payload: ChatRequestBody = {
-    message,
+    message: messageForN8n,
     conversationId,
     sessionId: asString(b.sessionId, conversationId),
     userId: resolvedUserId,
@@ -250,6 +264,13 @@ export async function POST(req: Request) {
             imageAttachments[0].url ||
             imageAttachments[0].signedUrl,
           hasImages: true,
+          ...(visualContext
+            ? {
+                visualContext: visualContext.context,
+                visualCtxString: visualContext.text,
+                usedVision: true,
+              }
+            : {}),
         }
       : {}),
   };
@@ -276,6 +297,26 @@ export async function POST(req: Request) {
       status: statusForError(result),
     });
   }
+
+  if (
+    imageAttachments.length > 0 &&
+    visualContext &&
+    looksLikeImageRefusal(result.reply)
+  ) {
+    return NextResponse.json(
+      {
+        ok: true,
+        reply: directVisionReply(visualContext.text),
+        meta: {
+          ...(result.meta ?? {}),
+          usedVision: true,
+          visionFallback: true,
+        },
+      },
+      { status: 200 }
+    );
+  }
+
   return NextResponse.json(result, { status: 200 });
 }
 

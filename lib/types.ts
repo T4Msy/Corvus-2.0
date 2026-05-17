@@ -31,6 +31,14 @@ export interface N8nImageAttachment {
   dataUrl?: string;
 }
 
+export interface VisualContext {
+  ocrText: string;
+  description: string;
+  relevantItems: string[];
+  limitations: string;
+  confidence: number;
+}
+
 /** Payload que o frontend envia para /api/corvus/chat. */
 export interface ChatRequestBody {
   message: string;
@@ -45,6 +53,9 @@ export interface ChatRequestBody {
   imageUrl?: string;
   imageUrls?: string[];
   images?: N8nImageAttachment[];
+  visualContext?: VisualContext;
+  visualCtxString?: string;
+  usedVision?: boolean;
 }
 
 /** Resposta normalizada que /api/corvus/chat devolve ao frontend. */

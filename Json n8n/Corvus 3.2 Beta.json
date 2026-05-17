@@ -1384,10 +1384,6 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "Bearer {{$env.OPENAI_API_KEY}}"
-            },
-            {
               "name": "Content-Type",
               "value": "application/json"
             }
@@ -1396,7 +1392,9 @@
         "sendBody": true,
         "specifyBody": "string",
         "body": "={{ JSON.stringify({\n  model: 'gpt-4o-mini',\n  temperature: 0,\n  max_output_tokens: 700,\n  input: [\n    {\n      role: 'user',\n      content: [\n        {\n          type: 'input_text',\n          text: 'Analise as imagens anexadas para o Corvus. Responda SOMENTE JSON valido com: ocrText, description, relevantItems, limitations, confidence. Foque em OCR e analise geral. Mensagem do usuario: ' + ($json.message || '')\n        },\n        ...($json.imageAttachments || []).map((image) => ({\n          type: 'input_image',\n          image_url: image.dataUrl || image.imageUrl || image.url || image.signedUrl,\n          detail: 'auto'\n        }))\n      ]\n    }\n  ]\n}) }}",
-        "options": {}
+        "options": {},
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi"
       },
       "id": "11026ba5-4e4f-4015-8160-600b287e40a9",
       "name": "Vision Analyzer",
@@ -1405,7 +1403,13 @@
       "position": [
         760,
         60
-      ]
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
     },
     {
       "parameters": {
