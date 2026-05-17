@@ -388,7 +388,7 @@ textarea {
   object-fit: contain;
   object-position: center;
   transform-origin: center;
-  --emblem-x: -6px;
+  --emblem-x: -12px;
   --emblem-y: -11px;
   filter:
     drop-shadow(0 0 8px rgba(227, 27, 63, 0.5))
