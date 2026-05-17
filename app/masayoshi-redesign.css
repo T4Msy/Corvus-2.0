@@ -359,8 +359,8 @@ textarea {
   border-radius: 999px;
   background: transparent;
   position: relative;
-  left: -4px;
-  top: -3px;
+  left: 0;
+  top: 0;
   padding: 0;
   cursor: pointer;
   box-shadow: none;
@@ -388,6 +388,8 @@ textarea {
   object-fit: contain;
   object-position: center;
   transform-origin: center;
+  --emblem-x: -6px;
+  --emblem-y: -5px;
   filter:
     drop-shadow(0 0 8px rgba(227, 27, 63, 0.5))
     drop-shadow(0 8px 16px rgba(0, 0, 0, 0.76));
@@ -455,13 +457,13 @@ textarea {
 @keyframes raven-emblem-breathe {
   0%,
   100% {
-    transform: scale(1);
+    transform: translate(var(--emblem-x), var(--emblem-y)) scale(1);
     filter:
       drop-shadow(0 0 8px rgba(227, 27, 63, 0.46))
       drop-shadow(0 8px 16px rgba(0, 0, 0, 0.72));
   }
   50% {
-    transform: scale(1.045);
+    transform: translate(var(--emblem-x), var(--emblem-y)) scale(1.045);
     filter:
       drop-shadow(0 0 14px rgba(255, 43, 75, 0.68))
       drop-shadow(0 10px 20px rgba(0, 0, 0, 0.78));
