@@ -228,7 +228,11 @@ export function ChatInput({
           </div>
 
           <div className="composer-tool-group composer-send-group">
-            <div className="agent-picker compact-agent-picker" ref={pickerRef}>
+            <div
+              className="agent-picker compact-agent-picker"
+              data-agent-mode={mode}
+              ref={pickerRef}
+            >
               <button
                 type="button"
                 className="agent-picker-button"

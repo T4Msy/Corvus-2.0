@@ -2978,10 +2978,9 @@ textarea {
     border: 1px solid rgba(216, 180, 98, 0.18) !important;
     border-radius: 22px !important;
     display: grid !important;
-    grid-template-columns: 44px minmax(0, 1fr) 48px !important;
+    grid-template-columns: 44px minmax(0, 1fr) 44px 48px !important;
     grid-template-areas:
-      "attach input send"
-      "agent agent agent" !important;
+      "attach input agent send" !important;
     align-items: center !important;
     gap: 8px !important;
     background:
@@ -3067,15 +3066,44 @@ textarea {
   .agent-picker,
   .compact-agent-picker {
     grid-area: agent !important;
-    width: min(132px, 42vw) !important;
-    min-width: 0 !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    height: 44px !important;
   }
 
   .agent-picker-button,
   .compact-agent-picker .agent-picker-button {
-    height: 38px !important;
-    padding: 0 14px !important;
-    justify-content: space-between !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    height: 44px !important;
+    padding: 0 !important;
+    display: grid !important;
+    place-items: center !important;
+    border-radius: 16px !important;
+    border-color: rgba(216, 180, 98, 0.2) !important;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.018)),
+      rgba(23, 17, 19, 0.86) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055) !important;
+  }
+
+  .compact-agent-picker .agent-picker-button::before {
+    content: "C";
+    color: #f3e8e2;
+    font-size: 13px;
+    font-weight: 750;
+    line-height: 1;
+  }
+
+  .compact-agent-picker[data-agent-mode="fenrir"] .agent-picker-button::before {
+    content: "F";
+  }
+
+  .compact-agent-picker .agent-picker-copy,
+  .compact-agent-picker .agent-picker-button svg {
+    display: none !important;
   }
 
   .send-button {
@@ -3092,9 +3120,8 @@ textarea {
 
   .composer-dock:has(.composer-attachment-chip) {
     grid-template-areas:
-      "chips chips chips"
-      "attach input send"
-      "agent agent agent" !important;
+      "chips chips chips chips"
+      "attach input agent send" !important;
   }
 
   .composer-dock:has(.composer-attachment-chip) .composer-attachment-strip {
@@ -3166,7 +3193,7 @@ textarea {
   .composer-dock {
     padding: 8px !important;
     border-radius: 20px !important;
-    grid-template-columns: 42px minmax(0, 1fr) 46px !important;
+    grid-template-columns: 42px minmax(0, 1fr) 42px 46px !important;
     gap: 7px !important;
   }
 
@@ -3181,6 +3208,15 @@ textarea {
   .send-button {
     height: 42px !important;
     border-radius: 14px !important;
+  }
+
+  .agent-picker,
+  .compact-agent-picker,
+  .agent-picker-button,
+  .compact-agent-picker .agent-picker-button {
+    width: 42px !important;
+    min-width: 42px !important;
+    max-width: 42px !important;
   }
 
   .attachment-button {
@@ -3238,7 +3274,7 @@ textarea {
 
   .composer-dock {
     padding: 7px !important;
-    grid-template-columns: 40px minmax(0, 1fr) 44px !important;
+    grid-template-columns: 40px minmax(0, 1fr) 40px 44px !important;
     gap: 6px !important;
   }
 
@@ -3253,7 +3289,10 @@ textarea {
 
   .agent-picker-button,
   .compact-agent-picker .agent-picker-button {
-    height: 36px !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    height: 40px !important;
   }
 
   .attachment-button,
