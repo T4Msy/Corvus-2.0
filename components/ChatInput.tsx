@@ -244,6 +244,9 @@ export function ChatInput({
                   setOpen((current) => !current);
                 }}
               >
+                <span className="agent-picker-mobile-icon" aria-hidden="true">
+                  {mode === "fenrir" ? <Zap size={16} /> : <Bot size={16} />}
+                </span>
                 <span className="agent-picker-copy">
                   <strong>{mode === "fenrir" ? "Fenrir" : "Corvus"}</strong>
                 </span>
