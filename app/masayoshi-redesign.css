@@ -2865,7 +2865,7 @@ textarea {
   .corvus-shell.empty-home .message-stream {
     min-height: calc(100dvh - 54px) !important;
     display: block !important;
-    padding-top: clamp(72px, 12dvh, 108px) !important;
+    padding-top: clamp(34px, 6dvh, 56px) !important;
     padding-bottom: calc(176px + env(safe-area-inset-bottom)) !important;
   }
 
@@ -2880,10 +2880,10 @@ textarea {
   }
 
   .welcome-copy {
-    width: min(100%, 340px) !important;
+    width: min(100%, 350px) !important;
     display: grid !important;
     justify-items: center !important;
-    gap: 11px !important;
+    gap: 12px !important;
     text-align: center !important;
   }
 
@@ -2893,9 +2893,9 @@ textarea {
     display: grid !important;
     grid-template-columns: 1fr !important;
     justify-items: center !important;
-    gap: 14px !important;
+    gap: 13px !important;
     text-align: center !important;
-    font-size: clamp(31px, 8.5vw, 38px) !important;
+    font-size: clamp(29px, 8vw, 36px) !important;
     line-height: 1 !important;
     letter-spacing: 0 !important;
   }
@@ -2907,10 +2907,10 @@ textarea {
   }
 
   .welcome-msy-mark {
-    width: 124px !important;
-    height: 124px !important;
-    min-width: 124px !important;
-    flex-basis: 124px !important;
+    width: 198px !important;
+    height: 198px !important;
+    min-width: 198px !important;
+    flex-basis: 198px !important;
     justify-self: center !important;
     margin-inline: auto !important;
     overflow: hidden !important;
@@ -2923,9 +2923,9 @@ textarea {
       rgba(8, 4, 6, 0.92) !important;
     box-shadow:
       0 0 0 1px rgba(255, 255, 255, 0.045) inset,
-      0 22px 52px rgba(227, 27, 63, 0.24),
-      0 0 72px rgba(216, 180, 98, 0.14),
-      0 0 36px rgba(227, 27, 63, 0.18) !important;
+      0 30px 72px rgba(227, 27, 63, 0.24),
+      0 0 96px rgba(216, 180, 98, 0.13),
+      0 0 54px rgba(227, 27, 63, 0.2) !important;
   }
 
   .welcome-msy-mark::before,
@@ -2938,7 +2938,7 @@ textarea {
     --emblem-y: 0px;
     width: 100% !important;
     height: 100% !important;
-    transform: translate(var(--emblem-x), var(--emblem-y)) scale(1.08) !important;
+    transform: translate(var(--emblem-x), var(--emblem-y)) scale(1.05) !important;
   }
 
   .welcome-subtitle {
@@ -3062,7 +3062,7 @@ textarea {
   }
 
   .corvus-shell.empty-home .message-stream {
-    padding-top: clamp(58px, 10dvh, 88px) !important;
+    padding-top: clamp(30px, 5dvh, 46px) !important;
     padding-bottom: calc(166px + env(safe-area-inset-bottom)) !important;
   }
 
@@ -3084,10 +3084,10 @@ textarea {
   }
 
   .welcome-msy-mark {
-    width: 118px !important;
-    height: 118px !important;
-    min-width: 118px !important;
-    flex-basis: 118px !important;
+    width: 184px !important;
+    height: 184px !important;
+    min-width: 184px !important;
+    flex-basis: 184px !important;
   }
 
   .welcome-subtitle {
@@ -3149,7 +3149,7 @@ textarea {
   }
 
   .corvus-shell.empty-home .message-stream {
-    padding-top: clamp(44px, 8dvh, 62px) !important;
+    padding-top: clamp(22px, 4dvh, 34px) !important;
     padding-bottom: calc(142px + env(safe-area-inset-bottom)) !important;
   }
 
@@ -3164,15 +3164,15 @@ textarea {
   }
 
   .welcome-msy-mark {
-    width: 102px !important;
-    height: 102px !important;
-    min-width: 102px !important;
-    flex-basis: 102px !important;
+    width: 164px !important;
+    height: 164px !important;
+    min-width: 164px !important;
+    flex-basis: 164px !important;
   }
 
   .welcome-panel h1,
   .rebuilt-welcome h1 {
-    font-size: clamp(29px, 8.1vw, 36px) !important;
+    font-size: clamp(27px, 7.6vw, 34px) !important;
   }
 
   .welcome-subtitle {
