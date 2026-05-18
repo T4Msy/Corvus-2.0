@@ -2923,7 +2923,7 @@ textarea {
     min-width: clamp(194px, 55vw, 236px) !important;
     flex-basis: clamp(194px, 55vw, 236px) !important;
     justify-self: center !important;
-    margin: -16px auto 8px !important;
+    margin: -34px auto 10px !important;
     overflow: visible !important;
     border-radius: 50% !important;
     border: 0 !important;
