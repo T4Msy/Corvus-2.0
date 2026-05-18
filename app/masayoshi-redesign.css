@@ -3089,6 +3089,7 @@ textarea {
     padding: 0 !important;
     display: grid !important;
     place-items: center !important;
+    position: relative !important;
     border-radius: 16px !important;
     border-color: rgba(216, 180, 98, 0.2) !important;
     background:
@@ -3105,6 +3106,22 @@ textarea {
   .compact-agent-picker .agent-picker-mobile-icon,
   .compact-agent-picker .agent-picker-mobile-icon svg {
     display: grid !important;
+  }
+
+  .compact-agent-picker .agent-picker-mobile-icon {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    place-items: center !important;
+    pointer-events: none !important;
+  }
+
+  .compact-agent-picker .agent-picker-mobile-icon svg {
+    width: 17px !important;
+    height: 17px !important;
+    margin: auto !important;
+    stroke-width: 2.2 !important;
   }
 
   .send-button {
