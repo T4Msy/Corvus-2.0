@@ -2923,14 +2923,12 @@ textarea {
     min-width: clamp(194px, 55vw, 236px) !important;
     flex-basis: clamp(194px, 55vw, 236px) !important;
     justify-self: center !important;
-    margin-inline: auto !important;
+    margin: -16px auto 8px !important;
     overflow: visible !important;
     border-radius: 50% !important;
     border: 0 !important;
     background: transparent !important;
-    box-shadow:
-      0 22px 70px rgba(227, 27, 63, 0.24),
-      0 0 86px rgba(216, 180, 98, 0.12) !important;
+    box-shadow: none !important;
   }
 
   .welcome-msy-mark::before,
@@ -2945,8 +2943,8 @@ textarea {
     height: 100% !important;
     object-fit: contain !important;
     filter:
-      drop-shadow(0 0 16px rgba(227, 27, 63, 0.58))
-      drop-shadow(0 18px 38px rgba(0, 0, 0, 0.5)) !important;
+      drop-shadow(0 0 12px rgba(227, 27, 63, 0.54))
+      drop-shadow(0 10px 24px rgba(0, 0, 0, 0.42)) !important;
     transform: translate(var(--emblem-x), var(--emblem-y)) scale(1.02) !important;
   }
 
