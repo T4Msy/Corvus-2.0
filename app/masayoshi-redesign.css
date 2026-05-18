@@ -2854,3 +2854,317 @@ textarea {
     max-height: 92px !important;
   }
 }
+
+/* Mobile home polish: compact, centered and aligned without changing desktop. */
+@media (max-width: 768px) {
+  .message-stream {
+    padding-top: clamp(8px, 2dvh, 18px) !important;
+    padding-bottom: calc(152px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .corvus-shell.empty-home .message-stream {
+    min-height: calc(100dvh - 54px) !important;
+    display: grid !important;
+    align-items: center !important;
+    padding-top: clamp(12px, 3dvh, 28px) !important;
+    padding-bottom: calc(178px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .message-stream > .welcome-panel,
+  .message-stream > .rebuilt-welcome {
+    min-height: auto !important;
+    padding: 0 8px !important;
+    display: grid !important;
+    place-items: center !important;
+    align-content: center !important;
+    text-align: center !important;
+  }
+
+  .welcome-copy {
+    width: min(100%, 360px) !important;
+    display: grid !important;
+    justify-items: center !important;
+    gap: 10px !important;
+    text-align: center !important;
+  }
+
+  .welcome-panel h1,
+  .rebuilt-welcome h1 {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    justify-items: center !important;
+    gap: 10px !important;
+    text-align: center !important;
+    font-size: clamp(33px, 9.1vw, 44px) !important;
+    line-height: 1 !important;
+    letter-spacing: 0 !important;
+  }
+
+  .welcome-msy-mark {
+    width: 112px !important;
+    height: 112px !important;
+    min-width: 112px !important;
+    flex-basis: 112px !important;
+    border-radius: 50% !important;
+    border-color: rgba(216, 180, 98, 0.3) !important;
+    background:
+      radial-gradient(circle at 50% 42%, rgba(255, 231, 176, 0.14), transparent 45%),
+      radial-gradient(circle at 50% 50%, rgba(227, 27, 63, 0.28), transparent 62%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.012)),
+      rgba(8, 4, 6, 0.92) !important;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.045) inset,
+      0 18px 44px rgba(227, 27, 63, 0.2),
+      0 0 54px rgba(216, 180, 98, 0.12) !important;
+  }
+
+  .welcome-msy-mark::before,
+  .welcome-msy-mark::after {
+    border-radius: 50% !important;
+  }
+
+  .corvao-emblem-image {
+    --emblem-x: -6px;
+    --emblem-y: -9px;
+    transform: translate(var(--emblem-x), var(--emblem-y)) scale(1.32) !important;
+  }
+
+  .welcome-subtitle {
+    max-width: 32ch !important;
+    margin: 0 auto !important;
+    color: rgba(232, 221, 216, 0.74) !important;
+    font-size: 12px !important;
+    line-height: 1.42 !important;
+    text-align: center !important;
+  }
+
+  .welcome-context {
+    display: none !important;
+  }
+
+  .composer-shell,
+  .rebuilt-composer {
+    padding:
+      7px
+      max(8px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left)) !important;
+  }
+
+  .composer-dock {
+    width: min(100%, 520px) !important;
+    margin: 0 auto !important;
+    padding: 9px !important;
+    border-radius: 20px !important;
+  }
+
+  .composer-input-row {
+    display: block !important;
+  }
+
+  .composer-text-field {
+    min-height: 50px !important;
+    padding: 10px 13px !important;
+    align-items: center !important;
+    border-radius: 15px !important;
+  }
+
+  .composer-textarea {
+    min-height: 30px !important;
+    font-size: 16px !important;
+    line-height: 1.38 !important;
+  }
+
+  .composer-textarea::placeholder {
+    color: rgba(224, 213, 216, 0.54) !important;
+  }
+
+  .composer-toolbar {
+    margin-top: 8px !important;
+    display: grid !important;
+    grid-template-columns: 44px minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .attachment-button,
+  .agent-picker-button,
+  .compact-agent-picker .agent-picker-button,
+  .send-button {
+    height: 44px !important;
+    border-radius: 15px !important;
+  }
+
+  .attachment-button {
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+  }
+
+  .composer-send-group {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 48px !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .agent-picker-button,
+  .compact-agent-picker .agent-picker-button {
+    padding: 0 14px !important;
+    justify-content: space-between !important;
+  }
+
+  .send-button {
+    width: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
+  }
+}
+
+@media (max-width: 520px) {
+  .message-stream {
+    padding-inline: max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-right)) !important;
+    padding-bottom: calc(144px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .corvus-shell.empty-home .message-stream {
+    padding-top: clamp(8px, 2dvh, 18px) !important;
+    padding-bottom: calc(166px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .message-stream > .welcome-panel,
+  .message-stream > .rebuilt-welcome {
+    min-height: auto !important;
+    padding-top: 0 !important;
+  }
+
+  .welcome-copy {
+    width: min(100%, 342px) !important;
+    gap: 9px !important;
+  }
+
+  .welcome-panel h1,
+  .rebuilt-welcome h1 {
+    font-size: clamp(31px, 8.8vw, 39px) !important;
+    gap: 9px !important;
+  }
+
+  .welcome-msy-mark {
+    width: 104px !important;
+    height: 104px !important;
+    min-width: 104px !important;
+    flex-basis: 104px !important;
+  }
+
+  .welcome-subtitle {
+    max-width: 31ch !important;
+    font-size: 11.75px !important;
+    line-height: 1.4 !important;
+  }
+
+  .composer-shell,
+  .rebuilt-composer {
+    padding-inline: max(9px, env(safe-area-inset-left)) max(9px, env(safe-area-inset-right)) !important;
+  }
+
+  .composer-dock {
+    padding: 8px !important;
+    border-radius: 19px !important;
+  }
+
+  .composer-text-field {
+    min-height: 48px !important;
+    padding: 9px 12px !important;
+  }
+
+  .composer-toolbar {
+    grid-template-columns: 42px minmax(0, 1fr) !important;
+    gap: 7px !important;
+  }
+
+  .attachment-button,
+  .agent-picker-button,
+  .compact-agent-picker .agent-picker-button,
+  .send-button {
+    height: 42px !important;
+    border-radius: 14px !important;
+  }
+
+  .attachment-button {
+    width: 42px !important;
+    min-width: 42px !important;
+    max-width: 42px !important;
+  }
+
+  .composer-send-group {
+    grid-template-columns: minmax(0, 1fr) 46px !important;
+    gap: 7px !important;
+  }
+
+  .send-button {
+    width: 46px !important;
+    min-width: 46px !important;
+    max-width: 46px !important;
+  }
+}
+
+@media (max-height: 700px) and (max-width: 768px) {
+  .message-stream {
+    padding-top: 8px !important;
+    padding-bottom: calc(132px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .corvus-shell.empty-home .message-stream {
+    align-items: start !important;
+    padding-top: 14px !important;
+    padding-bottom: calc(142px + env(safe-area-inset-bottom)) !important;
+  }
+
+  .message-stream > .welcome-panel,
+  .message-stream > .rebuilt-welcome {
+    min-height: auto !important;
+    padding-top: 6px !important;
+  }
+
+  .welcome-copy {
+    gap: 6px !important;
+  }
+
+  .welcome-msy-mark {
+    width: 76px !important;
+    height: 76px !important;
+    min-width: 76px !important;
+    flex-basis: 76px !important;
+  }
+
+  .welcome-panel h1,
+  .rebuilt-welcome h1 {
+    font-size: clamp(28px, 8vw, 34px) !important;
+  }
+
+  .welcome-subtitle {
+    font-size: 11.5px !important;
+    line-height: 1.38 !important;
+  }
+
+  .composer-dock {
+    padding: 8px !important;
+  }
+
+  .composer-text-field {
+    min-height: 42px !important;
+  }
+
+  .composer-toolbar {
+    margin-top: 7px !important;
+  }
+
+  .attachment-button,
+  .agent-picker-button,
+  .compact-agent-picker .agent-picker-button,
+  .send-button {
+    height: 40px !important;
+  }
+}
