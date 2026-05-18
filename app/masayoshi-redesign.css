@@ -2855,38 +2855,44 @@ textarea {
   }
 }
 
-/* Mobile home polish: compact, centered and aligned without changing desktop. */
+/* Mobile flagship home: phone-only responsive layer, desktop untouched. */
 @media (max-width: 768px) {
   .message-stream {
-    padding-top: clamp(8px, 2dvh, 18px) !important;
-    padding-bottom: calc(152px + env(safe-area-inset-bottom)) !important;
+    padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right)) !important;
+    padding-top: clamp(10px, 2.2dvh, 18px) !important;
+    padding-bottom: calc(160px + env(safe-area-inset-bottom)) !important;
   }
 
   .corvus-shell.empty-home .message-stream {
-    min-height: calc(100dvh - 54px) !important;
-    display: block !important;
-    padding-top: clamp(34px, 6dvh, 56px) !important;
-    padding-bottom: calc(176px + env(safe-area-inset-bottom)) !important;
+    min-height: calc(100dvh - 56px) !important;
+    display: grid !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+    align-items: center !important;
+    justify-items: center !important;
+    padding-top: clamp(22px, 4.8dvh, 46px) !important;
+    padding-bottom: calc(178px + env(safe-area-inset-bottom)) !important;
   }
 
   .message-stream > .welcome-panel,
   .message-stream > .rebuilt-welcome {
     width: 100% !important;
     max-width: 100% !important;
+    justify-self: stretch !important;
+    align-self: center !important;
     min-height: auto !important;
-    padding: 0 8px !important;
+    padding: 0 !important;
     display: grid !important;
     place-items: center !important;
-    align-content: center !important;
     text-align: center !important;
   }
 
   .welcome-copy {
-    width: min(100%, 350px) !important;
+    width: min(calc(100vw - 24px), 390px) !important;
+    max-width: min(calc(100vw - 24px), 390px) !important;
     margin-inline: auto !important;
     display: grid !important;
     justify-items: center !important;
-    gap: 12px !important;
+    gap: 10px !important;
     text-align: center !important;
   }
 
@@ -2896,44 +2902,46 @@ textarea {
     display: grid !important;
     grid-template-columns: 1fr !important;
     justify-items: center !important;
-    gap: 13px !important;
+    gap: 12px !important;
     text-align: center !important;
-    font-size: clamp(29px, 8vw, 36px) !important;
-    line-height: 1 !important;
+    font-size: clamp(30px, 8.2vw, 38px) !important;
+    line-height: 1.03 !important;
     letter-spacing: 0 !important;
+    margin: 0 !important;
   }
 
   .welcome-panel h1 > span,
   .rebuilt-welcome h1 > span {
     display: block !important;
     max-width: 100% !important;
+    text-wrap: balance;
   }
 
   .welcome-msy-mark {
-    width: 198px !important;
-    height: 198px !important;
-    min-width: 198px !important;
-    flex-basis: 198px !important;
+    width: clamp(180px, 52vw, 218px) !important;
+    height: clamp(180px, 52vw, 218px) !important;
+    min-width: clamp(180px, 52vw, 218px) !important;
+    flex-basis: clamp(180px, 52vw, 218px) !important;
     justify-self: center !important;
     margin-inline: auto !important;
     overflow: hidden !important;
     border-radius: 50% !important;
-    border-color: rgba(216, 180, 98, 0.3) !important;
+    border: 1px solid rgba(216, 180, 98, 0.22) !important;
     background:
-      radial-gradient(circle at 50% 42%, rgba(255, 231, 176, 0.14), transparent 45%),
-      radial-gradient(circle at 50% 50%, rgba(227, 27, 63, 0.28), transparent 62%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.012)),
-      rgba(8, 4, 6, 0.92) !important;
+      radial-gradient(circle at 50% 42%, rgba(255, 226, 164, 0.16), transparent 44%),
+      radial-gradient(circle at 50% 50%, rgba(227, 27, 63, 0.3), transparent 64%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.012)),
+      rgba(7, 3, 5, 0.94) !important;
     box-shadow:
       0 0 0 1px rgba(255, 255, 255, 0.045) inset,
-      0 30px 72px rgba(227, 27, 63, 0.24),
-      0 0 96px rgba(216, 180, 98, 0.13),
-      0 0 54px rgba(227, 27, 63, 0.2) !important;
+      0 34px 78px rgba(0, 0, 0, 0.4),
+      0 26px 72px rgba(227, 27, 63, 0.26),
+      0 0 84px rgba(216, 180, 98, 0.13) !important;
   }
 
   .welcome-msy-mark::before,
   .welcome-msy-mark::after {
-    border-radius: 50% !important;
+    display: none !important;
   }
 
   .corvao-emblem-image {
@@ -2941,16 +2949,18 @@ textarea {
     --emblem-y: 0px;
     width: 100% !important;
     height: 100% !important;
-    transform: translate(var(--emblem-x), var(--emblem-y)) scale(1.05) !important;
+    object-fit: cover !important;
+    transform: translate(var(--emblem-x), var(--emblem-y)) scale(1.04) !important;
   }
 
   .welcome-subtitle {
-    max-width: 29ch !important;
+    max-width: 31ch !important;
     margin: 0 auto !important;
-    color: rgba(232, 221, 216, 0.74) !important;
-    font-size: 12px !important;
+    color: rgba(232, 221, 216, 0.7) !important;
+    font-size: 12.25px !important;
     line-height: 1.42 !important;
     text-align: center !important;
+    text-wrap: balance;
   }
 
   .welcome-context {
@@ -2960,17 +2970,18 @@ textarea {
   .composer-shell,
   .rebuilt-composer {
     padding:
-      7px
-      max(8px, env(safe-area-inset-right))
-      max(8px, env(safe-area-inset-bottom))
-      max(8px, env(safe-area-inset-left)) !important;
+      8px
+      max(10px, env(safe-area-inset-right))
+      max(9px, env(safe-area-inset-bottom))
+      max(10px, env(safe-area-inset-left)) !important;
   }
 
   .composer-dock {
-    width: min(100%, 520px) !important;
+    width: min(100%, 540px) !important;
     margin: 0 auto !important;
     padding: 9px !important;
-    border-radius: 20px !important;
+    border: 1px solid rgba(216, 180, 98, 0.18) !important;
+    border-radius: 22px !important;
     display: grid !important;
     grid-template-columns: 44px minmax(0, 1fr) 48px !important;
     grid-template-areas:
@@ -2978,22 +2989,37 @@ textarea {
       "agent agent agent" !important;
     align-items: center !important;
     gap: 8px !important;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.018)),
+      radial-gradient(circle at 94% 15%, rgba(227, 27, 63, 0.16), transparent 36%),
+      rgba(16, 11, 13, 0.98) !important;
   }
 
   .composer-input-row {
     grid-area: input !important;
-    display: block !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 0 !important;
+    width: 100% !important;
     min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
   }
 
   .composer-text-field {
+    width: 100% !important;
+    min-width: 0 !important;
     min-height: 44px !important;
-    padding: 8px 12px !important;
+    max-height: 128px !important;
+    padding: 8px 13px !important;
     align-items: center !important;
     border-radius: 15px !important;
+    overflow: hidden !important;
   }
 
   .composer-textarea {
+    width: 100% !important;
+    min-width: 0 !important;
     min-height: 26px !important;
     font-size: 16px !important;
     line-height: 1.38 !important;
@@ -3001,6 +3027,7 @@ textarea {
 
   .composer-textarea::placeholder {
     color: rgba(224, 213, 216, 0.54) !important;
+    white-space: nowrap !important;
   }
 
   .composer-toolbar {
@@ -3014,7 +3041,7 @@ textarea {
   .compact-agent-picker .agent-picker-button,
   .send-button {
     height: 44px !important;
-    border-radius: 15px !important;
+    border-radius: 16px !important;
   }
 
   .attachment-button {
@@ -3022,6 +3049,11 @@ textarea {
     width: 44px !important;
     min-width: 44px !important;
     max-width: 44px !important;
+  }
+
+  .sync-status,
+  .composer-input-meta {
+    display: none !important;
   }
 
   .composer-send-group {
@@ -3035,17 +3067,13 @@ textarea {
   .agent-picker,
   .compact-agent-picker {
     grid-area: agent !important;
-    width: 100% !important;
+    width: min(132px, 42vw) !important;
     min-width: 0 !important;
   }
 
   .agent-picker-button,
   .compact-agent-picker .agent-picker-button {
     height: 38px !important;
-  }
-
-  .agent-picker-button,
-  .compact-agent-picker .agent-picker-button {
     padding: 0 14px !important;
     justify-content: space-between !important;
   }
@@ -3056,17 +3084,47 @@ textarea {
     min-width: 48px !important;
     max-width: 48px !important;
   }
+
+  .composer-attachment-strip {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .composer-dock:has(.composer-attachment-chip) {
+    grid-template-areas:
+      "chips chips chips"
+      "attach input send"
+      "agent agent agent" !important;
+  }
+
+  .composer-dock:has(.composer-attachment-chip) .composer-attachment-strip {
+    grid-area: chips !important;
+  }
+
+  .composer-attachment-chip {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    border-radius: 15px !important;
+  }
+
+  .agent-menu {
+    right: auto !important;
+    left: 0 !important;
+    bottom: calc(100% + 8px) !important;
+    width: min(270px, calc(100vw - 24px)) !important;
+  }
 }
 
 @media (max-width: 520px) {
   .message-stream {
-    padding-inline: max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-right)) !important;
-    padding-bottom: calc(144px + env(safe-area-inset-bottom)) !important;
+    padding-inline: max(10px, env(safe-area-inset-left)) max(10px, env(safe-area-inset-right)) !important;
+    padding-bottom: calc(148px + env(safe-area-inset-bottom)) !important;
   }
 
   .corvus-shell.empty-home .message-stream {
-    padding-top: clamp(30px, 5dvh, 46px) !important;
-    padding-bottom: calc(166px + env(safe-area-inset-bottom)) !important;
+    padding-top: clamp(18px, 3.6dvh, 34px) !important;
+    padding-bottom: calc(164px + env(safe-area-inset-bottom)) !important;
   }
 
   .message-stream > .welcome-panel,
@@ -3076,25 +3134,26 @@ textarea {
   }
 
   .welcome-copy {
-    width: min(100%, 342px) !important;
-    gap: 9px !important;
+    width: min(calc(100vw - 20px), 370px) !important;
+    max-width: min(calc(100vw - 20px), 370px) !important;
+    gap: 8px !important;
   }
 
   .welcome-panel h1,
   .rebuilt-welcome h1 {
-    font-size: clamp(31px, 8.8vw, 39px) !important;
-    gap: 9px !important;
+    font-size: clamp(29px, 8.2vw, 36px) !important;
+    gap: 10px !important;
   }
 
   .welcome-msy-mark {
-    width: 184px !important;
-    height: 184px !important;
-    min-width: 184px !important;
-    flex-basis: 184px !important;
+    width: clamp(172px, 50vw, 192px) !important;
+    height: clamp(172px, 50vw, 192px) !important;
+    min-width: clamp(172px, 50vw, 192px) !important;
+    flex-basis: clamp(172px, 50vw, 192px) !important;
   }
 
   .welcome-subtitle {
-    max-width: 31ch !important;
+    max-width: 30ch !important;
     font-size: 11.75px !important;
     line-height: 1.4 !important;
   }
@@ -3106,17 +3165,14 @@ textarea {
 
   .composer-dock {
     padding: 8px !important;
-    border-radius: 19px !important;
+    border-radius: 20px !important;
+    grid-template-columns: 42px minmax(0, 1fr) 46px !important;
+    gap: 7px !important;
   }
 
   .composer-text-field {
-    min-height: 48px !important;
-    padding: 9px 12px !important;
-  }
-
-  .composer-toolbar {
-    grid-template-columns: 42px minmax(0, 1fr) !important;
-    gap: 7px !important;
+    min-height: 44px !important;
+    padding: 8px 12px !important;
   }
 
   .attachment-button,
@@ -3133,11 +3189,6 @@ textarea {
     max-width: 42px !important;
   }
 
-  .composer-send-group {
-    grid-template-columns: minmax(0, 1fr) 46px !important;
-    gap: 7px !important;
-  }
-
   .send-button {
     width: 46px !important;
     min-width: 46px !important;
@@ -3148,12 +3199,13 @@ textarea {
 @media (max-height: 700px) and (max-width: 768px) {
   .message-stream {
     padding-top: 8px !important;
-    padding-bottom: calc(132px + env(safe-area-inset-bottom)) !important;
+    padding-bottom: calc(138px + env(safe-area-inset-bottom)) !important;
   }
 
   .corvus-shell.empty-home .message-stream {
-    padding-top: clamp(22px, 4dvh, 34px) !important;
-    padding-bottom: calc(142px + env(safe-area-inset-bottom)) !important;
+    align-items: start !important;
+    padding-top: clamp(10px, 2dvh, 20px) !important;
+    padding-bottom: calc(130px + env(safe-area-inset-bottom)) !important;
   }
 
   .message-stream > .welcome-panel,
@@ -3163,42 +3215,61 @@ textarea {
   }
 
   .welcome-copy {
-    gap: 6px !important;
+    gap: 7px !important;
   }
 
   .welcome-msy-mark {
-    width: 164px !important;
-    height: 164px !important;
-    min-width: 164px !important;
-    flex-basis: 164px !important;
+    width: clamp(126px, 34vw, 148px) !important;
+    height: clamp(126px, 34vw, 148px) !important;
+    min-width: clamp(126px, 34vw, 148px) !important;
+    flex-basis: clamp(126px, 34vw, 148px) !important;
   }
 
   .welcome-panel h1,
   .rebuilt-welcome h1 {
-    font-size: clamp(27px, 7.6vw, 34px) !important;
+    font-size: clamp(26px, 7vw, 30px) !important;
+    gap: 7px !important;
   }
 
   .welcome-subtitle {
-    font-size: 11.5px !important;
-    line-height: 1.38 !important;
+    font-size: 11px !important;
+    line-height: 1.32 !important;
   }
 
   .composer-dock {
-    padding: 8px !important;
+    padding: 7px !important;
+    grid-template-columns: 40px minmax(0, 1fr) 44px !important;
+    gap: 6px !important;
   }
 
   .composer-text-field {
-    min-height: 42px !important;
+    min-height: 40px !important;
+    padding: 7px 11px !important;
   }
 
-  .composer-toolbar {
-    margin-top: 7px !important;
+  .composer-textarea {
+    font-size: 15px !important;
+  }
+
+  .agent-picker-button,
+  .compact-agent-picker .agent-picker-button {
+    height: 36px !important;
   }
 
   .attachment-button,
-  .agent-picker-button,
-  .compact-agent-picker .agent-picker-button,
   .send-button {
     height: 40px !important;
+  }
+
+  .attachment-button {
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+  }
+
+  .send-button {
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
   }
 }
