@@ -2871,6 +2871,8 @@ textarea {
 
   .message-stream > .welcome-panel,
   .message-stream > .rebuilt-welcome {
+    width: 100% !important;
+    max-width: 100% !important;
     min-height: auto !important;
     padding: 0 8px !important;
     display: grid !important;
@@ -2881,6 +2883,7 @@ textarea {
 
   .welcome-copy {
     width: min(100%, 350px) !important;
+    margin-inline: auto !important;
     display: grid !important;
     justify-items: center !important;
     gap: 12px !important;
