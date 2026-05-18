@@ -2907,10 +2907,12 @@ textarea {
   }
 
   .welcome-msy-mark {
-    width: 104px !important;
-    height: 104px !important;
-    min-width: 104px !important;
-    flex-basis: 104px !important;
+    width: 124px !important;
+    height: 124px !important;
+    min-width: 124px !important;
+    flex-basis: 124px !important;
+    justify-self: center !important;
+    margin-inline: auto !important;
     overflow: hidden !important;
     border-radius: 50% !important;
     border-color: rgba(216, 180, 98, 0.3) !important;
@@ -2921,8 +2923,9 @@ textarea {
       rgba(8, 4, 6, 0.92) !important;
     box-shadow:
       0 0 0 1px rgba(255, 255, 255, 0.045) inset,
-      0 18px 44px rgba(227, 27, 63, 0.2),
-      0 0 54px rgba(216, 180, 98, 0.12) !important;
+      0 22px 52px rgba(227, 27, 63, 0.24),
+      0 0 72px rgba(216, 180, 98, 0.14),
+      0 0 36px rgba(227, 27, 63, 0.18) !important;
   }
 
   .welcome-msy-mark::before,
@@ -2935,7 +2938,7 @@ textarea {
     --emblem-y: 0px;
     width: 100% !important;
     height: 100% !important;
-    transform: translate(var(--emblem-x), var(--emblem-y)) scale(1.04) !important;
+    transform: translate(var(--emblem-x), var(--emblem-y)) scale(1.08) !important;
   }
 
   .welcome-subtitle {
@@ -3081,10 +3084,10 @@ textarea {
   }
 
   .welcome-msy-mark {
-    width: 104px !important;
-    height: 104px !important;
-    min-width: 104px !important;
-    flex-basis: 104px !important;
+    width: 118px !important;
+    height: 118px !important;
+    min-width: 118px !important;
+    flex-basis: 118px !important;
   }
 
   .welcome-subtitle {
@@ -3161,10 +3164,10 @@ textarea {
   }
 
   .welcome-msy-mark {
-    width: 88px !important;
-    height: 88px !important;
-    min-width: 88px !important;
-    flex-basis: 88px !important;
+    width: 102px !important;
+    height: 102px !important;
+    min-width: 102px !important;
+    flex-basis: 102px !important;
   }
 
   .welcome-panel h1,
