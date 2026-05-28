@@ -18,6 +18,7 @@ import type {
 } from "@/lib/types";
 
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
+type ChatResponseMeta = NonNullable<ChatSuccessResponse["meta"]>;
 
 interface N8nEnvelope {
   ok?: boolean;
@@ -26,7 +27,10 @@ interface N8nEnvelope {
   text?: string;
   response?: string;
   message?: string;
-  meta?: ChatSuccessResponse["meta"];
+  meta?: ChatResponseMeta;
+  answerStyle?: ChatResponseMeta["answerStyle"];
+  researchUsed?: boolean;
+  sources?: ChatResponseMeta["sources"];
   error?: string;
   code?: string;
   retryable?: boolean;
@@ -91,10 +95,17 @@ function normalizeBody(raw: unknown): ChatSuccessResponse | null {
 
   if (!reply || typeof reply !== "string") return null;
 
+  const meta: ChatResponseMeta = {
+    ...(item.meta ?? {}),
+  };
+  if (item.answerStyle) meta.answerStyle = item.answerStyle;
+  if (typeof item.researchUsed === "boolean") meta.researchUsed = item.researchUsed;
+  if (Array.isArray(item.sources)) meta.sources = item.sources;
+
   return {
     ok: true,
     reply,
-    meta: item.meta,
+    meta: Object.keys(meta).length > 0 ? meta : undefined,
   };
 }
 

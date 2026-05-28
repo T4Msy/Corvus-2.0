@@ -58,6 +58,39 @@ hljs.registerLanguage("yml", hljsYaml);
 
 const COPY_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
 
+type PendingContext = "default" | "image" | "document" | "mixed";
+
+const PROGRESS_STEPS: Record<PendingContext, string[]> = {
+  default: [
+    "Analisando o pedido",
+    "Definindo a melhor estrutura",
+    "Organizando os pontos principais",
+    "Montando a resposta",
+    "Refinando a conclusao",
+  ],
+  image: [
+    "Analisando a imagem",
+    "Extraindo os sinais principais",
+    "Conectando imagem e pedido",
+    "Montando a resposta",
+    "Refinando a conclusao",
+  ],
+  document: [
+    "Lendo o documento",
+    "Separando os pontos relevantes",
+    "Organizando os criterios",
+    "Montando a resposta",
+    "Refinando a conclusao",
+  ],
+  mixed: [
+    "Consolidando os materiais",
+    "Cruzando anexos e pedido",
+    "Escolhendo a melhor estrutura",
+    "Montando a resposta",
+    "Refinando a conclusao",
+  ],
+};
+
 marked.use({
   renderer: {
     code({ text, lang }: { text: string; lang?: string }) {
@@ -175,6 +208,7 @@ export function ChatMessages({
     });
   }, [messages]);
 
+  const pendingContext = useMemo(() => getPendingContext(messages), [messages]);
   const empty = showWelcome && messages.length === 0 && !pending && !historyLoading;
 
   return (
@@ -251,7 +285,7 @@ export function ChatMessages({
         )}
       </AnimatePresence>
 
-      {pending && <TypingIndicator logoSrc={logoSrc} />}
+      {pending && <TypingIndicator logoSrc={logoSrc} context={pendingContext} />}
 
       {showScrollBtn && (
         <div className="scroll-to-bottom-wrap">
@@ -653,7 +687,26 @@ function MessageAction({
   );
 }
 
-function TypingIndicator({ logoSrc }: { logoSrc: string }) {
+function TypingIndicator({
+  logoSrc,
+  context,
+}: {
+  logoSrc: string;
+  context: PendingContext;
+}) {
+  const steps = PROGRESS_STEPS[context];
+  const [stepIndex, setStepIndex] = useState(0);
+
+  useEffect(() => {
+    setStepIndex(0);
+    const timer = window.setInterval(() => {
+      setStepIndex((current) => (current + 1) % steps.length);
+    }, 1850);
+    return () => window.clearInterval(timer);
+  }, [context, steps]);
+
+  const currentStep = steps[stepIndex];
+
   return (
     <motion.div
       className="message-row thread-message corvus typing-row"
@@ -661,7 +714,7 @@ function TypingIndicator({ logoSrc }: { logoSrc: string }) {
       animate={{ opacity: 1, y: 0 }}
     >
       <div className="message-avatar-wrap" aria-hidden="true">
-        <div className="message-avatar">
+        <div className="message-avatar thinking-avatar">
           <Image src={logoSrc} alt="" width={20} height={20} />
         </div>
         <span className="assistant-state-dot active" />
@@ -670,24 +723,50 @@ function TypingIndicator({ logoSrc }: { logoSrc: string }) {
         <div className="message-meta">
           <span className="message-role">
             <strong>Corvus</strong>
-            <small>Gerando resposta</small>
+            <small>Estruturando resposta</small>
           </span>
         </div>
-        <div className="typing-card">
-          <div className="typing-lines">
-            <span />
+        <div className="typing-card thinking-card" aria-label={currentStep}>
+          <div className="thinking-orbit" aria-hidden="true">
             <span />
             <span />
           </div>
-          <div className="typing-dots">
-            <span />
-            <span />
-            <span />
+          <div className="thinking-copy">
+            <AnimatePresence mode="wait">
+              <motion.strong
+                key={currentStep}
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                transition={{ duration: 0.22 }}
+              >
+                {currentStep}
+              </motion.strong>
+            </AnimatePresence>
+            <div className="thinking-progress" aria-hidden="true">
+              {steps.map((step, index) => (
+                <span
+                  key={step}
+                  className={index === stepIndex ? "active" : undefined}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </div>
     </motion.div>
   );
+}
+
+function getPendingContext(messages: ChatMessage[]): PendingContext {
+  const lastUserMessage = [...messages].reverse().find((message) => message.role === "user");
+  const attachments = lastUserMessage?.attachments ?? [];
+  const hasImages = attachments.some((attachment) => attachment.type.startsWith("image/"));
+  const hasDocuments = attachments.some((attachment) => !attachment.type.startsWith("image/"));
+  if (hasImages && hasDocuments) return "mixed";
+  if (hasImages) return "image";
+  if (hasDocuments) return "document";
+  return "default";
 }
 
 const SKELETON_ROWS = [
@@ -804,6 +883,26 @@ function renderSafeMarkdown(text: string): string {
     if (element.tagName === "A") {
       element.setAttribute("target", "_blank");
       element.setAttribute("rel", "noopener noreferrer");
+    }
+  });
+
+  document.body.querySelectorAll("table").forEach((table) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "markdown-table-wrap";
+    table.parentNode?.insertBefore(wrapper, table);
+    wrapper.appendChild(table);
+  });
+
+  document.body.querySelectorAll("p, blockquote").forEach((element) => {
+    const label =
+      element.textContent
+        ?.trim()
+        .split(":")[0]
+        ?.toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") ?? "";
+    if (["resumo", "criterios", "conclusao", "recomendacao"].includes(label)) {
+      element.classList.add("markdown-highlight-block");
     }
   });
 

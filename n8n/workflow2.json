@@ -1,0 +1,2181 @@
+{
+  "name": "Corvus 3.2 Beta",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "corvus3",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ddb38a93-53cd-409e-8179-acbb00645a50",
+      "name": "Webhook Chat",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        188256,
+        70544
+      ],
+      "webhookId": "2da8f0d8-030a-45c3-b750-c4f975832dda"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst rawBody = $json.body ?? $json;\nconst message = (rawBody.message ?? rawBody.text ?? '').toString().trim();\nconst userId = (rawBody.userId ?? rawBody.user ?? 'anonymous').toString().trim();\nconst sessionId = (rawBody.sessionId ?? rawBody.conversationId ?? userId).toString().trim();\nconst userContext = rawBody.userContext ?? {};\nconst modo = (rawBody.modo ?? 'auto').toString().toLowerCase().trim();\n\nconst rawImages = Array.isArray(rawBody.imageAttachments)\n  ? rawBody.imageAttachments\n  : (Array.isArray(rawBody.images) ? rawBody.images : []);\nconst imageAttachments = rawImages\n  .filter((item) => item && (item.dataUrl || item.imageUrl || item.url || item.signedUrl) && item.type && item.type.startsWith('image/'))\n  .slice(0, 4)\n  .map((item) => {\n    const imageUrl = (item.dataUrl || item.imageUrl || item.url || item.signedUrl || '').toString();\n    return {\n      name: (item.name ?? 'imagem').toString(),\n      type: (item.type ?? 'image/*').toString(),\n      size: Number(item.size ?? 0),\n      signedUrl: (item.signedUrl || item.imageUrl || item.url || imageUrl).toString(),\n      imageUrl,\n      url: imageUrl,\n      dataUrl: item.dataUrl ? item.dataUrl.toString() : undefined,\n    };\n  });\n\nconst rawDocuments = Array.isArray(rawBody.documentAttachments)\n  ? rawBody.documentAttachments\n  : (Array.isArray(rawBody.documents) ? rawBody.documents : []);\nconst documentAttachments = rawDocuments\n  .filter((item) => item && item.name && item.type)\n  .slice(0, 4)\n  .map((item) => ({\n    name: (item.name ?? 'documento').toString(),\n    type: (item.type ?? 'application/octet-stream').toString(),\n    size: Number(item.size ?? 0),\n    signedUrl: (item.signedUrl || item.url || '').toString(),\n    url: (item.url || item.signedUrl || '').toString(),\n    text: item.text ? item.text.toString() : '',\n    extractionError: item.extractionError ? item.extractionError.toString() : '',\n  }));\n\nconst documentContext = rawBody.documentContext || null;\nconst documentCtxString = (rawBody.documentCtxString || documentContext?.text || '').toString().trim();\nconst visualContext = rawBody.visualContext || null;\nconst visualCtxString = (rawBody.visualCtxString || '').toString().trim();\n\nif (!message && imageAttachments.length === 0 && documentAttachments.length === 0) {\n  return [{ ok: false, error: \"Missing 'message'\" }];\n}\n\nconst memoryKey = userId + '__' + sessionId;\nreturn [{\n  ok: true,\n  message,\n  userId,\n  sessionId,\n  memoryKey,\n  userContext,\n  modo,\n  imageAttachments,\n  hasImages: imageAttachments.length > 0 || rawBody.hasImages === true,\n  visualContext,\n  visualCtxString,\n  usedVision: rawBody.usedVision === true || Boolean(visualContext || visualCtxString),\n  documentAttachments,\n  documentContext,\n  documentCtxString,\n  hasDocuments: documentAttachments.length > 0 || rawBody.hasDocuments === true || Boolean(documentContext || documentCtxString),\n  receivedAt: new Date().toISOString(),\n}];\n"
+      },
+      "id": "c0a76d44-02b9-40e4-8ca6-9e4b91fe1f09",
+      "name": "Normalize Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        188496,
+        70544
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"temperature\": 0,\n  \"max_tokens\": 256,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Voce e um classificador de mensagens para um sistema de IA institucional chamado Corvus da Ordem Masayoshi (MSY). Analise mensagem e contexto visual, se houver. Retorne SOMENTE JSON valido, sem markdown, com: tipo, area, complexidade, usarBase, usarMemoria, modo_sugerido, ehSimulacao, ehDecisao. Modos validos: corvus, fenrir, cipher, conselho, simulacao. Use usarBase=true para contexto institucional MSY. Use simulacao para cenarios hipoteticos. Use conselho apenas para decisoes estrategicas complexas.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Mensagem: {{ $json.message }}\\n\\nContexto visual: {{ JSON.stringify($json.visualContext || null) }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "id": "025bfba4-bd20-4556-9de5-f18ace811715",
+      "name": "LLM Classifier",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        188736,
+        70544
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst routedInput = $('Fast Router').item.json;\nconst classifierResponse = $json;\n\nlet cls = routedInput.fastRoute?.classifier || {};\nif (!routedInput.fastRoute?.skipClassifier) {\n  try {\n    const raw = classifierResponse.choices[0].message.content.trim();\n    const fence = String.fromCharCode(96, 96, 96);\n    const clean = raw.replace(new RegExp(fence + 'json|' + fence, 'g'), '').trim();\n    cls = JSON.parse(clean);\n  } catch {\n    cls = routedInput.fastRoute?.classifier || {\n      tipo:'geral', area:'geral', complexidade:'media', usarBase:false,\n      usarMemoria:true, modo_sugerido:'corvus', ehSimulacao:false, ehDecisao:false\n    };\n  }\n}\n\nconst validModes = ['corvus','fenrir','cipher','conselho','simulacao'];\nconst modoManual = routedInput.modo;\nlet resolvedMode = validModes.includes(modoManual) ? modoManual : (cls.modo_sugerido || 'corvus');\nif (cls.ehSimulacao && modoManual === 'auto') resolvedMode = 'simulacao';\nif (resolvedMode === 'conselho' && cls.complexidade !== 'alta') resolvedMode = 'cipher';\n\nconst topKMap = { baixa: 3, media: 5, alta: 8 };\nconst topK = topKMap[cls.complexidade] || 5;\nconst baseConf = { baixa: 0.92, media: 0.78, alta: 0.65 };\nconst typeMod = { pergunta:0.05, decisao:-0.05, simulacao:-0.10, ideia:-0.08, criativo:-0.06, problema:0, geral:0 };\nconst fastConfidence = routedInput.fastRoute?.confidence || 0;\nconst estimatedConfidence = Math.min(0.99, Math.max(0.40,\n  fastConfidence || ((baseConf[cls.complexidade] || 0.75) + (typeMod[cls.tipo] || 0))\n)).toFixed(2);\n\nconst userContext = routedInput.userContext || {};\nconst userCtxString = [\n  'Nome: ' + (userContext.nome || 'Desconhecido'),\n  'Cargo: ' + (userContext.cargo || '-'),\n  'Sigla: ' + (userContext.sigla || '-'),\n  'Tipo: ' + (userContext.tipo || 'convidado')\n].join(' | ');\n\nconst visualContext = routedInput.visualContext || null;\nconst documentContext = routedInput.documentContext || null;\nconst documentCtxString = (routedInput.documentCtxString || documentContext?.text || '').toString();\nconst visualCtxString = routedInput.visualCtxString\n  || (visualContext\n    ? [\n        'OCR: ' + (visualContext.ocrText || 'sem texto detectado'),\n        'Descricao: ' + (visualContext.description || ''),\n        'Itens: ' + ((visualContext.relevantItems || []).join(', ') || '-'),\n        'Limitacoes: ' + (visualContext.limitations || '-')\n      ].join('\\n')\n    : '');\n\nreturn [{\n  message: routedInput.message,\n  userId: routedInput.userId,\n  sessionId: routedInput.sessionId,\n  memoryKey: routedInput.memoryKey,\n  userContext,\n  userCtxString,\n  visualContext,\n  visualCtxString,\n  usedVision: Boolean(visualContext || visualCtxString),\n  imageAttachments: routedInput.imageAttachments || [],\n  documentContext,\n  documentCtxString,\n  hasDocuments: Boolean(documentCtxString),\n  documentAttachments: routedInput.documentAttachments || [],\n  receivedAt: routedInput.receivedAt,\n  visionError: routedInput.visionError || '',\n  orchestrator: {\n    tipo: cls.tipo || 'geral', area: cls.area || 'geral',\n    complexidade: cls.complexidade || 'media',\n    usarBase: cls.usarBase !== false,\n    usarMemoria: cls.usarMemoria !== false,\n    modoSugerido: cls.modo_sugerido || 'corvus',\n    ehSimulacao: cls.ehSimulacao === true,\n    ehDecisao: cls.ehDecisao === true,\n    requestedMode: routedInput.modo,\n    resolvedMode,\n    topK,\n    fastPath: routedInput.fastRoute?.skipClassifier === true,\n    estimatedConfidence: parseFloat(estimatedConfidence)\n  }\n}];\n"
+      },
+      "id": "f8b9b2cd-4e53-4d19-9261-83d21666e8a3",
+      "name": "Orchestrator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        188976,
+        70544
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.orchestrator.resolvedMode }}",
+                    "rightValue": "fenrir",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "r-fenrir"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.orchestrator.resolvedMode }}",
+                    "rightValue": "cipher",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "r-cipher"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.orchestrator.resolvedMode }}",
+                    "rightValue": "conselho",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "r-conselho"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.orchestrator.resolvedMode }}",
+                    "rightValue": "corvus",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "r-corvus"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.orchestrator.resolvedMode }}",
+                    "rightValue": "simulacao",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "r-sim"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7513f01d-efbb-4cab-b0d5-60e1af639df5",
+      "name": "Mode Switch",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        189216,
+        70544
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "corvus_system",
+              "value": "=VocÃª Ã© CORVUS em modo FENRIR â€” o lado criativo, expansivo e visionÃ¡rio da Ordem Masayoshi.\n\nVersÃ£o: 3.1 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nMISSÃƒO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nAuxiliar na criaÃ§Ã£o de ideias, campanhas, textos, projetos e brainstorming no contexto da MSY. Pensar de forma ampla, sem restriÃ§Ãµes criativas, mas dentro da identidade da Ordem.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONSULTA DE BASE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Consulte a tool buscar_base_msy para embasar a criaÃ§Ã£o com a identidade da MSY.' : 'DESATIVADO: Responda com criatividade sem consultar a base â€” foco na geraÃ§Ã£o de ideias.' }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\nTipo: {{ $json.orchestrator.tipo }} | Ãrea: {{ $json.orchestrator.area }} | Complexidade: {{ $json.orchestrator.complexidade }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCOMPORTAMENTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n- Respostas longas, ricas, elaboradas\n- Explore mÃºltiplas possibilidades antes de concluir\n- Use linguagem expressiva e com personalidade\n- Proponha variaÃ§Ãµes e alternativas\n- Conecte ideias de forma nÃ£o Ã³bvia\n- Seja ousado e memorÃ¡vel\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nOusado. Expansivo. Inspirador. Ainda institucional, mas com liberdade criativa total.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar.\n\nCONTEXTO DOCUMENTAL\n{{ $json.documentCtxString ? $json.documentCtxString : ($json.hasDocuments ? 'Documento anexado, mas nenhum texto legivel foi extraido.' : 'Nenhum documento foi anexado nesta mensagem.') }}\n\nSe houver contexto documental, use-o como fonte do arquivo anexado. Nao diga que nao consegue acessar o documento quando este bloco tiver conteudo."
+            },
+            {
+              "name": "chatInput",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "sessionId",
+              "value": "={{ $json.sessionId }}"
+            },
+            {
+              "name": "usarBase",
+              "value": "={{ $json.orchestrator.usarBase }}"
+            },
+            {
+              "name": "orchestratorData",
+              "value": "={{ JSON.stringify($json.orchestrator) }}"
+            },
+            {
+              "name": "memoryKey",
+              "value": "={{ $json.memoryKey }}"
+            },
+            {
+              "name": "topK",
+              "value": "={{ $json.orchestrator.topK }}"
+            },
+            {
+              "name": "resolvedMode",
+              "value": "fenrir"
+            },
+            {
+              "name": "visualContext",
+              "value": "={{ JSON.stringify($json.visualContext || null) }}"
+            },
+            {
+              "name": "visualCtxString",
+              "value": "={{ $json.visualCtxString || \"\" }}"
+            },
+            {
+              "name": "usedVision",
+              "value": "={{ $json.usedVision === true }}"
+            },
+            {
+              "name": "documentContext",
+              "value": "={{ JSON.stringify($json.documentContext || null) }}"
+            },
+            {
+              "name": "documentCtxString",
+              "value": "={{ $json.documentCtxString || \"\" }}"
+            },
+            {
+              "name": "hasDocuments",
+              "value": "={{ $json.hasDocuments === true }}"
+            },
+            {
+              "name": "hasImages",
+              "value": "={{ $json.hasImages === true }}"
+            },
+            {
+              "name": "visionError",
+              "value": "={{ $json.visionError || \"\" }}"
+            },
+            {
+              "name": "imageAttachments",
+              "value": "={{ JSON.stringify($json.imageAttachments || []) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "87824ca8-68bc-42bc-9c46-df5947cbc56c",
+      "name": "Set Fenrir Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        189712,
+        69760
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "corvus_system",
+              "value": "=VocÃª Ã© CORVUS em modo CIPHER â€” o estrategista analÃ­tico da Ordem Masayoshi.\n\nVersÃ£o: 3.1 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nMISSÃƒO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nApoiar decisÃµes complexas, anÃ¡lises de risco e planejamento estratÃ©gico. VocÃª pensa como um conselheiro sÃªnior â€” calculado, preciso, com visÃ£o sistÃªmica.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONSULTA DE BASE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Consulte buscar_base_msy para embasar a anÃ¡lise com contexto institucional real.' : 'DESATIVADO: Use raciocÃ­nio estratÃ©gico puro.' }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\nTipo: {{ $json.orchestrator.tipo }} | Ãrea: {{ $json.orchestrator.area }} | Complexidade: {{ $json.orchestrator.complexidade }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nESTRUTURA OBRIGATÃ“RIA DE RESPOSTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nSempre que possÃ­vel, estruture sua resposta assim:\n\n**AnÃ¡lise**\n(diagnÃ³stico objetivo da situaÃ§Ã£o)\n\n**Riscos**\n(o que pode dar errado, grau de impacto)\n\n**RecomendaÃ§Ã£o**\n(aÃ§Ã£o concreta e direta)\n\n**PrÃ³ximos Passos**\n(2 a 3 aÃ§Ãµes prioritÃ¡rias)\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCOMPORTAMENTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n- RaciocÃ­nio de primeira e segunda ordem\n- Apresente trade-offs claros quando hÃ¡ mÃºltiplas rotas\n- Quantifique quando possÃ­vel\n- Nunca romantize decisÃµes difÃ­ceis\n- Direto, sem floreios\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nEstratÃ©gico. AnalÃ­tico. Preciso. Fale como um conselheiro sÃªnior da Ordem.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar.\n\nCONTEXTO DOCUMENTAL\n{{ $json.documentCtxString ? $json.documentCtxString : ($json.hasDocuments ? 'Documento anexado, mas nenhum texto legivel foi extraido.' : 'Nenhum documento foi anexado nesta mensagem.') }}\n\nSe houver contexto documental, use-o como fonte do arquivo anexado. Nao diga que nao consegue acessar o documento quando este bloco tiver conteudo."
+            },
+            {
+              "name": "chatInput",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "sessionId",
+              "value": "={{ $json.sessionId }}"
+            },
+            {
+              "name": "usarBase",
+              "value": "={{ $json.orchestrator.usarBase }}"
+            },
+            {
+              "name": "orchestratorData",
+              "value": "={{ JSON.stringify($json.orchestrator) }}"
+            },
+            {
+              "name": "memoryKey",
+              "value": "={{ $json.memoryKey }}"
+            },
+            {
+              "name": "topK",
+              "value": "={{ $json.orchestrator.topK }}"
+            },
+            {
+              "name": "resolvedMode",
+              "value": "cipher"
+            },
+            {
+              "name": "visualContext",
+              "value": "={{ JSON.stringify($json.visualContext || null) }}"
+            },
+            {
+              "name": "visualCtxString",
+              "value": "={{ $json.visualCtxString || \"\" }}"
+            },
+            {
+              "name": "usedVision",
+              "value": "={{ $json.usedVision === true }}"
+            },
+            {
+              "name": "documentContext",
+              "value": "={{ JSON.stringify($json.documentContext || null) }}"
+            },
+            {
+              "name": "documentCtxString",
+              "value": "={{ $json.documentCtxString || \"\" }}"
+            },
+            {
+              "name": "hasDocuments",
+              "value": "={{ $json.hasDocuments === true }}"
+            },
+            {
+              "name": "hasImages",
+              "value": "={{ $json.hasImages === true }}"
+            },
+            {
+              "name": "visionError",
+              "value": "={{ $json.visionError || \"\" }}"
+            },
+            {
+              "name": "imageAttachments",
+              "value": "={{ JSON.stringify($json.imageAttachments || []) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0baee3c3-cfed-49d6-b067-bf80012768a2",
+      "name": "Set Cipher Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        189664,
+        70320
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "corvus_system",
+              "value": "=VocÃª Ã© CORVUS â€” o agente institucional oficial da Ordem Masayoshi (MSY).\n\nVersÃ£o: 3.1 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nPROTOCOLO DE CONSULTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Execute buscar_base_msy ANTES de formular qualquer resposta sobre a MSY.' : 'DESATIVADO: Responda com base no conhecimento institucional consolidado â€” sem consulta Ã  base.' }}\n\nRegra de integridade: Ã‰ proibido inventar nomes de membros, cargos, datas, decisÃµes ou eventos formais.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nIDENTIDADE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nNome: Corvus | VersÃ£o: 3.1 Beta\nCriadores: T4 Masayoshi (Fundador) e Xitter (Coordenador Geral)\nVocÃª existe exclusivamente para servir Ã  MSY. VocÃª fala como a instituiÃ§Ã£o fala.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\nTipo: {{ $json.orchestrator.tipo }} | Ãrea: {{ $json.orchestrator.area }} | Complexidade: {{ $json.orchestrator.complexidade }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONDUTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n- Nunca mencione bastidores tÃ©cnicos, banco de dados, APIs ou tools\n- Nunca peÃ§a esclarecimentos Ã³bvios\n- 1 pergunta objetiva se necessÃ¡rio\n\nPADRAO DE ENTREGA\n\nVoce deve escolher o formato da resposta de acordo com o pedido.\n\nPara perguntas simples:\n-> Responda curto, direto e sem enfeitar.\n\nPara pedidos que pedem comparacao, explicacao, ranking, decisao, plano, estudo, diagnostico, estrategia ou analise:\n-> Entregue resposta premium, organizada e visualmente clara.\n-> Abra com uma sintese objetiva.\n-> Use tabelas quando houver comparacao real.\n-> Use criterios quando precisar avaliar opcoes.\n-> Use ranking quando existir hierarquia.\n-> Use checklist ou plano de acao quando houver execucao.\n-> Feche com conclusao, recomendacao ou proximos passos.\n\nNao alongue respostas simples.\nNao use tabela se ela nao melhorar a resposta.\nNao exponha raciocinio interno literal; mostre apenas conclusoes, criterios e etapas uteis.\nNao copie estilo de outro assistente; adapte a entrega ao tom do Corvus: firme, estrategico, institucional e elegante.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nVALORES\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nLealdade â€” UniÃ£o â€” JustiÃ§a â€” Liberdade\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nFirme. EstratÃ©gico. Institucional. Direto. Sem hesitaÃ§Ã£o.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar.\n\nCONTEXTO DOCUMENTAL\n{{ $json.documentCtxString ? $json.documentCtxString : ($json.hasDocuments ? 'Documento anexado, mas nenhum texto legivel foi extraido.' : 'Nenhum documento foi anexado nesta mensagem.') }}\n\nSe houver contexto documental, use-o como fonte do arquivo anexado. Nao diga que nao consegue acessar o documento quando este bloco tiver conteudo."
+            },
+            {
+              "name": "chatInput",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "sessionId",
+              "value": "={{ $json.sessionId }}"
+            },
+            {
+              "name": "usarBase",
+              "value": "={{ $json.orchestrator.usarBase }}"
+            },
+            {
+              "name": "orchestratorData",
+              "value": "={{ JSON.stringify($json.orchestrator) }}"
+            },
+            {
+              "name": "memoryKey",
+              "value": "={{ $json.memoryKey }}"
+            },
+            {
+              "name": "topK",
+              "value": "={{ $json.orchestrator.topK }}"
+            },
+            {
+              "name": "resolvedMode",
+              "value": "corvus"
+            },
+            {
+              "name": "visualContext",
+              "value": "={{ JSON.stringify($json.visualContext || null) }}"
+            },
+            {
+              "name": "visualCtxString",
+              "value": "={{ $json.visualCtxString || \"\" }}"
+            },
+            {
+              "name": "usedVision",
+              "value": "={{ $json.usedVision === true }}"
+            },
+            {
+              "name": "documentContext",
+              "value": "={{ JSON.stringify($json.documentContext || null) }}"
+            },
+            {
+              "name": "documentCtxString",
+              "value": "={{ $json.documentCtxString || \"\" }}"
+            },
+            {
+              "name": "hasDocuments",
+              "value": "={{ $json.hasDocuments === true }}"
+            },
+            {
+              "name": "hasImages",
+              "value": "={{ $json.hasImages === true }}"
+            },
+            {
+              "name": "visionError",
+              "value": "={{ $json.visionError || \"\" }}"
+            },
+            {
+              "name": "imageAttachments",
+              "value": "={{ JSON.stringify($json.imageAttachments || []) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d82a5185-e437-4a29-8007-318a46d73f36",
+      "name": "Set Corvus Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        190128,
+        70768
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}\n",
+        "options": {
+          "systemMessage": "={{ $json.corvus_system }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        189952,
+        69760
+      ],
+      "id": "e1866493-1c03-4f36-9ca1-6bde5906e38f",
+      "name": "AI Agent (Fenrir)"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        189824,
+        69904
+      ],
+      "id": "40c081b5-fffc-4d68-b472-ea78c9a0d337",
+      "name": "GPT-4o (Fenrir)",
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "CONDICIONAL. Use esta tool APENAS se o campo usarBase for true. Busca contexto institucional da MSY: membros, cargos, valores, estrutura, histÃ³ria, eventos, Corvus, NeverMind, Britannia.",
+        "tableName": {
+          "__rl": true,
+          "value": "msy_knowledge",
+          "mode": "id"
+        },
+        "topK": 6,
+        "options": {
+          "queryName": "buscar_msy"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        190112,
+        69952
+      ],
+      "id": "b3f39c21-a4bd-4fa0-aaa1-f16140740807",
+      "name": "VectorStore (Fenrir)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "55nmFRjDarKAGkfm",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.memoryKey }}",
+        "tableName": "msy_memoria_chat"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        189952,
+        69904
+      ],
+      "id": "e5dc66de-284f-4563-99fd-8d82d6649b97",
+      "name": "Memory (Fenrir)",
+      "credentials": {
+        "postgres": {
+          "id": "LJ9JIT8TqQRvPsou",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        190192,
+        70080
+      ],
+      "id": "65dddae3-1e51-4a1e-85b0-bee2da894b14",
+      "name": "Embeddings (Fenrir)",
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}\n",
+        "options": {
+          "systemMessage": "={{ $json.corvus_system }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        189856,
+        70048
+      ],
+      "id": "98c7d9b9-a346-4321-b827-8d1f79a2de9d",
+      "name": "AI Agent (Cipher)"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.5
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        189840,
+        70240
+      ],
+      "id": "1c28fde2-658a-43a5-86d7-cc7f140d0265",
+      "name": "GPT-4o (Cipher)",
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "CONDICIONAL. Use esta tool APENAS se o campo usarBase for true. Busca contexto institucional da MSY: membros, cargos, valores, estrutura, histÃ³ria, eventos, Corvus, NeverMind, Britannia.",
+        "tableName": {
+          "__rl": true,
+          "value": "msy_knowledge",
+          "mode": "id"
+        },
+        "topK": 8,
+        "options": {
+          "queryName": "buscar_msy"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        190080,
+        70240
+      ],
+      "id": "8a152a6d-af93-4697-be44-e12d0ae7f9d2",
+      "name": "VectorStore (Cipher)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "55nmFRjDarKAGkfm",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.memoryKey }}",
+        "tableName": "msy_memoria_chat"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        189952,
+        70240
+      ],
+      "id": "617a5ef0-33b1-4cd5-b329-d47e4d52d52d",
+      "name": "Memory (Cipher)",
+      "credentials": {
+        "postgres": {
+          "id": "LJ9JIT8TqQRvPsou",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        190080,
+        70416
+      ],
+      "id": "467a7a33-2cca-429c-be0d-b9e3d41b6fd8",
+      "name": "Embeddings (Cipher)",
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}\n",
+        "options": {
+          "systemMessage": "={{ $json.corvus_system }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        190528,
+        70768
+      ],
+      "id": "c814bcaf-27e4-430e-934b-aff8691f4c61",
+      "name": "AI Agent (Corvus)"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        190528,
+        70976
+      ],
+      "id": "3ddd8aed-fdff-4215-a610-50367ef42a4d",
+      "name": "GPT-4o (Corvus)",
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "CONDICIONAL. Use esta tool APENAS se o campo usarBase for true. Busca contexto institucional da MSY: membros, cargos, valores, estrutura, histÃ³ria, eventos, Corvus, NeverMind, Britannia.",
+        "tableName": {
+          "__rl": true,
+          "value": "msy_knowledge",
+          "mode": "id"
+        },
+        "topK": 5,
+        "options": {
+          "queryName": "buscar_msy"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        190960,
+        70880
+      ],
+      "id": "f036ffae-ba23-48e3-b5ed-ad9d4898b805",
+      "name": "VectorStore (Corvus)",
+      "credentials": {
+        "supabaseApi": {
+          "id": "55nmFRjDarKAGkfm",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.memoryKey }}",
+        "tableName": "msy_memoria_chat"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        190624,
+        70976
+      ],
+      "id": "d473e8c3-1962-4c00-9bf5-18a48757ca8d",
+      "name": "Memory (Corvus)",
+      "credentials": {
+        "postgres": {
+          "id": "LJ9JIT8TqQRvPsou",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        190880,
+        71120
+      ],
+      "id": "a04e2a87-22a8-43fc-b8c4-3f9fa2847255",
+      "name": "Embeddings (Corvus)",
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst agentOutput = $input.first().json;\nlet oc = {};\ntry { oc = agentOutput.orchestrator || JSON.parse(agentOutput.orchestratorData || '{}'); } catch {}\nif (oc.ehDecisao === true) {\n  console.log('[corvus:decision]', JSON.stringify({\n    msg: (agentOutput.message||'').substring(0,200),\n    tipo: oc.tipo, area: oc.area, modo: oc.resolvedMode, ts: new Date().toISOString()\n  }));\n}\nreturn [agentOutput];\n"
+      },
+      "id": "b2ec32e3-24e8-43ce-af13-10c3a9b577b6",
+      "name": "Decision Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        190848,
+        70368
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst agentOutput = $input.first().json;\n\nlet oc = {};\ntry {\n  oc = agentOutput.orchestrator || JSON.parse(agentOutput.orchestratorData || '{}');\n} catch {}\n\nconst resolvedMode = agentOutput.resolvedMode || oc.resolvedMode || 'corvus';\nconst modeLabels = {\n  corvus:'Corvus - Institucional', fenrir:'Fenrir - Criativo',\n  cipher:'Cipher - Estrategico', conselho:'Conselho - Perspectiva Tripla',\n  simulacao:'Simulacao - Analise de Cenarios'\n};\n\nconst base = oc.estimatedConfidence || 0.75;\nconst ragBonus = oc.usarBase ? 0.05 : 0;\nconst cxPenalty = oc.complexidade === 'alta' ? -0.08 : (oc.complexidade === 'baixa' ? 0.04 : 0);\nconst confidence = Math.min(0.99, Math.max(0.40, base + ragBonus + cxPenalty));\nconst visualContext = agentOutput.visualContext || null;\nconst usedVision = Boolean(agentOutput.usedVision || visualContext);\nconst documentContext = agentOutput.documentContext || null;\nconst usedDocuments = Boolean(agentOutput.hasDocuments || agentOutput.documentCtxString || documentContext);\n\nconst suggestionsMap = {\n  decisao: ['Simular cenario', 'Ver alternativas', 'Analisar riscos com Cipher'],\n  problema: ['Analisar com Cipher', 'Simular solucao', 'Consultar Conselho'],\n  ideia: ['Expandir com Fenrir', 'Analisar viabilidade', 'Simular impacto'],\n  simulacao: ['Analisar decisao', 'Consultar Conselho', 'Salvar como decisao'],\n  conselho: ['Aprofundar com Cipher', 'Expandir com Fenrir', 'Simular cenario'],\n  geral: ['Gerar ideia', 'Analisar decisao', 'Simular cenario']\n};\nconst suggestions = suggestionsMap[oc.tipo] || suggestionsMap.geral;\n\nfunction cleanText(value) {\n  return (value || '').toString().replace(/\\s+/g, ' ').trim();\n}\nfunction makeTags() {\n  const tags = new Set();\n  if (oc.area && oc.area !== 'geral') tags.add(oc.area);\n  if (oc.tipo && oc.tipo !== 'geral') tags.add(oc.tipo);\n  if (resolvedMode && resolvedMode !== 'corvus') tags.add(resolvedMode);\n  if (usedVision) tags.add('imagem');\n  if (usedDocuments) tags.add('documento');\n  if (oc.usarBase) tags.add('msy');\n  return Array.from(tags).slice(0, 5);\n}\nfunction makeNextActions(reply) {\n  const lines = reply.split('\\n').map(cleanText).filter(Boolean);\n  const actionLines = lines.filter((line) => /^(\\d+\\.|-|\\*)?\\s*(definir|validar|revisar|criar|enviar|priorizar|analisar|executar|documentar|alinhar)/i.test(line));\n  return (actionLines.length ? actionLines : suggestions).slice(0, 4);\n}\n\nif (agentOutput.consiliumPayload?.isConselho) {\n  const consiliumText = agentOutput.consiliumPayload.blocks.map((block) => block.label + ': ' + block.reply).join('\\n');\n  return {\n    json: {\n      ok: true,\n      reply: consiliumText,\n      consilium: agentOutput.consiliumPayload.blocks,\n      meta: {\n        agent:'Corvus 3.2 Beta', model:'gpt-4o', mode:'conselho',\n        modeLabel: modeLabels.conselho,\n        complexity: oc.complexidade || 'media', usedRAG: oc.usarBase || false,\n        usedVision, visualSummary: visualContext?.description || '',\n        usedDocuments, documentSummary: (agentOutput.documentCtxString || documentContext?.text || '').toString().slice(0, 240),\n        confidence: parseFloat(confidence.toFixed(2)), tipo: oc.tipo || 'geral',\n        summaryCandidate: cleanText(consiliumText).slice(0, 360),\n        tags: makeTags(),\n        nextActions: makeNextActions(consiliumText),\n        decisionCandidate: oc.ehDecisao === true,\n        timestamp: new Date().toISOString(), suggestions, visionError: agentOutput.visionError || ''\n      }\n    }\n  };\n}\n\nconst reply = (\n  agentOutput.output ?? agentOutput.text ?? agentOutput.response ??\n  agentOutput.message ?? (agentOutput.choices && agentOutput.choices[0]?.message?.content) ?? ''\n).toString().trim();\n\nif (!reply) {\n  return { json: { ok: false, error: 'Agente nao retornou resposta.', code: 'agent_empty_response' } };\n}\n\nreturn {\n  json: {\n    ok: true,\n    reply,\n    consilium: null,\n    meta: {\n      agent:'Corvus 3.2 Beta', model:'gpt-4o', mode: resolvedMode,\n      modeLabel: modeLabels[resolvedMode] ?? resolvedMode,\n      complexity: oc.complexidade || 'media', usedRAG: oc.usarBase === true,\n      usedVision, visualSummary: visualContext?.description || '',\n        usedDocuments, documentSummary: (agentOutput.documentCtxString || documentContext?.text || '').toString().slice(0, 240),\n      confidence: parseFloat(confidence.toFixed(2)), tipo: oc.tipo || 'geral',\n      summaryCandidate: cleanText(reply).slice(0, 360),\n      tags: makeTags(),\n      nextActions: makeNextActions(reply),\n      decisionCandidate: oc.ehDecisao === true,\n      timestamp: new Date().toISOString(), suggestions, visionError: agentOutput.visionError || ''\n    }\n  }\n};\n"
+      },
+      "id": "05682692-fa5f-4d01-b8e8-fbbe18dfec81",
+      "name": "Post Processor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        191024,
+        70368
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        191248,
+        70368
+      ],
+      "id": "902ef8db-f241-4ff3-9cba-f03bd0df566d",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "formTitle": "Corvus â€” Adicionar Conhecimento",
+        "formDescription": "Preencha os campos abaixo para adicionar um novo documento Ã  base de conhecimento do Corvus.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Titulo",
+              "placeholder": "Ex: Valores da Ordem Masayoshi",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Categoria",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Valores"
+                  },
+                  {
+                    "option": "Estrutura"
+                  },
+                  {
+                    "option": "Historia"
+                  },
+                  {
+                    "option": "Cargo"
+                  },
+                  {
+                    "option": "Evento"
+                  },
+                  {
+                    "option": "Processo"
+                  },
+                  {
+                    "option": "Geral"
+                  },
+                  {
+                    "option": "Modelos"
+                  },
+                  {
+                    "option": "Membros"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Tags",
+              "placeholder": "Ex: valores, pilares, fundamentos"
+            },
+            {
+              "fieldLabel": "Conteudo",
+              "fieldType": "textarea",
+              "placeholder": "Escreva o conteÃºdo completo aqui.",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0fa9275b-626b-41a4-9341-2d309a19b8ae",
+      "name": "Formulario",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        188224,
+        70832
+      ],
+      "webhookId": "3a285978-9b7c-4163-8bd4-acd2683a18a9"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\nconst titulo   = (d['Titulo']   || '').trim();\nconst conteudo = (d['Conteudo'] || '').trim();\nconst categoria= (d['Categoria']|| 'Geral').trim();\nconst tagsRaw  = (d['Tags']     || '').trim();\nconst tags     = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];\nconst texto    = titulo + '\\n\\n' + conteudo;\nreturn [{ titulo, conteudo, categoria, tags, texto }];"
+      },
+      "id": "49932e7e-d55e-4954-aeb2-0985dbfc5b54",
+      "name": "Preparar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        188464,
+        70832
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "text-embedding-3-small"
+            },
+            {
+              "name": "input",
+              "value": "={{ $json.texto }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "50c692e1-ea03-4960-b4e9-7f886de3569b",
+      "name": "Gerar Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        188688,
+        70832
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const prep      = $('Preparar').item.json;\nconst embedding = $json.data[0].embedding;\nreturn [{\n  titulo:    prep.titulo,\n  conteudo:  prep.conteudo,\n  categoria: prep.categoria,\n  tags:      prep.tags,\n  embedding: '[' + embedding.join(',') + ']'\n}];"
+      },
+      "id": "4e524771-0cb5-444a-b6b0-a89ab13f027f",
+      "name": "Montar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        188928,
+        70832
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO msy_knowledge (titulo, conteudo, categoria, tags, ativo, embedding, criado_em, atualizado_em) VALUES ('{{ $json.titulo }}', '{{ $json.conteudo }}', '{{ $json.categoria }}', ARRAY[{{ $json.tags.map(t => \"'\" + t + \"'\").join(',') }}]::text[], true, '{{ $json.embedding }}'::vector, now(), now());",
+        "options": {}
+      },
+      "id": "09bf191a-e1a7-480f-9155-e3415414312e",
+      "name": "Salvar Supabase",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        189136,
+        70832
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "LJ9JIT8TqQRvPsou",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst d  = $input.first().json;\nconst oc = d.orchestrator;\n\nconst baseInst = oc.usarBase\n  ? 'Consulte o contexto institucional da MSY: valores, estrutura, membros, histÃ³ria.'\n  : 'Responda com base no conhecimento geral da Ordem Masayoshi.';\n\nconst ctx = `UsuÃ¡rio: ${d.userCtxString}\\nTipo: ${oc.tipo} | Ãrea: ${oc.area} | Complexidade: ${oc.complexidade}`;\n\nconst sCorvus = `VocÃª Ã© CORVUS â€” agente institucional da Ordem Masayoshi. ${baseInst}\\n${ctx}\\nResposta precisa, direta e institucional. Para perguntas simples, responda curto. Para comparacao, explicacao, ranking, decisao, plano, estudo, diagnostico, estrategia ou analise, entregue resposta premium: sintese objetiva, estrutura visual clara, tabelas quando houver comparacao real, criterios quando precisar avaliar opcoes, ranking quando existir hierarquia, checklist ou plano de acao quando houver execucao, e conclusao/recomendacao/proximos passos. Nao exponha raciocinio interno literal.`;\nconst sFenrir = `VocÃª Ã© CORVUS modo FENRIR â€” lado criativo da Ordem Masayoshi. ${baseInst}\\n${ctx}\\nVisÃ£o criativa, expansiva, inspiradora. MÃ¡ximo 8 linhas.`;\nconst sCipher = `VocÃª Ã© CORVUS modo CIPHER â€” estrategista da Ordem Masayoshi. ${baseInst}\\n${ctx}\\nEstruture: **AnÃ¡lise** â†’ **Riscos** â†’ **RecomendaÃ§Ã£o** â†’ **PrÃ³ximos Passos**.`;\n\n// PrÃ©-serializa os bodies completos â€” evita problema de expressÃ£o dentro de JSON\nconst bodyCorvus = JSON.stringify({\n  model:'gpt-4o', temperature:0.3, max_tokens:1200,\n  messages:[{role:'system',content:sCorvus},{role:'user',content:d.message}]\n});\nconst bodyFenrir = JSON.stringify({\n  model:'gpt-4o', temperature:1.0, max_tokens:700,\n  messages:[{role:'system',content:sFenrir},{role:'user',content:d.message}]\n});\nconst bodyCipher = JSON.stringify({\n  model:'gpt-4o', temperature:0.5, max_tokens:800,\n  messages:[{role:'system',content:sCipher},{role:'user',content:d.message}]\n});\n\nreturn [{\n  _message:       d.message,\n  _userId:        d.userId,\n  _sessionId:     d.sessionId,\n  _memoryKey:     d.memoryKey,\n  _orchestrator:  JSON.stringify(oc),\n  _bodyCorvus:    bodyCorvus,\n  _bodyFenrir:    bodyFenrir,\n  _bodyCipher:    bodyCipher\n}];\n"
+      },
+      "id": "1fe18b9d-e297-4eb7-8f30-a90b18edc9e3",
+      "name": "Prep Conselho",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        189232,
+        70368
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "_bodyCorvus",
+              "value": "={{ $json._bodyCorvus }}"
+            },
+            {
+              "name": "_bodyFenrir",
+              "value": "={{ $json._bodyFenrir }}"
+            },
+            {
+              "name": "_bodyCipher",
+              "value": "={{ $json._bodyCipher }}"
+            },
+            {
+              "name": "_message",
+              "value": "={{ $json._message }}"
+            },
+            {
+              "name": "_userId",
+              "value": "={{ $json._userId }}"
+            },
+            {
+              "name": "_sessionId",
+              "value": "={{ $json._sessionId }}"
+            },
+            {
+              "name": "_memoryKey",
+              "value": "={{ $json._memoryKey }}"
+            },
+            {
+              "name": "_orchestrator",
+              "value": "={{ $json._orchestrator }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "83615533-573f-469e-a10e-788a5847dc73",
+      "name": "Set Corvus Body",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        189568,
+        70480
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.parse($json._bodyCorvus || '{}') }}",
+        "options": {}
+      },
+      "id": "54b8d5d7-2e29-4c0b-9f9d-7674f5b63a49",
+      "name": "Call Corvus",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        189792,
+        70480
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "_replyCorvus",
+              "value": "={{ $json.choices ? $json.choices[0].message.content : '' }}"
+            },
+            {
+              "name": "_bodyFenrir",
+              "value": "={{ $('Set Corvus Body').item.json._bodyFenrir }}"
+            },
+            {
+              "name": "_bodyCipher",
+              "value": "={{ $('Set Corvus Body').item.json._bodyCipher }}"
+            },
+            {
+              "name": "_message",
+              "value": "={{ $('Set Corvus Body').item.json._message }}"
+            },
+            {
+              "name": "_userId",
+              "value": "={{ $('Set Corvus Body').item.json._userId }}"
+            },
+            {
+              "name": "_sessionId",
+              "value": "={{ $('Set Corvus Body').item.json._sessionId }}"
+            },
+            {
+              "name": "_memoryKey",
+              "value": "={{ $('Set Corvus Body').item.json._memoryKey }}"
+            },
+            {
+              "name": "_orchestrator",
+              "value": "={{ $('Set Corvus Body').item.json._orchestrator }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d37b25f1-30e6-482f-b62e-910d874a6266",
+      "name": "Set Fenrir Body",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        189968,
+        70560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.parse($json._bodyFenrir || '{}') }}",
+        "options": {}
+      },
+      "id": "62e8ed34-0629-411f-9da6-9296206b9324",
+      "name": "Call Fenrir",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        190144,
+        70560
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "_replyCorvus",
+              "value": "={{ $('Set Fenrir Body').item.json._replyCorvus }}"
+            },
+            {
+              "name": "_replyFenrir",
+              "value": "={{ $json.choices ? $json.choices[0].message.content : '' }}"
+            },
+            {
+              "name": "_bodyCipher",
+              "value": "={{ $('Set Fenrir Body').item.json._bodyCipher }}"
+            },
+            {
+              "name": "_message",
+              "value": "={{ $('Set Fenrir Body').item.json._message }}"
+            },
+            {
+              "name": "_userId",
+              "value": "={{ $('Set Fenrir Body').item.json._userId }}"
+            },
+            {
+              "name": "_sessionId",
+              "value": "={{ $('Set Fenrir Body').item.json._sessionId }}"
+            },
+            {
+              "name": "_memoryKey",
+              "value": "={{ $('Set Fenrir Body').item.json._memoryKey }}"
+            },
+            {
+              "name": "_orchestrator",
+              "value": "={{ $('Set Fenrir Body').item.json._orchestrator }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c9f7da6e-8fc6-4f57-8841-c95bcb3ff31c",
+      "name": "Set Cipher Body",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        190288,
+        70560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.parse($json._bodyCipher || '{}') }}",
+        "options": {}
+      },
+      "id": "630eec71-92db-4309-831d-1e0579479e34",
+      "name": "Call Cipher",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        190432,
+        70560
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst d = $input.first().json;\n\nconst safeTrim = (v) => (v || '').toString().trim() || 'Sem resposta.';\n\nconst replyCorvus = safeTrim($('Set Cipher Body').item.json._replyCorvus);\nconst replyFenrir = safeTrim($('Set Cipher Body').item.json._replyFenrir);\nconst replyCipher = safeTrim(d.choices && d.choices[0]?.message?.content);\n\nlet oc = {};\ntry { oc = JSON.parse($('Set Cipher Body').item.json._orchestrator || '{}'); } catch {}\n\nreturn [{\n  consiliumPayload: {\n    isConselho: true,\n    blocks: [\n      { mode:'corvus', label:'â¬¡ Corvus', reply: replyCorvus },\n      { mode:'fenrir', label:'âš¡ Fenrir', reply: replyFenrir },\n      { mode:'cipher', label:'â—ˆ Cipher', reply: replyCipher }\n    ]\n  },\n  orchestrator: oc,\n  resolvedMode: 'conselho',\n  message:   $('Set Cipher Body').item.json._message,\n  userId:    $('Set Cipher Body').item.json._userId,\n  sessionId: $('Set Cipher Body').item.json._sessionId\n}];\n"
+      },
+      "id": "6a9c7b99-519d-4dd5-9e4c-1be50474a0ae",
+      "name": "Merge Conselho",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        190576,
+        70560
+      ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "corvus_system",
+              "value": "=VocÃª Ã© CORVUS em modo SIMULAÃ‡ÃƒO â€” analista de cenÃ¡rios da Ordem Masayoshi.\n\nVersÃ£o: 3.2 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nMISSÃƒO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nAnalisar cenÃ¡rios hipotÃ©ticos (\"e se...\") com rigor estratÃ©gico, mapeando consequÃªncias reais.\n\nCONSULTA DE BASE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Consulte buscar_base_msy para embasar o cenÃ¡rio.' : 'DESATIVADO.' }}\n\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\n\nESTRUTURA OBRIGATÃ“RIA DE RESPOSTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n**ðŸŸ¢ Melhor CenÃ¡rio**\n(o que pode acontecer de positivo)\n\n**ðŸ”´ Pior CenÃ¡rio**\n(o que pode dar errado)\n\n**âš ï¸ Riscos**\n(principais ameaÃ§as e probabilidade)\n\n**ðŸ“Š Impacto**\n(consequÃªncias diretas para a Ordem)\n\n**âœ… RecomendaÃ§Ã£o**\n(aÃ§Ã£o concreta sugerida)\n\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nAnalÃ­tico. Preciso. Sem romantizar. Baseado em evidÃªncias.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar.\n\nCONTEXTO DOCUMENTAL\n{{ $json.documentCtxString ? $json.documentCtxString : ($json.hasDocuments ? 'Documento anexado, mas nenhum texto legivel foi extraido.' : 'Nenhum documento foi anexado nesta mensagem.') }}\n\nSe houver contexto documental, use-o como fonte do arquivo anexado. Nao diga que nao consegue acessar o documento quando este bloco tiver conteudo."
+            },
+            {
+              "name": "chatInput",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "sessionId",
+              "value": "={{ $json.sessionId }}"
+            },
+            {
+              "name": "memoryKey",
+              "value": "={{ $json.memoryKey }}"
+            },
+            {
+              "name": "resolvedMode",
+              "value": "simulacao"
+            },
+            {
+              "name": "usarBase",
+              "value": "={{ $json.orchestrator.usarBase }}"
+            },
+            {
+              "name": "orchestratorData",
+              "value": "={{ JSON.stringify($json.orchestrator) }}"
+            },
+            {
+              "name": "visualContext",
+              "value": "={{ JSON.stringify($json.visualContext || null) }}"
+            },
+            {
+              "name": "visualCtxString",
+              "value": "={{ $json.visualCtxString || \"\" }}"
+            },
+            {
+              "name": "usedVision",
+              "value": "={{ $json.usedVision === true }}"
+            },
+            {
+              "name": "documentContext",
+              "value": "={{ JSON.stringify($json.documentContext || null) }}"
+            },
+            {
+              "name": "documentCtxString",
+              "value": "={{ $json.documentCtxString || \"\" }}"
+            },
+            {
+              "name": "hasDocuments",
+              "value": "={{ $json.hasDocuments === true }}"
+            },
+            {
+              "name": "hasImages",
+              "value": "={{ $json.hasImages === true }}"
+            },
+            {
+              "name": "visionError",
+              "value": "={{ $json.visionError || \"\" }}"
+            },
+            {
+              "name": "imageAttachments",
+              "value": "={{ JSON.stringify($json.imageAttachments || []) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c7f0e7e5-b4d2-4764-aee7-e406ca113f9f",
+      "name": "Set Simulacao Prompt",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        190144,
+        70976
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}\n",
+        "options": {
+          "systemMessage": "={{ $json.corvus_system }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        190496,
+        71216
+      ],
+      "id": "600d34c7-2ec6-4f2f-a3d8-a5f009f4c2d8",
+      "name": "AI Agent (Simulacao)"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        190496,
+        71360
+      ],
+      "id": "01555368-6915-4e24-b070-75ee9e83f76a",
+      "name": "GPT-4o (Simulacao)",
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.memoryKey }}",
+        "tableName": "msy_memoria_chat"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        190592,
+        71360
+      ],
+      "id": "94f125d2-f301-4381-bb86-8a275baef214",
+      "name": "Memory (Simulacao)",
+      "credentials": {
+        "postgres": {
+          "id": "LJ9JIT8TqQRvPsou",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "vision-yes",
+                    "leftValue": "={{ Array.isArray($json.imageAttachments) && $json.imageAttachments.length > 0 && !$json.visualContext && !$json.visualCtxString ? 'analyze' : 'skip' }}",
+                    "rightValue": "analyze",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "vision-no",
+                    "leftValue": "={{ Array.isArray($json.imageAttachments) && $json.imageAttachments.length > 0 && !$json.visualContext && !$json.visualCtxString ? 'analyze' : 'skip' }}",
+                    "rightValue": "skip",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "64bd655d-3b6c-412c-b533-db132ccf884f",
+      "name": "Vision Gate",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        187264,
+        70048
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/responses",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: 'gpt-4o-mini', temperature: 0, max_output_tokens: 700, input: [{ role: 'user', content: [{ type: 'input_text', text: 'Analise as imagens anexadas para o Corvus. Responda SOMENTE JSON valido com: ocrText, description, relevantItems, limitations, confidence. Foque em OCR e analise geral. Mensagem do usuario: ' + ($json.message || '') }, ...($json.imageAttachments || []).map((image) => ({ type: 'input_image', image_url: image.dataUrl || image.imageUrl || image.url || image.signedUrl, detail: 'auto' }))] }] } }}",
+        "options": {}
+      },
+      "id": "d3d228ba-1e69-4750-aba0-42bc8c4fb090",
+      "name": "Vision Analyzer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        187504,
+        69936
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst base = $('Normalize Input').item.json;\nconst raw = $json;\n\nfunction firstText(value) {\n  if (typeof value?.output_text === 'string') return value.output_text;\n  const output = Array.isArray(value?.output) ? value.output : [];\n  for (const item of output) {\n    const content = Array.isArray(item.content) ? item.content : [];\n    for (const part of content) {\n      if (typeof part.text === 'string') return part.text;\n      if (typeof part.value === 'string') return part.value;\n    }\n  }\n  return '';\n}\n\nfunction parseJson(text) {\n  try { return JSON.parse(text); } catch {}\n  const fence = String.fromCharCode(96, 96, 96);\n  const clean = text\n    .replace(new RegExp('^' + fence + '(?:json)?', 'i'), '')\n    .replace(new RegExp(fence + '$', 'i'), '')\n    .trim();\n  try { return JSON.parse(clean); } catch {}\n  return null;\n}\n\nconst text = firstText(raw).trim();\nif (!text) {\n  return [{\n    ...base,\n    visualContext: base.visualContext || null,\n    visualCtxString: base.visualCtxString || '',\n    usedVision: Boolean(base.visualContext || base.visualCtxString),\n    visionError: raw.error?.message || raw.message || 'Vision Analyzer nao retornou contexto visual.',\n  }];\n}\n\nconst parsed = parseJson(text) || {};\nconst visualContext = {\n  ocrText: (parsed.ocrText || parsed.ocr || '').toString().trim(),\n  description: (parsed.description || parsed.descricao || text || '').toString().trim(),\n  relevantItems: Array.isArray(parsed.relevantItems) ? parsed.relevantItems.slice(0, 8) : [],\n  limitations: (parsed.limitations || parsed.limits || '').toString().trim(),\n  confidence: Number(parsed.confidence || parsed.confianca || 0.7),\n};\nconst visualCtxString = [\n  'OCR: ' + (visualContext.ocrText || 'sem texto detectado'),\n  'Descricao: ' + (visualContext.description || ''),\n  'Itens: ' + ((visualContext.relevantItems || []).join(', ') || '-'),\n  'Limitacoes: ' + (visualContext.limitations || '-'),\n  Number.isFinite(visualContext.confidence) ? 'Confianca: ' + visualContext.confidence : '',\n].filter(Boolean).join('\\n');\n\nreturn [{ ...base, visualContext, visualCtxString, usedVision: Boolean(visualCtxString), hasImages: true }];\n"
+      },
+      "id": "cf1a6802-91bb-4e5b-a105-84d7c01a475f",
+      "name": "Vision Context Merge",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        187744,
+        69936
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst item = $json;\nconst text = (item.message || '').toString();\nconst lower = text.toLowerCase();\nconst visual = item.visualContext || null;\nconst docs = item.documentContext || null;\nconst documentText = (item.documentCtxString || docs?.text || '').toString();\nconst hasVision = Boolean(visual?.description || visual?.ocrText || item.visualCtxString);\nconst hasDocuments = Boolean(documentText);\n\nconst institutionalWords = ['msy','masayoshi','ordem','membro','cargo','lideranca','lideranÃ§a','evento','valores','nevermind','britannia','corvus'];\nconst decisionWords = ['decidir','decisao','decisÃ£o','risco','estrategia','estratÃ©gia','aprovar','planejar','prioridade','problema'];\nconst creativeWords = ['ideia','crie','campanha','texto','roteiro','post','criativo','brainstorm'];\nconst simulationWords = ['e se','simula','simular','imagine que','o que aconteceria','cenario','cenÃ¡rio'];\n\nconst hasInstitutional = institutionalWords.some((word) => lower.includes(word));\nconst hasDecision = decisionWords.some((word) => lower.includes(word));\nconst hasCreative = creativeWords.some((word) => lower.includes(word));\nconst hasSimulation = simulationWords.some((word) => lower.includes(word));\nconst shortCasual = lower.length <= 80 && /^(oi|ola|olÃ¡|bom dia|boa tarde|boa noite|valeu|obrigado|teste)\\b/.test(lower);\nconst manualMode = ['corvus','fenrir','cipher','conselho','simulacao'].includes(item.modo) ? item.modo : '';\n\nlet tipo = 'geral';\nlet area = hasInstitutional ? 'estrutura' : 'geral';\nlet complexidade = lower.length > 550 || hasDecision ? 'alta' : (lower.length > 180 ? 'media' : 'baixa');\nlet modo_sugerido = manualMode || 'corvus';\nif (!manualMode && hasSimulation) modo_sugerido = 'simulacao';\nelse if (!manualMode && hasCreative) modo_sugerido = 'fenrir';\nelse if (!manualMode && hasDecision) modo_sugerido = 'cipher';\n\nif (hasSimulation) tipo = 'simulacao';\nelse if (hasDecision) tipo = 'decisao';\nelse if (hasCreative) tipo = 'ideia';\nelse if (hasInstitutional) tipo = 'pergunta';\n\nconst visualText = (visual?.ocrText || '') + ' ' + (visual?.description || '') + ' ' + documentText;\nconst classifier = {\n  tipo,\n  area,\n  complexidade,\n  usarBase: hasInstitutional || (hasVision && /msy|masayoshi|ordem|cargo|membro/i.test(visualText)),\n  usarMemoria: !shortCasual,\n  modo_sugerido,\n  ehSimulacao: hasSimulation,\n  ehDecisao: hasDecision,\n};\n\nconst confidence = shortCasual ? 0.95 : (hasVision || hasDocuments || hasInstitutional || hasDecision || hasCreative || hasSimulation ? 0.86 : 0.72);\nreturn [{ ...item, fastRoute: { skipClassifier: confidence >= 0.8, confidence, classifier } }];\n"
+      },
+      "id": "eb2e409b-bd8c-4959-a6b4-4919c03b4f8b",
+      "name": "Fast Router",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        187984,
+        70048
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "skip-classifier",
+                    "leftValue": "={{ $json.fastRoute && $json.fastRoute.skipClassifier ? 'skip' : 'classify' }}",
+                    "rightValue": "skip",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "run-classifier",
+                    "leftValue": "={{ $json.fastRoute && $json.fastRoute.skipClassifier ? 'skip' : 'classify' }}",
+                    "rightValue": "classify",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f0425696-826b-424b-9e47-b19d82e0b73f",
+      "name": "Classifier Gate",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        188224,
+        70048
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Chat": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "Vision Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LLM Classifier": {
+      "main": [
+        [
+          {
+            "node": "Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Orchestrator": {
+      "main": [
+        [
+          {
+            "node": "Mode Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mode Switch": {
+      "main": [
+        [
+          {
+            "node": "Set Fenrir Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Cipher Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prep Conselho",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Corvus Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Simulacao Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Fenrir Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Agent (Fenrir)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Cipher Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Agent (Cipher)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Corvus Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Agent (Corvus)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent (Fenrir)": {
+      "main": [
+        [
+          {
+            "node": "Decision Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent (Cipher)": {
+      "main": [
+        [
+          {
+            "node": "Decision Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent (Corvus)": {
+      "main": [
+        [
+          {
+            "node": "Decision Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Processor": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o (Fenrir)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent (Fenrir)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o (Cipher)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent (Cipher)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o (Corvus)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent (Corvus)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory (Fenrir)": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent (Fenrir)",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory (Cipher)": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent (Cipher)",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory (Corvus)": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent (Corvus)",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VectorStore (Fenrir)": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent (Fenrir)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VectorStore (Cipher)": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent (Cipher)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VectorStore (Corvus)": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent (Corvus)",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings (Fenrir)": {
+      "ai_embedding": [
+        [
+          {
+            "node": "VectorStore (Fenrir)",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings (Cipher)": {
+      "ai_embedding": [
+        [
+          {
+            "node": "VectorStore (Cipher)",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings (Corvus)": {
+      "ai_embedding": [
+        [
+          {
+            "node": "VectorStore (Corvus)",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formulario": {
+      "main": [
+        [
+          {
+            "node": "Preparar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar": {
+      "main": [
+        [
+          {
+            "node": "Gerar Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar Embedding": {
+      "main": [
+        [
+          {
+            "node": "Montar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar": {
+      "main": [
+        [
+          {
+            "node": "Salvar Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decision Log": {
+      "main": [
+        [
+          {
+            "node": "Post Processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Conselho": {
+      "main": [
+        [
+          {
+            "node": "Set Corvus Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Corvus Body": {
+      "main": [
+        [
+          {
+            "node": "Call Corvus",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Corvus": {
+      "main": [
+        [
+          {
+            "node": "Set Fenrir Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Fenrir Body": {
+      "main": [
+        [
+          {
+            "node": "Call Fenrir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Fenrir": {
+      "main": [
+        [
+          {
+            "node": "Set Cipher Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Cipher Body": {
+      "main": [
+        [
+          {
+            "node": "Call Cipher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Cipher": {
+      "main": [
+        [
+          {
+            "node": "Merge Conselho",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Conselho": {
+      "main": [
+        [
+          {
+            "node": "Decision Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Simulacao Prompt": {
+      "main": [
+        [
+          {
+            "node": "AI Agent (Simulacao)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent (Simulacao)": {
+      "main": [
+        [
+          {
+            "node": "Decision Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o (Simulacao)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent (Simulacao)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory (Simulacao)": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent (Simulacao)",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vision Gate": {
+      "main": [
+        [
+          {
+            "node": "Vision Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fast Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vision Analyzer": {
+      "main": [
+        [
+          {
+            "node": "Vision Context Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vision Context Merge": {
+      "main": [
+        [
+          {
+            "node": "Fast Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fast Router": {
+      "main": [
+        [
+          {
+            "node": "Classifier Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classifier Gate": {
+      "main": [
+        [
+          {
+            "node": "Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "LLM Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "f810c9c3-6c08-43e1-bff0-df97d0dfdea6",
+  "meta": {
+    "instanceId": "a7f0e0d215509525dd33ac10745deb3c6ff572ae61fd8e56fb38099ee12d38ed"
+  },
+  "id": "9JgXXQhmrj_Q2YUE91YpM",
+  "tags": []
+}

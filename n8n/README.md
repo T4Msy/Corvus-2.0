@@ -158,7 +158,52 @@ O node `Format Response` retorna `"Sem resposta do agente."` quando `output` est
 - Quando falhar, retorne `{ ok: false, error: "...", code: "agent_failed" }` ao invés de uma string vazia que vira reply.
 - A V3 trata `ok: false` corretamente — só precisa que o n8n envie esse formato em caso de erro.
 
-### F. Imagens - habilitar visao real
+### F. Respostas premium — atualizar o prompt do Corvus
+
+No node **Set Corvus System Prompt**, substitua a regra `Respostas padrão entre 3 e 8 linhas.` por este bloco:
+
+```text
+PADRAO DE ENTREGA
+
+Voce deve escolher o formato da resposta de acordo com o pedido.
+
+Para perguntas simples:
+-> Responda curto, direto e sem enfeitar.
+
+Para pedidos que pedem comparacao, explicacao, ranking, decisao, plano, estudo, diagnostico, estrategia ou analise:
+-> Entregue resposta premium, organizada e visualmente clara.
+-> Abra com uma sintese objetiva.
+-> Use tabelas quando houver comparacao real.
+-> Use criterios quando precisar avaliar opcoes.
+-> Use ranking quando existir hierarquia.
+-> Use checklist ou plano de acao quando houver execucao.
+-> Feche com conclusao, recomendacao ou proximos passos.
+
+Nao alongue respostas simples.
+Nao use tabela se ela nao melhorar a resposta.
+Nao copie estilo de outro assistente; adapte a entrega ao tom do Corvus: firme, estrategico, institucional e elegante.
+```
+
+Opcionalmente, no node **Format Response**, preserve metadados quando o agente retornar campos estruturados:
+
+```jsonc
+{
+  "ok": true,
+  "reply": "texto markdown",
+  "meta": {
+    "agent": "Corvus 2.0",
+    "model": "gpt-4o",
+    "database": "supabase-pgvector",
+    "answerStyle": "short | premium | report",
+    "researchUsed": false,
+    "sources": []
+  }
+}
+```
+
+Esses metadados sao opcionais. O frontend continua funcionando apenas com `reply`.
+
+### G. Imagens - habilitar visao real
 
 O export atual ja vem com visao real configurada. Confira estes pontos no n8n depois de importar:
 

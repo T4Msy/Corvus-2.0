@@ -93,6 +93,14 @@ export interface ChatSuccessResponse {
     agent?: string;
     model?: string;
     database?: string;
+    answerStyle?: "short" | "premium" | "report";
+    researchUsed?: boolean;
+    sources?: Array<{
+      title: string;
+      url: string;
+      publisher?: string;
+      date?: string;
+    }>;
     [key: string]: unknown;
   };
 }
