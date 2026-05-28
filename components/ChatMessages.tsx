@@ -375,6 +375,7 @@ function MessageBubble({
     if (!isCorvus) return "";
     return renderSafeMarkdown(message.text);
   }, [isCorvus, message.text]);
+  const hasTable = isCorvus && html.includes("<table");
 
   useEffect(() => {
     const container = markdownRef.current;
@@ -442,7 +443,7 @@ function MessageBubble({
 
   return (
     <motion.article
-      className={`message-row thread-message ${isCorvus ? "corvus" : "user"}`}
+      className={`message-row thread-message ${isCorvus ? "corvus" : "user"}${hasTable ? " has-table" : ""}`}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}

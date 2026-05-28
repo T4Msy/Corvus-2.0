@@ -13020,9 +13020,26 @@ body {
   background: color-mix(in srgb, var(--bg-elev-1) 82%, transparent);
 }
 
+.message-row.thread-message.corvus.has-table {
+  width: min(1120px, calc(100vw - var(--sidebar-w, 0px) - 96px)) !important;
+  max-width: min(1120px, calc(100vw - var(--sidebar-w, 0px) - 96px)) !important;
+}
+
+.message-row.corvus.has-table .message-card,
+.message-row.corvus.has-table .assistant-card {
+  width: 100%;
+  max-width: 100%;
+}
+
+.message-row.corvus.has-table .assistant-answer,
+.message-row.corvus.has-table .message-text.markdown {
+  width: 100%;
+  max-width: 100%;
+}
+
 .message-text.markdown .markdown-table-wrap table {
   margin: 0;
-  min-width: min(680px, 100%);
+  min-width: 760px;
   border: 0;
   border-radius: 0;
 }
@@ -13081,6 +13098,11 @@ body {
 }
 
 @media (max-width: 560px) {
+  .message-row.thread-message.corvus.has-table {
+    width: min(100%, calc(100vw - 20px)) !important;
+    max-width: min(100%, calc(100vw - 20px)) !important;
+  }
+
   .thinking-card {
     gap: 10px;
     padding: 12px;
