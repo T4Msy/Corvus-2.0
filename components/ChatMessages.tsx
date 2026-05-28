@@ -58,7 +58,7 @@ hljs.registerLanguage("yml", hljsYaml);
 
 const COPY_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`;
 
-type PendingContext = "default" | "image" | "document" | "mixed";
+type PendingContext = "default" | "comparison" | "image" | "document" | "mixed";
 
 const PROGRESS_STEPS: Record<PendingContext, string[]> = {
   default: [
@@ -66,28 +66,35 @@ const PROGRESS_STEPS: Record<PendingContext, string[]> = {
     "Definindo a melhor estrutura",
     "Organizando os pontos principais",
     "Montando a resposta",
-    "Refinando a conclusao",
+    "Finalizando a resposta",
+  ],
+  comparison: [
+    "Analisando o comparativo",
+    "Separando os criterios",
+    "Montando a tabela",
+    "Ordenando do maior para o menor",
+    "Finalizando a conclusao",
   ],
   image: [
     "Analisando a imagem",
     "Extraindo os sinais principais",
     "Conectando imagem e pedido",
     "Montando a resposta",
-    "Refinando a conclusao",
+    "Finalizando a resposta",
   ],
   document: [
     "Lendo o documento",
     "Separando os pontos relevantes",
     "Organizando os criterios",
     "Montando a resposta",
-    "Refinando a conclusao",
+    "Finalizando a resposta",
   ],
   mixed: [
     "Consolidando os materiais",
     "Cruzando anexos e pedido",
     "Escolhendo a melhor estrutura",
     "Montando a resposta",
-    "Refinando a conclusao",
+    "Finalizando a resposta",
   ],
 };
 
@@ -700,7 +707,7 @@ function TypingIndicator({
   useEffect(() => {
     setStepIndex(0);
     const timer = window.setInterval(() => {
-      setStepIndex((current) => (current + 1) % steps.length);
+      setStepIndex((current) => Math.min(current + 1, steps.length - 1));
     }, 1850);
     return () => window.clearInterval(timer);
   }, [context, steps]);
@@ -766,7 +773,14 @@ function getPendingContext(messages: ChatMessage[]): PendingContext {
   if (hasImages && hasDocuments) return "mixed";
   if (hasImages) return "image";
   if (hasDocuments) return "document";
+  if (isComparisonPrompt(lastUserMessage?.text ?? "")) return "comparison";
   return "default";
+}
+
+function isComparisonPrompt(text: string): boolean {
+  return /\b(compar\w*|tabela|ranking|rankear|maior|menor|melhor|piores?|melhores?|hierarqu\w*|ordem|cargos?|funcoes?|diferencas?|vs\.?|versus)\b/i.test(
+    text.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  );
 }
 
 const SKELETON_ROWS = [
