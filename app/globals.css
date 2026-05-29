@@ -11703,34 +11703,6 @@ body {
   padding-inline: 10px;
 }
 
-.home-suggestion-row {
-  width: min(760px, 100%);
-  max-width: 100%;
-  margin: 10px auto 0;
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.home-suggestion-pill {
-  width: 100%;
-  min-width: 0;
-  min-height: 36px;
-  padding: 0 12px;
-  border-radius: 12px;
-  justify-content: center;
-  color: var(--ui-muted);
-  background: var(--ui-panel-soft);
-  background-image: none;
-}
-
-.home-suggestion-pill span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .profile-card,
 .settings-profile-card,
 .attachment-item,

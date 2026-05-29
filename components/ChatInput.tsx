@@ -36,35 +36,9 @@ interface Props {
   onOpenAttachment?: (attachment: ConversationAttachment) => void;
   onRemoveAttachment?: (attachment: ConversationAttachment) => void;
   syncStatus: SyncStatusType;
-  showSuggestions?: boolean;
 }
 
 const MAX_HEIGHT = 200;
-const HOME_SUGGESTIONS = [
-  {
-    label: "Código",
-    prompt:
-      "Ajude com uma tarefa de código de forma objetiva, explicando apenas o necessário.",
-  },
-  {
-    label: "Aprender",
-    prompt: "Explique este tema de forma clara, estruturada e progressiva.",
-  },
-  {
-    label: "Estratégias",
-    prompt:
-      "Analise este contexto estrategicamente, com opções, tradeoffs e próximos passos.",
-  },
-  {
-    label: "Escrever",
-    prompt:
-      "Ajude a escrever ou revisar um texto com clareza, elegância e precisão.",
-  },
-  {
-    label: "Assuntos pessoais",
-    prompt: "Ajude a organizar um assunto pessoal com discrição e praticidade.",
-  },
-];
 
 export function ChatInput({
   mode,
@@ -79,7 +53,6 @@ export function ChatInput({
   onOpenAttachment,
   onRemoveAttachment,
   syncStatus,
-  showSuggestions = false,
 }: Props) {
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
@@ -307,21 +280,6 @@ export function ChatInput({
           </div>
         </div>
       </div>
-      {showSuggestions && (
-        <div className="home-suggestion-row" aria-label="Sugestões">
-          {HOME_SUGGESTIONS.map((suggestion) => (
-            <button
-              key={suggestion.label}
-              type="button"
-              className="home-suggestion-pill"
-              disabled={disabled}
-              onClick={() => onSend(suggestion.prompt)}
-            >
-              <span>{suggestion.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
     </motion.footer>
   );
 }
