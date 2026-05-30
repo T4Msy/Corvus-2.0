@@ -3396,3 +3396,34 @@ html[data-theme="light"] .boot-mark > span {
     max-width: 44px !important;
   }
 }
+
+/* Sugestoes do home alinhadas com a largura do composer. */
+.home-suggestion-row {
+  width: min(900px, calc(100vw - 32px)) !important;
+  max-width: 100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  overflow: visible !important;
+  padding: 0 !important;
+}
+
+.home-suggestion-pill {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  flex: 1 1 0 !important;
+}
+
+@media (max-width: 768px) {
+  .home-suggestion-row {
+    display: flex !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+    padding-bottom: 2px !important;
+  }
+
+  .home-suggestion-pill {
+    flex: 0 0 min(46vw, 168px) !important;
+  }
+}
