@@ -2243,7 +2243,8 @@ function BootScreen({ logoSrc }: { logoSrc: string }) {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4 }}
       >
-        <Image src={logoSrc} alt="Corvus" width={50} height={50} priority />
+        <Image className="boot-logo-dark" src={logoSrc} alt="Corvus" width={50} height={50} priority />
+        <Image className="boot-logo-light" src="/corvuslogolight.png" alt="Corvus" width={50} height={50} priority />
         <span />
       </motion.div>
     </main>
