@@ -75,7 +75,7 @@ export function useTheme() {
     }
   }, []);
 
-  const logoSrc = resolved === "light" ? "/corvuslogo.png" : "/corvuslogolight.png";
+  const logoSrc = resolved === "light" ? "/corvuslogolight.png" : "/corvuslogo.png";
 
   return { preference, resolved, setPreference, logoSrc };
 }
