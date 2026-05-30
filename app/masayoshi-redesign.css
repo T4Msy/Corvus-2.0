@@ -3403,16 +3403,26 @@ html[data-theme="light"] .boot-mark > span {
   max-width: 100% !important;
   display: grid !important;
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  gap: 12px !important;
+  gap: 2px !important;
   overflow: visible !important;
   padding: 0 !important;
 }
 
 .home-suggestion-pill {
   width: 100% !important;
+  height: 42px !important;
   min-width: 0 !important;
   max-width: none !important;
   flex: 1 1 0 !important;
+  border-radius: 0 !important;
+}
+
+.home-suggestion-pill:first-child {
+  border-radius: 12px 0 0 12px !important;
+}
+
+.home-suggestion-pill:last-child {
+  border-radius: 0 12px 12px 0 !important;
 }
 
 @media (max-width: 768px) {
