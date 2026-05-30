@@ -1836,6 +1836,7 @@ export function ChatApp() {
             onOpenAttachment={(attachment) => void openAttachment(attachment)}
             onRemoveAttachment={(attachment) => void removeAttachment(attachment)}
             syncStatus={conversations.syncStatus}
+            showSuggestions={emptyHome}
           />
         </main>
       </section>

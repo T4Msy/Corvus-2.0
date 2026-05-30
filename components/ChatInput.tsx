@@ -36,9 +36,27 @@ interface Props {
   onOpenAttachment?: (attachment: ConversationAttachment) => void;
   onRemoveAttachment?: (attachment: ConversationAttachment) => void;
   syncStatus: SyncStatusType;
+  showSuggestions?: boolean;
 }
 
 const MAX_HEIGHT = 200;
+const HOME_SUGGESTIONS = [
+  {
+    label: "Tese MSY",
+    prompt:
+      "Estruture uma tese institucional para a Masayoshi, com contexto, riscos, assimetrias e próximos passos.",
+  },
+  {
+    label: "Operação",
+    prompt:
+      "Analise esta operação com foco em execução, prioridades, riscos operacionais e decisão objetiva.",
+  },
+  {
+    label: "Inteligência",
+    prompt:
+      "Organize esta informação em um briefing executivo para a Masayoshi, com sinais relevantes e implicações.",
+  },
+];
 
 export function ChatInput({
   mode,
@@ -53,6 +71,7 @@ export function ChatInput({
   onOpenAttachment,
   onRemoveAttachment,
   syncStatus,
+  showSuggestions = false,
 }: Props) {
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
@@ -280,6 +299,21 @@ export function ChatInput({
           </div>
         </div>
       </div>
+      {showSuggestions && (
+        <div className="home-suggestion-row" aria-label="Sugestões">
+          {HOME_SUGGESTIONS.map((suggestion) => (
+            <button
+              key={suggestion.label}
+              type="button"
+              className="home-suggestion-pill"
+              disabled={disabled}
+              onClick={() => onSend(suggestion.prompt)}
+            >
+              <span>{suggestion.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </motion.footer>
   );
 }

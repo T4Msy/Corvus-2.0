@@ -11703,6 +11703,34 @@ body {
   padding-inline: 10px;
 }
 
+.home-suggestion-row {
+  width: min(760px, 100%);
+  max-width: 100%;
+  margin: 10px auto 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.home-suggestion-pill {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 12px;
+  justify-content: center;
+  color: var(--ui-muted);
+  background: var(--ui-panel-soft);
+  background-image: none;
+}
+
+.home-suggestion-pill span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .profile-card,
 .settings-profile-card,
 .attachment-item,
@@ -13066,6 +13094,35 @@ body {
   100% {
     transform: translateX(110%);
     opacity: 0;
+  }
+}
+
+/* Correcao: mantem o menu de agentes dentro da tela em celulares estreitos. */
+.composer-toolbar,
+.composer-dock,
+.composer-send-group,
+.agent-picker,
+.compact-agent-picker {
+  overflow: visible;
+}
+
+.composer-send-group .agent-picker,
+.composer-send-group .compact-agent-picker {
+  position: relative;
+}
+
+.composer-send-group .agent-menu {
+  left: auto !important;
+  right: 0 !important;
+  width: max-content;
+  min-width: 196px;
+  max-width: min(240px, calc(100vw - 28px));
+}
+
+@media (max-width: 520px) {
+  .composer-send-group .agent-menu {
+    right: 0 !important;
+    min-width: min(196px, calc(100vw - 28px));
   }
 }
 
