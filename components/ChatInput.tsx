@@ -42,19 +42,19 @@ interface Props {
 const MAX_HEIGHT = 200;
 const HOME_SUGGESTIONS = [
   {
-    label: "Tese MSY",
+    label: "O que é Masayoshi",
     prompt:
-      "Estruture uma tese institucional para a Masayoshi, com contexto, riscos, assimetrias e próximos passos.",
+      "Explique o que é a Masayoshi de forma clara, objetiva e institucional.",
   },
   {
-    label: "Operação",
+    label: "Estrutura",
     prompt:
-      "Analise esta operação com foco em execução, prioridades, riscos operacionais e decisão objetiva.",
+      "Explique a estrutura da Masayoshi, incluindo áreas, funcionamento e responsabilidades principais.",
   },
   {
-    label: "Inteligência",
+    label: "Cargos",
     prompt:
-      "Organize esta informação em um briefing executivo para a Masayoshi, com sinais relevantes e implicações.",
+      "Liste e explique os cargos da Masayoshi, com responsabilidades e função de cada posição.",
   },
 ];
 
