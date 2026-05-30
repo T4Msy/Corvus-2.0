@@ -13126,6 +13126,221 @@ body {
   }
 }
 
+/* Tema claro final: o atributo fica no body, entao esta camada vence fundos escuros antigos. */
+body[data-theme="light"] {
+  --bg: #f7f5f2;
+  --bg-elev-0: #ffffff;
+  --bg-elev-1: #fbfaf8;
+  --bg-elev-2: #f1efec;
+  --bg-elev-3: #e8e3de;
+  --surface: #ffffff;
+  --surface-muted: #f4f1ed;
+  --surface-hover: rgba(22, 18, 20, 0.06);
+  --surface-active: rgba(22, 18, 20, 0.09);
+  --border: rgba(22, 18, 20, 0.1);
+  --border-subtle: rgba(22, 18, 20, 0.075);
+  --border-strong: rgba(22, 18, 20, 0.18);
+  --text-strong: #111014;
+  --text: #201b1f;
+  --text-muted: #625b62;
+  --text-dim: #8b838b;
+  --fx-bg-canvas: #f7f5f2;
+  --fx-bg-subtle: #eeeae5;
+  --fx-surface-0: rgba(255, 255, 255, 0.76);
+  --fx-surface-1: rgba(255, 255, 255, 0.9);
+  --fx-surface-2: #ffffff;
+  --fx-surface-solid: #ffffff;
+  --fx-surface-glass: rgba(255, 255, 255, 0.82);
+  --fx-surface-glass-strong: rgba(255, 255, 255, 0.94);
+  --fx-surface-hover: rgba(22, 18, 20, 0.055);
+  --fx-surface-active: rgba(22, 18, 20, 0.085);
+  --fx-border-soft: rgba(22, 18, 20, 0.075);
+  --fx-border: rgba(22, 18, 20, 0.11);
+  --fx-border-strong: rgba(22, 18, 20, 0.18);
+  --fx-text-1: #111014;
+  --fx-text-2: #2d272d;
+  --fx-text-3: #6f6870;
+  --fx-text-4: #9c949c;
+  --ui-bg: #f7f5f2;
+  --ui-panel: rgba(255, 255, 255, 0.92);
+  --ui-panel-solid: #ffffff;
+  --ui-panel-soft: rgba(22, 18, 20, 0.045);
+  --ui-panel-hover: rgba(22, 18, 20, 0.07);
+  --ui-border: rgba(22, 18, 20, 0.11);
+  --ui-border-strong: rgba(22, 18, 20, 0.18);
+  --ui-text: #171416;
+  --ui-muted: #625b62;
+  --ui-dim: #928a92;
+  --shadow-lg: 0 18px 44px -34px rgba(22, 18, 20, 0.28);
+  --shadow-xl: 0 24px 60px -38px rgba(22, 18, 20, 0.32);
+  background:
+    radial-gradient(circle at 50% -16%, rgba(214, 32, 67, 0.06), transparent 34%),
+    linear-gradient(180deg, #ffffff 0%, #f7f5f2 42%, #f1eee9 100%) !important;
+  color: var(--text);
+}
+
+body[data-theme="light"] .corvus-shell,
+body[data-theme="light"] .workspace,
+body[data-theme="light"] .rebuilt-workspace,
+body[data-theme="light"] .message-stream {
+  background:
+    radial-gradient(circle at 50% -18%, rgba(214, 32, 67, 0.055), transparent 36%),
+    linear-gradient(180deg, #ffffff 0%, #f7f5f2 46%, #f1eee9 100%) !important;
+  color: var(--text);
+}
+
+body[data-theme="light"] .corvus-shell::before {
+  background:
+    linear-gradient(135deg, rgba(214, 32, 67, 0.045), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), transparent 42%) !important;
+  opacity: 1;
+}
+
+body[data-theme="light"] .corvus-sidebar,
+body[data-theme="light"] .rebuilt-sidebar,
+body[data-theme="light"] .topbar,
+body[data-theme="light"] .rebuilt-topbar,
+body[data-theme="light"] .composer-dock,
+body[data-theme="light"] .message-card,
+body[data-theme="light"] .assistant-card,
+body[data-theme="light"] .typing-card,
+body[data-theme="light"] .dialog-panel,
+body[data-theme="light"] .command-panel,
+body[data-theme="light"] .conversation-details,
+body[data-theme="light"] .toast-card,
+body[data-theme="light"] .conversation-menu,
+body[data-theme="light"] .agent-menu {
+  border-color: var(--ui-border) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  background-image: none !important;
+  box-shadow: 0 18px 48px -38px rgba(22, 18, 20, 0.28) !important;
+  color: var(--ui-text);
+}
+
+body[data-theme="light"] .corvus-sidebar,
+body[data-theme="light"] .rebuilt-sidebar {
+  background: rgba(255, 255, 255, 0.96) !important;
+}
+
+body[data-theme="light"] .topbar,
+body[data-theme="light"] .rebuilt-topbar {
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+
+body[data-theme="light"] .message-row.corvus .message-card,
+body[data-theme="light"] .message-row.corvus .assistant-card {
+  background: #ffffff !important;
+}
+
+body[data-theme="light"] .message-row.user .message-card,
+body[data-theme="light"] .message-row.user .user-card {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="light"] .message-row.user .user-message-surface {
+  border-color: color-mix(in srgb, var(--accent-strong) 26%, var(--ui-border)) !important;
+  background: color-mix(in srgb, var(--accent-soft) 36%, #ffffff) !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="light"] .composer-dock {
+  background: #ffffff !important;
+}
+
+body[data-theme="light"] .composer-input-row .composer-textarea,
+body[data-theme="light"] .composer-textarea,
+body[data-theme="light"] .message-text,
+body[data-theme="light"] .assistant-answer,
+body[data-theme="light"] .markdown {
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="light"] .composer-textarea::placeholder {
+  color: var(--ui-dim) !important;
+}
+
+body[data-theme="light"] .new-chat-button,
+body[data-theme="light"] .sidebar-command-button,
+body[data-theme="light"] .sidebar-search,
+body[data-theme="light"] .profile-button,
+body[data-theme="light"] .conversation-open,
+body[data-theme="light"] .icon-button,
+body[data-theme="light"] .attachment-button,
+body[data-theme="light"] .send-button:disabled,
+body[data-theme="light"] .agent-picker-button,
+body[data-theme="light"] .home-suggestion-pill,
+body[data-theme="light"] .copy-button,
+body[data-theme="light"] .message-action-button,
+body[data-theme="light"] .message-edit-btn,
+body[data-theme="light"] .sync-status {
+  border-color: var(--ui-border) !important;
+  background: rgba(22, 18, 20, 0.045) !important;
+  background-image: none !important;
+  color: var(--ui-muted) !important;
+}
+
+body[data-theme="light"] .new-chat-button {
+  border-color: color-mix(in srgb, var(--accent-strong) 28%, var(--ui-border)) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.12)),
+    var(--accent-strong) !important;
+  color: #ffffff !important;
+}
+
+body[data-theme="light"] .conversation-item.active,
+body[data-theme="light"] .conversation-item:hover {
+  background: color-mix(in srgb, var(--accent-soft) 34%, #ffffff) !important;
+  border-color: color-mix(in srgb, var(--accent-strong) 24%, var(--ui-border)) !important;
+}
+
+body[data-theme="light"] .conversation-title,
+body[data-theme="light"] .topbar-title-btn,
+body[data-theme="light"] .topbar-title strong,
+body[data-theme="light"] .message-role strong,
+body[data-theme="light"] .agent-picker-copy strong,
+body[data-theme="light"] .brand-copy strong {
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="light"] .message-role small,
+body[data-theme="light"] .composer-input-meta,
+body[data-theme="light"] .composer-input-meta small,
+body[data-theme="light"] .topbar-mode,
+body[data-theme="light"] .conversation-message-search,
+body[data-theme="light"] .brand-copy small {
+  color: var(--ui-muted) !important;
+}
+
+body[data-theme="light"] .message-date-separator span {
+  border-color: var(--ui-border) !important;
+  background: rgba(255, 255, 255, 0.86) !important;
+  color: var(--ui-muted) !important;
+}
+
+body[data-theme="light"] .markdown-table-wrap,
+body[data-theme="light"] .message-text.markdown table {
+  border-color: var(--ui-border) !important;
+  background: #ffffff !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="light"] .message-text.markdown th {
+  background: #f1eee9 !important;
+  color: var(--ui-text) !important;
+}
+
+body[data-theme="light"] .message-text.markdown td {
+  border-color: var(--ui-border) !important;
+}
+
+body[data-theme="light"] .code-block,
+body[data-theme="light"] .message-text.markdown pre {
+  border-color: var(--ui-border) !important;
+  background: #f1eee9 !important;
+  color: var(--ui-text) !important;
+}
+
 @media (max-width: 560px) {
   .message-row.thread-message.corvus.has-table {
     width: min(100%, calc(100vw - 20px)) !important;

@@ -26,6 +26,7 @@ function resolveTheme(pref: ThemePreference): Resolved {
 
 function apply(resolved: Resolved): void {
   if (typeof document === "undefined") return;
+  document.documentElement.setAttribute("data-theme", resolved);
   document.body.setAttribute("data-theme", resolved);
   document.documentElement.style.colorScheme = resolved;
 }
