@@ -37,8 +37,18 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Inter:wght@300;400;450;500;600;700&display=swap"
           rel="stylesheet"
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var p=localStorage.getItem("corvus.theme")||"dark";var r=p==="system"?(matchMedia("(prefers-color-scheme: light)").matches?"light":"dark"):p;if(r!=="light"&&r!=="dark")r="dark";document.documentElement.setAttribute("data-theme",r);document.documentElement.style.colorScheme=r;}catch(e){}})();`,
+          }}
+        />
       </head>
       <body data-theme="dark" suppressHydrationWarning>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var r=document.documentElement.getAttribute("data-theme")||"dark";document.body.setAttribute("data-theme",r);}catch(e){}})();`,
+          }}
+        />
         {children}
       </body>
     </html>
