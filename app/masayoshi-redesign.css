@@ -2855,6 +2855,52 @@ textarea {
   }
 }
 
+/* Tema claro: marca Corvus com fundo vermelho e corvo escuro legivel. */
+body[data-theme="light"] .brand-mark,
+html[data-theme="light"] .brand-mark,
+body[data-theme="light"] .message-avatar,
+html[data-theme="light"] .message-avatar {
+  border: 1px solid color-mix(in srgb, var(--accent-strong, #d62043) 58%, #2b050b) !important;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.18), transparent 30%),
+    linear-gradient(145deg, #ef3257 0%, #a40f25 48%, #5f0612 100%) !important;
+  box-shadow:
+    0 12px 30px -18px rgba(95, 6, 18, 0.72),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+}
+
+body[data-theme="light"] .brand-mark img,
+html[data-theme="light"] .brand-mark img,
+body[data-theme="light"] .message-avatar img,
+html[data-theme="light"] .message-avatar img {
+  filter: brightness(0.08) contrast(1.45) drop-shadow(0 1px 0 rgba(255, 255, 255, 0.2)) !important;
+  opacity: 0.96 !important;
+}
+
+body[data-theme="light"] .welcome-msy-mark,
+html[data-theme="light"] .welcome-msy-mark {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.12), transparent 34%),
+    linear-gradient(145deg, #ef3257 0%, #a40f25 48%, #5f0612 100%) !important;
+  border: 1px solid color-mix(in srgb, var(--accent-strong, #d62043) 50%, #2b050b) !important;
+  box-shadow:
+    0 18px 46px -24px rgba(95, 6, 18, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+}
+
+body[data-theme="light"] .welcome-msy-mark::before,
+body[data-theme="light"] .welcome-msy-mark::after,
+html[data-theme="light"] .welcome-msy-mark::before,
+html[data-theme="light"] .welcome-msy-mark::after {
+  display: none !important;
+}
+
+body[data-theme="light"] .corvao-emblem-image,
+html[data-theme="light"] .corvao-emblem-image {
+  filter: brightness(0.08) contrast(1.4) drop-shadow(0 1px 0 rgba(255, 255, 255, 0.18)) !important;
+  opacity: 0.96 !important;
+}
+
 /* Mobile flagship home: phone-only responsive layer, desktop untouched. */
 @media (max-width: 768px) {
   .agent-picker-mobile-icon {
