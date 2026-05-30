@@ -3480,20 +3480,62 @@ body[data-theme="light"] .agent-picker-button,
 body[data-theme="light"] .compact-agent-picker .agent-picker-button,
 body[data-theme="light"] .send-button:disabled,
 body[data-theme="light"] .home-suggestion-pill,
+body[data-theme="light"] .home-suggestion-pill:hover:not(:disabled),
+body[data-theme="light"] .home-suggestion-pill:disabled,
 html[data-theme="light"] .attachment-button,
 html[data-theme="light"] .agent-picker-button,
 html[data-theme="light"] .compact-agent-picker .agent-picker-button,
 html[data-theme="light"] .send-button:disabled,
-html[data-theme="light"] .home-suggestion-pill {
+html[data-theme="light"] .home-suggestion-pill,
+html[data-theme="light"] .home-suggestion-pill:hover:not(:disabled),
+html[data-theme="light"] .home-suggestion-pill:disabled {
   border-color: rgba(20, 18, 22, 0.1) !important;
-  background: rgba(20, 18, 22, 0.045) !important;
+  background: rgba(255, 255, 255, 0.86) !important;
   background-image: none !important;
   color: var(--text-muted) !important;
   box-shadow: none !important;
+}
+
+body[data-theme="light"] .home-suggestion-pill:disabled,
+html[data-theme="light"] .home-suggestion-pill:disabled {
+  opacity: 0.72 !important;
+}
+
+body[data-theme="light"] .home-suggestion-pill span,
+html[data-theme="light"] .home-suggestion-pill span {
+  color: var(--text-muted) !important;
 }
 
 body[data-theme="light"] .agent-picker-copy strong,
 html[data-theme="light"] .agent-picker-copy strong {
   color: var(--text) !important;
   -webkit-text-fill-color: var(--text) !important;
+}
+
+body[data-theme="light"] .message-row.corvus .message-card,
+body[data-theme="light"] .message-row.corvus .assistant-card,
+html[data-theme="light"] .message-row.corvus .message-card,
+html[data-theme="light"] .message-row.corvus .assistant-card {
+  border-color: rgba(20, 18, 22, 0.08) !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+body[data-theme="light"] .message-row.corvus .assistant-answer,
+body[data-theme="light"] .typing-card,
+html[data-theme="light"] .message-row.corvus .assistant-answer,
+html[data-theme="light"] .typing-card {
+  border-color: rgba(20, 18, 22, 0.1) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  background-image: none !important;
+  color: var(--text) !important;
+  box-shadow:
+    0 12px 30px -24px rgba(22, 18, 20, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72) !important;
+}
+
+body[data-theme="light"] .message-row.corvus .assistant-answer *,
+html[data-theme="light"] .message-row.corvus .assistant-answer * {
+  color: inherit;
 }
