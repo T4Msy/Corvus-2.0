@@ -410,7 +410,7 @@ export async function POST(req: Request) {
 
     if (acceptedAudio.length === 0) {
       return bad(
-        "Nenhum audio valido foi anexado. Use MP3, M4A, WAV, WebM ou MP4 da conversa atual."
+        "Nenhum audio valido foi anexado. Use MP3, M4A, OGG, OGA, Opus, WAV, WebM ou MP4 da conversa atual."
       );
     }
 

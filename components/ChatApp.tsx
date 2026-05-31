@@ -2049,7 +2049,7 @@ export function ChatApp() {
                     id="conversation-file-picker"
                     type="file"
                     className="sr-only"
-                    accept="image/*,.pdf,.docx,.txt,.md,.csv,.json,audio/*,video/mp4,.mp3,.m4a,.wav,.webm,.mp4,.mpeg,.mpga"
+                    accept="image/*,.pdf,.docx,.txt,.md,.csv,.json,audio/*,video/mp4,.mp3,.m4a,.ogg,.oga,.opus,.wav,.webm,.mp4,.mpeg,.mpga"
                     onChange={(event) => {
                       const file = event.target.files?.[0];
                       event.target.value = "";

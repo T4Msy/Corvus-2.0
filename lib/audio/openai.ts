@@ -20,6 +20,9 @@ export const SUPPORTED_AUDIO_TYPES = new Set([
   "audio/mp4",
   "audio/mpga",
   "audio/m4a",
+  "audio/ogg",
+  "audio/oga",
+  "audio/opus",
   "audio/wav",
   "audio/wave",
   "audio/webm",
@@ -31,7 +34,7 @@ export function isSupportedAudioType(type: string, name: string): boolean {
   const extension = extensionOf(name);
   return (
     SUPPORTED_AUDIO_TYPES.has(normalized) ||
-    ["mp3", "m4a", "wav", "webm", "mp4", "mpeg", "mpga"].includes(extension)
+    ["mp3", "m4a", "ogg", "oga", "opus", "wav", "webm", "mp4", "mpeg", "mpga"].includes(extension)
   );
 }
 
