@@ -10,10 +10,13 @@ import {
   FileText,
   Image as ImageIcon,
   Loader2,
+  Mic,
   Plus,
   Send,
   Sparkles,
+  Square,
   TriangleAlert,
+  Volume2,
   X,
   Zap,
 } from "lucide-react";
@@ -35,11 +38,16 @@ interface Props {
   attachments?: ConversationAttachment[];
   onOpenAttachment?: (attachment: ConversationAttachment) => void;
   onRemoveAttachment?: (attachment: ConversationAttachment) => void;
+  dictationAccessToken?: string | null;
+  dictationDisabled?: boolean;
+  onDictationBlocked?: () => void;
+  onDictationError?: (message: string) => void;
   syncStatus: SyncStatusType;
   showSuggestions?: boolean;
 }
 
 const MAX_HEIGHT = 200;
+const REALTIME_SAMPLE_RATE = 24_000;
 const HOME_SUGGESTIONS = [
   {
     label: "O que é Masayoshi",
@@ -70,17 +78,29 @@ export function ChatInput({
   attachments = [],
   onOpenAttachment,
   onRemoveAttachment,
+  dictationAccessToken,
+  dictationDisabled,
+  onDictationBlocked,
+  onDictationError,
   syncStatus,
   showSuggestions = false,
 }: Props) {
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
+  const [dictationStatus, setDictationStatus] = useState<
+    "idle" | "connecting" | "recording"
+  >("idle");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
+  const dictationRef = useRef<DictationSession | null>(null);
+  const dictationBaseRef = useRef("");
+  const committedTextRef = useRef("");
+  const partialTextRef = useRef("");
   const trimmedValue = value.trim();
   const sendLocked = disabled && trimmedValue.length > 0;
   const hasAttachments = attachments.length > 0;
+  const dictating = dictationStatus !== "idle";
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -97,6 +117,13 @@ export function ChatInput({
     ta.style.height = `${Math.min(ta.scrollHeight, MAX_HEIGHT)}px`;
   }, [value]);
 
+  useEffect(() => {
+    return () => {
+      void stopDictation();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function commitSend() {
     const text = value.trim();
     if ((!text && !hasAttachments) || disabled) return;
@@ -111,6 +138,103 @@ export function ChatInput({
       event.preventDefault();
       commitSend();
     }
+  }
+
+  async function startDictation() {
+    if (dictationDisabled || !dictationAccessToken) {
+      onDictationBlocked?.();
+      return;
+    }
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.mediaDevices?.getUserMedia
+    ) {
+      onDictationError?.("Este navegador nao suporta ditado por microfone.");
+      return;
+    }
+
+    setDictationStatus("connecting");
+    dictationBaseRef.current = value;
+    committedTextRef.current = "";
+    partialTextRef.current = "";
+
+    try {
+      const tokenResponse = await fetch("/api/audio/realtime-token", {
+        method: "POST",
+        headers: {
+          ...(dictationAccessToken
+            ? { Authorization: `Bearer ${dictationAccessToken}` }
+            : {}),
+        },
+      });
+      const tokenData = (await tokenResponse.json().catch(() => null)) as
+        | RealtimeTokenResponse
+        | null;
+      if (!tokenResponse.ok || !tokenData?.ok) {
+        throw new Error(
+          tokenData && !tokenData.ok
+            ? tokenData.error.message
+            : "Nao foi possivel iniciar o ditado."
+        );
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const session = await openDictationSession({
+        stream,
+        tokenData,
+        onOpen: () => setDictationStatus("recording"),
+        onMessage: handleDictationMessage,
+        onError: (message) => {
+          onDictationError?.(message);
+          void stopDictation();
+        },
+      });
+      dictationRef.current = session;
+    } catch (err) {
+      setDictationStatus("idle");
+      onDictationError?.(
+        err instanceof Error ? err.message : "Nao foi possivel iniciar o ditado."
+      );
+    }
+  }
+
+  async function stopDictation() {
+    const session = dictationRef.current;
+    dictationRef.current = null;
+    session?.stop();
+    setDictationStatus("idle");
+    partialTextRef.current = "";
+  }
+
+  function handleDictationMessage(event: RealtimeTranscriptEvent) {
+    if (event.type === "conversation.item.input_audio_transcription.delta") {
+      partialTextRef.current = appendDictatedText(
+        partialTextRef.current,
+        event.delta || ""
+      );
+      renderDictationText();
+      return;
+    }
+    if (event.type === "conversation.item.input_audio_transcription.completed") {
+      const text = event.transcript || event.text || "";
+      if (text.trim()) {
+        committedTextRef.current = appendDictatedText(
+          committedTextRef.current,
+          text
+        );
+      }
+      partialTextRef.current = "";
+      renderDictationText();
+    }
+  }
+
+  function renderDictationText() {
+    const current = [committedTextRef.current, partialTextRef.current]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    if (!current) return;
+    setValue(mergeDictationValue(dictationBaseRef.current, current));
   }
 
   return (
@@ -141,6 +265,8 @@ export function ChatInput({
                     <span className="composer-attachment-icon" aria-hidden="true">
                       {attachment.type.startsWith("image/") ? (
                         <ImageIcon size={14} />
+                      ) : isAudioAttachment(attachment) ? (
+                        <Volume2 size={14} />
                       ) : (
                         <FileText size={14} />
                       )}
@@ -149,6 +275,8 @@ export function ChatInput({
                       <strong>
                         {attachment.type.startsWith("image/")
                           ? "Imagem anexada"
+                          : isAudioAttachment(attachment)
+                            ? "Áudio anexado"
                           : "Arquivo anexado"}
                       </strong>
                       <small>
@@ -193,6 +321,7 @@ export function ChatInput({
               type="file"
               className="sr-only"
               aria-label="Selecionar arquivo"
+              accept="image/*,.pdf,.docx,.txt,.md,.csv,.json,audio/*,video/mp4,.mp3,.m4a,.wav,.webm,.mp4,.mpeg,.mpga"
               onChange={(event) => {
                 const file = event.target.files?.[0];
                 event.target.value = "";
@@ -215,6 +344,37 @@ export function ChatInput({
             >
               {attachmentBusy ? <Loader2 size={16} /> : <Plus size={18} />}
               <span>{attachmentBusy ? "..." : "Anexos"}</span>
+            </button>
+            <button
+              type="button"
+              className={`attachment-button dictation-button${
+                dictating ? " recording" : ""
+              }${dictationDisabled ? " restricted" : ""}`}
+              aria-label={dictating ? "Parar ditado" : "Iniciar ditado"}
+              title={dictating ? "Parar ditado" : "Ditado por voz"}
+              disabled={dictationStatus === "connecting"}
+              onClick={() => {
+                if (dictating) {
+                  void stopDictation();
+                  return;
+                }
+                void startDictation();
+              }}
+            >
+              {dictationStatus === "connecting" ? (
+                <Loader2 size={16} />
+              ) : dictating ? (
+                <Square size={15} />
+              ) : (
+                <Mic size={16} />
+              )}
+              <span>
+                {dictationStatus === "connecting"
+                  ? "..."
+                  : dictating
+                    ? "Gravando"
+                    : "Voz"}
+              </span>
             </button>
             <SyncStatus status={syncStatus} />
           </div>
@@ -329,6 +489,189 @@ function formatFileSize(bytes: number): string {
   return `${value >= 10 || index === 0 ? value.toFixed(0) : value.toFixed(1)} ${
     units[index]
   }`;
+}
+
+type RealtimeTokenResponse =
+  | {
+      ok: true;
+      token: string;
+      expiresAt?: number;
+      model: string;
+      language: string;
+      locale: string;
+      audioFormat: string;
+      sampleRate: number;
+      websocketUrl: string;
+    }
+  | {
+      ok: false;
+      error: { code: string; message: string };
+    };
+
+type RealtimeTranscriptEvent = {
+  type?: string;
+  delta?: string;
+  text?: string;
+  transcript?: string;
+  error?: string;
+  message?: string;
+};
+
+type DictationSession = {
+  stop: () => void;
+};
+
+async function openDictationSession(args: {
+  stream: MediaStream;
+  tokenData: Extract<RealtimeTokenResponse, { ok: true }>;
+  onOpen: () => void;
+  onMessage: (event: RealtimeTranscriptEvent) => void;
+  onError: (message: string) => void;
+}): Promise<DictationSession> {
+  const url = `${args.tokenData.websocketUrl}?intent=transcription`;
+  const socket = new WebSocket(url, [
+    "realtime",
+    `openai-insecure-api-key.${args.tokenData.token}`,
+  ]);
+  const audioContext = new window.AudioContext();
+  const source = audioContext.createMediaStreamSource(args.stream);
+  const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+  let opened = false;
+  let stopped = false;
+
+  socket.onopen = () => {
+    opened = true;
+    args.onOpen();
+  };
+  socket.onerror = () => {
+    if (!stopped) args.onError("Falha na conexao do ditado.");
+  };
+  socket.onclose = () => {
+    if (!stopped && !opened) args.onError("Ditado encerrado antes de iniciar.");
+  };
+  socket.onmessage = (event) => {
+    const parsed = parseRealtimeEvent(event.data);
+    if (!parsed) return;
+    if (parsed.type === "error") {
+      args.onError(parsed.error || parsed.message || "Erro no ditado.");
+      return;
+    }
+    args.onMessage(parsed);
+  };
+
+  processor.onaudioprocess = (event) => {
+    if (stopped || socket.readyState !== WebSocket.OPEN) return;
+    const input = event.inputBuffer.getChannelData(0);
+    const downsampled = downsampleToRealtimeRate(input, audioContext.sampleRate);
+    if (downsampled.length === 0) return;
+    socket.send(
+      JSON.stringify({
+        type: "input_audio_buffer.append",
+        audio: pcm16ToBase64(downsampled),
+      })
+    );
+  };
+
+  source.connect(processor);
+  processor.connect(audioContext.destination);
+
+  return {
+    stop: () => {
+      stopped = true;
+      try {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(
+            JSON.stringify({
+              type: "input_audio_buffer.commit",
+            })
+          );
+        }
+      } catch {
+        /* conexao encerrada */
+      }
+      source.disconnect();
+      processor.disconnect();
+      args.stream.getTracks().forEach((track) => track.stop());
+      void audioContext.close().catch(() => undefined);
+      if (
+        socket.readyState === WebSocket.OPEN ||
+        socket.readyState === WebSocket.CONNECTING
+      ) {
+        socket.close();
+      }
+    },
+  };
+}
+
+function parseRealtimeEvent(value: unknown): RealtimeTranscriptEvent | null {
+  if (typeof value !== "string") return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object"
+      ? (parsed as RealtimeTranscriptEvent)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function downsampleToRealtimeRate(
+  input: Float32Array,
+  sampleRate: number
+): Int16Array {
+  if (sampleRate <= REALTIME_SAMPLE_RATE) return floatToPcm16(input);
+  const ratio = sampleRate / REALTIME_SAMPLE_RATE;
+  const length = Math.floor(input.length / ratio);
+  const result = new Int16Array(length);
+  for (let i = 0; i < length; i++) {
+    const start = Math.floor(i * ratio);
+    const end = Math.min(Math.floor((i + 1) * ratio), input.length);
+    let sum = 0;
+    for (let j = start; j < end; j++) sum += input[j] ?? 0;
+    const sample = sum / Math.max(1, end - start);
+    result[i] = clampPcm16(sample);
+  }
+  return result;
+}
+
+function floatToPcm16(input: Float32Array): Int16Array {
+  const result = new Int16Array(input.length);
+  for (let i = 0; i < input.length; i++) {
+    result[i] = clampPcm16(input[i] ?? 0);
+  }
+  return result;
+}
+
+function clampPcm16(sample: number): number {
+  const clamped = Math.max(-1, Math.min(1, sample));
+  return clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff;
+}
+
+function pcm16ToBase64(samples: Int16Array): string {
+  let binary = "";
+  const bytes = new Uint8Array(samples.buffer);
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i] ?? 0);
+  }
+  return window.btoa(binary);
+}
+
+function appendDictatedText(previous: string, next: string): string {
+  const clean = next.trim();
+  if (!clean) return previous;
+  if (!previous.trim()) return clean;
+  return `${previous.trimEnd()} ${clean}`;
+}
+
+function mergeDictationValue(base: string, dictated: string): string {
+  const clean = dictated.trim();
+  if (!base.trim()) return clean;
+  return `${base.trimEnd()} ${clean}`;
+}
+
+function isAudioAttachment(attachment: ConversationAttachment): boolean {
+  return attachment.type.startsWith("audio/") || attachment.type === "video/mp4";
 }
 
 function SyncStatus({

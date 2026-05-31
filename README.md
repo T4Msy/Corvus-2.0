@@ -47,7 +47,7 @@ Veja `.env.local.example` para a lista completa. Os essenciais:
 |---|---|
 | `N8N_WEBHOOK_URL` | URL do webhook do workflow no n8n (server-only). |
 | `N8N_WEBHOOK_SECRET` | Header secreto exigido pelo webhook. **Crítico em produção.** |
-| `OPENAI_API_KEY` | Server-only. Pré-análise de imagens no Next antes do n8n. |
+| `OPENAI_API_KEY` | Server-only. Pré-análise de imagens, áudio anexado e ditado realtime. |
 | `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Anon key do Supabase (pública por design). |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role — server-only, opcional. |

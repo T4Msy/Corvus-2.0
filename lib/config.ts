@@ -51,6 +51,19 @@ export function getServerConfig() {
       ),
       serviceRoleKey: optional(process.env.SUPABASE_SERVICE_ROLE_KEY, ""),
     },
+    audio: {
+      openAiApiKey: optional(process.env.OPENAI_API_KEY, ""),
+      transcriptionModel: optional(
+        process.env.OPENAI_TRANSCRIPTION_MODEL,
+        "gpt-4o-transcribe"
+      ),
+      realtimeTranscriptionModel: optional(
+        process.env.OPENAI_REALTIME_TRANSCRIPTION_MODEL,
+        "gpt-4o-transcribe"
+      ),
+      language: optional(process.env.AUDIO_STT_LANGUAGE, "pt"),
+      locale: optional(process.env.AUDIO_STT_LOCALE, "pt-BR"),
+    },
   } as const;
 }
 

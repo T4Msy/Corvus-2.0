@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { createAttachmentSignedUrl } from "@/integrations/supabase/storage";
 import {
+  buildAudioContext,
+  formatAudioContext,
+  isSupportedAudioType,
+  transcribeAudioBuffer,
+} from "@/lib/audio/openai";
+import {
   buildDocumentContext,
   extractDocumentText,
   formatDocumentContext,
@@ -20,6 +26,7 @@ import type {
   ChatErrorResponse,
   ChatRequestBody,
   ChatResponse,
+  N8nAudioAttachment,
   N8nDocumentAttachment,
   N8nImageAttachment,
   UserContext,
@@ -31,9 +38,11 @@ export const dynamic = "force-dynamic";
 const MAX_MESSAGE_CHARS = 8_000;
 const MAX_IMAGE_ATTACHMENTS = 4;
 const MAX_DOCUMENT_ATTACHMENTS = 4;
+const MAX_AUDIO_ATTACHMENTS = 3;
 const MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
 const IMAGE_URL_EXPIRES_IN = 10 * 60;
 const DOCUMENT_URL_EXPIRES_IN = 10 * 60;
+const AUDIO_URL_EXPIRES_IN = 10 * 60;
 const VALID_MODES: ReadonlySet<AgentMode> = new Set(["corvus", "fenrir"]);
 const SUPPORTED_IMAGE_TYPES = new Set([
   "image/png",
@@ -95,6 +104,10 @@ function isSupportedDocument(attachment: ChatAttachment): boolean {
   return isSupportedDocumentType(attachment.type, attachment.name);
 }
 
+function isSupportedAudio(attachment: ChatAttachment): boolean {
+  return isSupportedAudioType(attachment.type, attachment.name);
+}
+
 function attachmentBelongsToConversation(
   attachment: ChatAttachment,
   userId: string,
@@ -125,6 +138,29 @@ async function createImageDataUrl(
   } catch {
     return undefined;
   }
+}
+
+async function downloadAttachmentBuffer(
+  signedUrl: string,
+  expectedType: string,
+  name: string
+): Promise<Buffer> {
+  const response = await fetch(signedUrl, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error("Nao foi possivel baixar o audio anexado.");
+  }
+
+  const contentType = response.headers.get("content-type") || expectedType;
+  if (
+    contentType &&
+    !contentType.toLowerCase().startsWith("audio/") &&
+    !contentType.toLowerCase().startsWith("video/") &&
+    !isSupportedAudioType(expectedType, name)
+  ) {
+    throw new Error("Arquivo anexado nao parece ser audio valido.");
+  }
+
+  return Buffer.from(await response.arrayBuffer());
 }
 
 function statusForError(err: ChatErrorResponse): number {
@@ -193,13 +229,23 @@ export async function POST(req: Request) {
   const supportedDocumentAttachments = attachments.filter(
     (attachment) => !isSupportedImage(attachment) && isSupportedDocument(attachment)
   );
+  const supportedAudioAttachments = attachments.filter(
+    (attachment) =>
+      !isSupportedImage(attachment) &&
+      !isSupportedDocument(attachment) &&
+      isSupportedAudio(attachment)
+  );
   const unsupportedAttachments = attachments.filter(
     (attachment) =>
-      !isSupportedImage(attachment) && !isSupportedDocument(attachment)
+      !isSupportedImage(attachment) &&
+      !isSupportedDocument(attachment) &&
+      !isSupportedAudio(attachment)
   );
   let imageAttachments: N8nImageAttachment[] = [];
   let documentAttachments: N8nDocumentAttachment[] = [];
+  let audioAttachments: N8nAudioAttachment[] = [];
   let documentContext: ReturnType<typeof buildDocumentContext> = null;
+  let audioContext: ReturnType<typeof buildAudioContext> = null;
   let visualContext:
     | Awaited<ReturnType<typeof analyzeImagesWithOpenAI>>
     | null = null;
@@ -217,7 +263,7 @@ export async function POST(req: Request) {
         .slice(0, 4)
         .join(", ");
       return bad(
-        `Tipo de anexo ainda nao suportado para analise: ${names}. Use imagens, PDF, DOCX, TXT, MD, CSV ou JSON.`
+        `Tipo de anexo ainda nao suportado para analise: ${names}. Use imagens, audio, PDF, DOCX, TXT, MD, CSV ou JSON.`
       );
     }
   }
@@ -352,11 +398,89 @@ export async function POST(req: Request) {
     }
   }
 
+  if (supportedAudioAttachments.length > 0) {
+    const supabase = userSupabase;
+    if (!supabase) return bad("Anexos exigem sessao autenticada.", 401);
+
+    const acceptedAudio = supportedAudioAttachments
+      .filter((attachment) =>
+        attachmentBelongsToConversation(attachment, resolvedUserId, conversationId)
+      )
+      .slice(0, MAX_AUDIO_ATTACHMENTS);
+
+    if (acceptedAudio.length === 0) {
+      return bad(
+        "Nenhum audio valido foi anexado. Use MP3, M4A, WAV, WebM ou MP4 da conversa atual."
+      );
+    }
+
+    audioAttachments = await Promise.all(
+      acceptedAudio.map(async (attachment): Promise<N8nAudioAttachment> => {
+        const signedUrl = await createAttachmentSignedUrl(
+          supabase,
+          attachment.path,
+          undefined,
+          AUDIO_URL_EXPIRES_IN
+        );
+        if (!signedUrl) {
+          return {
+            name: attachment.name,
+            type: attachment.type,
+            size: attachment.size,
+            signedUrl: "",
+            transcriptionError: "Nao foi possivel gerar acesso temporario.",
+          };
+        }
+
+        try {
+          const buffer = await downloadAttachmentBuffer(
+            signedUrl,
+            attachment.type,
+            attachment.name
+          );
+          const transcribed = await transcribeAudioBuffer({
+            buffer,
+            name: attachment.name,
+            type: attachment.type,
+          });
+          return {
+            ...transcribed,
+            signedUrl,
+            url: signedUrl,
+          };
+        } catch (err) {
+          return {
+            name: attachment.name,
+            type: attachment.type,
+            size: attachment.size,
+            signedUrl,
+            url: signedUrl,
+            transcriptionError:
+              err instanceof Error
+                ? err.message
+                : "Nao foi possivel transcrever o audio anexado.",
+          };
+        }
+      })
+    );
+
+    audioContext = buildAudioContext(audioAttachments);
+    if (!audioContext) {
+      const reason =
+        audioAttachments
+          .map((attachment) => attachment.transcriptionError)
+          .filter(Boolean)
+          .join(" ") || "O audio nao retornou fala legivel.";
+      return bad(`Nao foi possivel analisar o audio anexado. ${reason}`);
+    }
+  }
+
   const contextBlocks = [
     visualContext ? `[Contexto visual analisado]\n${visualContext.text}` : "",
     documentContext
       ? `[Contexto dos documentos]\n${formatDocumentContext(documentContext)}`
       : "",
+    audioContext ? `[Contexto de audio]\n${formatAudioContext(audioContext)}` : "",
   ].filter(Boolean);
   const messageForN8n =
     contextBlocks.length > 0
@@ -403,6 +527,15 @@ export async function POST(req: Request) {
           documentContext,
           documentCtxString: formatDocumentContext(documentContext),
           hasDocuments: true,
+        }
+      : {}),
+    ...(audioAttachments.length > 0 && audioContext
+      ? {
+          audioAttachments,
+          audioContext,
+          audioCtxString: formatAudioContext(audioContext),
+          hasAudio: true,
+          usedAudioTranscription: true,
         }
       : {}),
   };

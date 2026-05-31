@@ -16,6 +16,14 @@ export function GET() {
       webhookUrlPresent: Boolean(process.env.N8N_WEBHOOK_URL?.trim()),
       webhookSecretPresent: Boolean(process.env.N8N_WEBHOOK_SECRET?.trim()),
     },
+    audio: {
+      openAiPresent: Boolean(process.env.OPENAI_API_KEY?.trim()),
+      transcriptionModel:
+        process.env.OPENAI_TRANSCRIPTION_MODEL?.trim() || "gpt-4o-transcribe",
+      realtimeTranscriptionModel:
+        process.env.OPENAI_REALTIME_TRANSCRIPTION_MODEL?.trim() ||
+        "gpt-4o-transcribe",
+    },
     supabase: {
       configured: supabase.configured,
       urlPresent: supabase.urlPresent,

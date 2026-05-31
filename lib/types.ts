@@ -41,6 +41,20 @@ export interface N8nDocumentAttachment {
   extractionError?: string;
 }
 
+export interface N8nAudioAttachment {
+  name: string;
+  type: string;
+  size: number;
+  signedUrl: string;
+  url?: string;
+  text?: string;
+  provider?: "openai";
+  model?: string;
+  language?: string;
+  confidence?: number;
+  transcriptionError?: string;
+}
+
 export interface VisualContext {
   ocrText: string;
   description: string;
@@ -56,6 +70,21 @@ export interface DocumentContext {
     size: number;
     text: string;
     truncated: boolean;
+  }>;
+  text: string;
+  limitations: string;
+}
+
+export interface AudioTranscriptContext {
+  audios: Array<{
+    name: string;
+    type: string;
+    size: number;
+    text: string;
+    provider: string;
+    model: string;
+    language: string;
+    confidence?: number;
   }>;
   text: string;
   limitations: string;
@@ -83,6 +112,11 @@ export interface ChatRequestBody {
   documentContext?: DocumentContext;
   documentCtxString?: string;
   hasDocuments?: boolean;
+  audioAttachments?: N8nAudioAttachment[];
+  audioContext?: AudioTranscriptContext;
+  audioCtxString?: string;
+  hasAudio?: boolean;
+  usedAudioTranscription?: boolean;
 }
 
 /** Resposta normalizada que /api/corvus/chat devolve ao frontend. */

@@ -31,6 +31,7 @@ import {
   Star,
   Tag,
   Trash2,
+  Volume2,
   X,
 } from "lucide-react";
 import { ChatInput } from "@/components/ChatInput";
@@ -503,6 +504,12 @@ export function ChatApp() {
             attachment.type.startsWith("image/")
           )
             ? "Analise a imagem anexada."
+            : activeAttachments.some(
+                  (attachment) =>
+                    attachment.type.startsWith("audio/") ||
+                    attachment.type === "video/mp4"
+                )
+              ? "Analise o áudio anexado."
             : "Analise o arquivo anexado.");
 
         const sent = await chat.send({
@@ -1835,6 +1842,32 @@ export function ChatApp() {
             attachments={attachments.activeAttachments}
             onOpenAttachment={(attachment) => void openAttachment(attachment)}
             onRemoveAttachment={(attachment) => void removeAttachment(attachment)}
+            dictationAccessToken={auth.accessToken}
+            dictationDisabled={
+              auth.status !== "authed" ||
+              !auth.supabaseReady ||
+              !conversations.online
+            }
+            onDictationBlocked={() => {
+              toast.push({
+                tone: "warning",
+                title:
+                  auth.status === "guest"
+                    ? "Login necessário"
+                    : "Ditado indisponível",
+                message:
+                  auth.status === "guest"
+                    ? "Entre com sua conta para usar o microfone."
+                    : "Reconecte para usar o microfone.",
+              });
+            }}
+            onDictationError={(message) => {
+              toast.push({
+                tone: "error",
+                title: "Falha no ditado",
+                message,
+              });
+            }}
             syncStatus={conversations.syncStatus}
             showSuggestions={emptyHome}
           />
@@ -2016,6 +2049,7 @@ export function ChatApp() {
                     id="conversation-file-picker"
                     type="file"
                     className="sr-only"
+                    accept="image/*,.pdf,.docx,.txt,.md,.csv,.json,audio/*,video/mp4,.mp3,.m4a,.wav,.webm,.mp4,.mpeg,.mpga"
                     onChange={(event) => {
                       const file = event.target.files?.[0];
                       event.target.value = "";
@@ -2254,6 +2288,8 @@ function BootScreen({ logoSrc }: { logoSrc: string }) {
 function AttachmentThumb({ attachment }: { attachment: ConversationAttachment }) {
   const [imgFailed, setImgFailed] = useState(false);
   const isImage = attachment.type.startsWith("image/");
+  const isAudio =
+    attachment.type.startsWith("audio/") || attachment.type === "video/mp4";
 
   if (isImage && attachment.url && !imgFailed) {
     return (
@@ -2269,7 +2305,7 @@ function AttachmentThumb({ attachment }: { attachment: ConversationAttachment })
 
   return (
     <span className="attachment-icon" aria-hidden="true">
-      <FileText size={16} />
+      {isAudio ? <Volume2 size={16} /> : <FileText size={16} />}
     </span>
   );
 }
@@ -2371,6 +2407,7 @@ function formatFileSize(size: number): string {
 
 function fileKindLabel(type: string): string {
   if (type.startsWith("image/")) return "Imagem";
+  if (type.startsWith("audio/") || type === "video/mp4") return "Áudio";
   if (type === "application/pdf") return "PDF";
   if (type.startsWith("text/")) return "Texto";
   if (type.includes("spreadsheet") || type.includes("excel")) return "Planilha";

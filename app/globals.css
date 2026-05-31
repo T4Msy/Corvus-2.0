@@ -13407,6 +13407,22 @@ body[data-theme="light"] .message-text.markdown pre {
   color: var(--ui-text) !important;
 }
 
+.dictation-button.recording {
+  border-color: rgba(239, 68, 68, 0.55) !important;
+  color: #fecaca !important;
+  background: rgba(239, 68, 68, 0.14) !important;
+}
+
+.dictation-button.recording svg {
+  fill: currentColor;
+}
+
+body[data-theme="light"] .dictation-button.recording {
+  border-color: rgba(185, 28, 28, 0.42) !important;
+  color: #991b1b !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+}
+
 @media (max-width: 560px) {
   .message-row.thread-message.corvus.has-table {
     width: min(100%, calc(100vw - 20px)) !important;
