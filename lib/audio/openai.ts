@@ -11,7 +11,7 @@ const OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions"
 const REALTIME_SAMPLE_RATE = 24_000;
 
 const AUDIO_PROMPT =
-  "Vocabulário provável: Masayoshi, MSY, Corvus, Fenrir, Cipher, Conselho, T4, Xitter, Nevermind, Britannia, Ordem, Coordenador, Fundador, liderança, membro.";
+  "Transcreva em português do Brasil. Preserve linguagem informal, pausas naturais e sentido contextual. Prefira palavras comuns quando fizerem sentido pelo contexto, como rodeio, festa, agradável, fechar e dar dez. Não traduza nomes próprios.";
 const MISSING_OPENAI_KEY_MESSAGE =
   "Ditado indisponivel: configure OPENAI_API_KEY no ambiente do servidor e reinicie o app.";
 
@@ -238,7 +238,10 @@ export async function answerAudioTranscriptFallback(args: {
   if (!audio.openAiApiKey) throw new Error(MISSING_OPENAI_KEY_MESSAGE);
   const wantsTranscript = isTranscriptRequest(args.message);
   if (wantsTranscript) {
-    return `Foi falado:\n\n${args.transcript.trim()}`;
+    const cleanTranscript =
+      (await cleanAudioTranscript(args.transcript).catch(() => "")) ||
+      args.transcript.trim();
+    return `Foi falado:\n\n${cleanTranscript}`;
   }
 
   const response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
@@ -266,6 +269,53 @@ export async function answerAudioTranscriptFallback(args: {
           ]
             .filter(Boolean)
             .join("\n\n"),
+        },
+      ],
+    }),
+  });
+
+  const data = (await response.json().catch(() => null)) as Record<
+    string,
+    unknown
+  > | null;
+  if (!response.ok) {
+    throw new Error(
+      textValue((data?.error as Record<string, unknown> | undefined)?.message) ||
+        textValue(data?.message) ||
+        `OpenAI retornou HTTP ${response.status}.`
+    );
+  }
+
+  const choices = data?.choices as
+    | Array<{ message?: { content?: unknown } }>
+    | undefined;
+  return normalizeTranscript(textValue(choices?.[0]?.message?.content));
+}
+
+async function cleanAudioTranscript(transcript: string): Promise<string> {
+  const audio = getServerConfig().audio;
+  if (!audio.openAiApiKey) throw new Error(MISSING_OPENAI_KEY_MESSAGE);
+
+  const response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
+    method: "POST",
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${audio.openAiApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: audio.responseFallbackModel,
+      temperature: 0,
+      max_tokens: 500,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Revise uma transcrição automática em pt-BR. Corrija apenas erros óbvios de reconhecimento de fala, pontuação e capitalização. Preserve as palavras, informalidade e hesitações do falante. Não resuma, não explique e não acrescente informações. Exemplo de correção contextual: Roday/Rodey -> rodeio quando o contexto for festa/evento.",
+        },
+        {
+          role: "user",
+          content: transcript.trim(),
         },
       ],
     }),
