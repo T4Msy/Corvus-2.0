@@ -61,6 +61,10 @@ export function getServerConfig() {
         process.env.OPENAI_REALTIME_TRANSCRIPTION_MODEL,
         "gpt-realtime-whisper"
       ),
+      responseFallbackModel: optional(
+        process.env.OPENAI_AUDIO_FALLBACK_MODEL,
+        "gpt-4o-mini"
+      ),
       language: optional(process.env.AUDIO_STT_LANGUAGE, "pt"),
       locale: optional(process.env.AUDIO_STT_LOCALE, "pt-BR"),
     },

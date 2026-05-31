@@ -7,6 +7,7 @@ const MAX_AUDIO_CONTEXT_CHARS = 32_000;
 const OPENAI_TRANSCRIPTION_URL = "https://api.openai.com/v1/audio/transcriptions";
 const OPENAI_REALTIME_CLIENT_SECRET_URL =
   "https://api.openai.com/v1/realtime/client_secrets";
+const OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
 const REALTIME_SAMPLE_RATE = 24_000;
 
 const AUDIO_PROMPT =
@@ -227,6 +228,61 @@ export function formatAudioContext(context: AudioTranscriptContext): string {
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+export async function answerAudioTranscriptFallback(args: {
+  message: string;
+  transcript: string;
+}): Promise<string> {
+  const audio = getServerConfig().audio;
+  if (!audio.openAiApiKey) throw new Error(MISSING_OPENAI_KEY_MESSAGE);
+
+  const response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
+    method: "POST",
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${audio.openAiApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: audio.responseFallbackModel,
+      temperature: 0.35,
+      max_tokens: 450,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Voce e Corvus. Responda em pt-BR, de forma natural e direta, usando a transcricao do audio como a mensagem do usuario. Nao mencione workflow, n8n, fallback, transcricao ou metadados tecnicos. Se o audio for conversa solta ou ambigua, responda com uma leitura curta do que foi entendido e uma pergunta objetiva para continuar.",
+        },
+        {
+          role: "user",
+          content: [
+            args.message.trim() ? `Mensagem digitada: ${args.message.trim()}` : "",
+            `Audio transcrito:\n${args.transcript.trim()}`,
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
+        },
+      ],
+    }),
+  });
+
+  const data = (await response.json().catch(() => null)) as Record<
+    string,
+    unknown
+  > | null;
+  if (!response.ok) {
+    throw new Error(
+      textValue((data?.error as Record<string, unknown> | undefined)?.message) ||
+        textValue(data?.message) ||
+        `OpenAI retornou HTTP ${response.status}.`
+    );
+  }
+
+  const choices = data?.choices as
+    | Array<{ message?: { content?: unknown } }>
+    | undefined;
+  return normalizeTranscript(textValue(choices?.[0]?.message?.content));
 }
 
 function errorAttachment(

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { createAttachmentSignedUrl } from "@/integrations/supabase/storage";
 import {
+  answerAudioTranscriptFallback,
   buildAudioContext,
   formatAudioContext,
   isSupportedAudioType,
@@ -579,18 +580,24 @@ export async function POST(req: Request) {
     });
 
     if (!result.ok && result.error.code === "upstream_invalid_response") {
+      const transcript = audioContext.audios
+        .map((audio) => audio.text)
+        .filter(Boolean)
+        .join("\n\n");
+      const fallbackReply = await answerAudioTranscriptFallback({
+        message,
+        transcript,
+      }).catch(() => "");
+
       result = {
         ok: true,
-        reply: [
-          "O workflow do n8n respondeu vazio, mas o audio foi transcrito com sucesso.",
-          "",
-          "**Transcricao do audio:**",
-          audioContext.text,
-        ].join("\n"),
+        reply:
+          fallbackReply ||
+          "Recebi o audio, mas nao consegui gerar uma resposta completa agora. Pode me dizer o que voce quer fazer com esse trecho?",
         meta: {
           agent: "Corvus",
           usedAudio: true,
-          upstreamFallback: "audio_transcript",
+          upstreamFallback: "audio_response",
         },
       };
     }
