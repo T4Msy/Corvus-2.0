@@ -11,6 +11,8 @@ const REALTIME_SAMPLE_RATE = 24_000;
 
 const AUDIO_PROMPT =
   "Vocabulário provável: Masayoshi, MSY, Corvus, Fenrir, Cipher, Conselho, T4, Xitter, Nevermind, Britannia, Ordem, Coordenador, Fundador, liderança, membro.";
+const MISSING_OPENAI_KEY_MESSAGE =
+  "Ditado indisponivel: configure OPENAI_API_KEY no ambiente do servidor e reinicie o app.";
 
 export const SUPPORTED_AUDIO_TYPES = new Set([
   "audio/mpeg",
@@ -39,7 +41,7 @@ export async function createOpenAIRealtimeToken(): Promise<{
 }> {
   const audio = getServerConfig().audio;
   if (!audio.openAiApiKey) {
-    throw new Error("OPENAI_API_KEY nao configurada.");
+    throw new Error(MISSING_OPENAI_KEY_MESSAGE);
   }
 
   const response = await fetch(OPENAI_REALTIME_CLIENT_SECRET_URL, {
@@ -122,7 +124,7 @@ async function transcribeWithOpenAI(args: {
   type: string;
 }): Promise<N8nAudioAttachment> {
   const audio = getServerConfig().audio;
-  if (!audio.openAiApiKey) throw new Error("OPENAI_API_KEY nao configurada.");
+  if (!audio.openAiApiKey) throw new Error(MISSING_OPENAI_KEY_MESSAGE);
 
   const form = new FormData();
   form.append("model", audio.transcriptionModel);
