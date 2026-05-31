@@ -577,6 +577,23 @@ export async function POST(req: Request) {
       modo,
       userContext: payload.userContext,
     });
+
+    if (!result.ok && result.error.code === "upstream_invalid_response") {
+      result = {
+        ok: true,
+        reply: [
+          "O workflow do n8n respondeu vazio, mas o audio foi transcrito com sucesso.",
+          "",
+          "**Transcricao do audio:**",
+          audioContext.text,
+        ].join("\n"),
+        meta: {
+          agent: "Corvus",
+          usedAudio: true,
+          upstreamFallback: "audio_transcript",
+        },
+      };
+    }
   }
 
   if (!result.ok) {
