@@ -557,6 +557,28 @@ export async function POST(req: Request) {
     };
   }
 
+  if (
+    !result.ok &&
+    result.error.code === "upstream_invalid_response" &&
+    audioContext?.text
+  ) {
+    const audioOnlyMessage = [
+      message.trim(),
+      `Transcricao do audio:\n${audioContext.text}`,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    result = await sendChatToN8n({
+      message: audioOnlyMessage,
+      conversationId,
+      sessionId: payload.sessionId,
+      userId: resolvedUserId,
+      modo,
+      userContext: payload.userContext,
+    });
+  }
+
   if (!result.ok) {
     return NextResponse.json<ChatErrorResponse>(result, {
       status: statusForError(result),
