@@ -46,3 +46,4 @@ next-env.d.ts
 *Corvus*Ingestão*Formulário*.json
 n8n/workflow.original.json
 n8n/*.local.json
+.env.local
