@@ -236,6 +236,10 @@ export async function answerAudioTranscriptFallback(args: {
 }): Promise<string> {
   const audio = getServerConfig().audio;
   if (!audio.openAiApiKey) throw new Error(MISSING_OPENAI_KEY_MESSAGE);
+  const wantsTranscript = isTranscriptRequest(args.message);
+  if (wantsTranscript) {
+    return `Foi falado:\n\n${args.transcript.trim()}`;
+  }
 
   const response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
     method: "POST",
@@ -252,7 +256,7 @@ export async function answerAudioTranscriptFallback(args: {
         {
           role: "system",
           content:
-            "Voce e Corvus. Responda em pt-BR, de forma natural e direta, usando a transcricao do audio como a mensagem do usuario. Nao mencione workflow, n8n, fallback, transcricao ou metadados tecnicos. Se o audio for conversa solta ou ambigua, responda com uma leitura curta do que foi entendido e uma pergunta objetiva para continuar.",
+            "Voce e Corvus. Responda em pt-BR, de forma natural e direta, usando a transcricao do audio como a mensagem do usuario. Nao mencione workflow, n8n, fallback ou metadados tecnicos. Se o usuario pedir para transcrever, dizer o que foi falado, passar o texto do audio ou perguntar literalmente o conteudo dito, devolva a fala transcrita de forma limpa e fiel, sem resumir. Se o audio for conversa solta ou ambigua e nao houver pedido de transcricao, responda com uma leitura curta do que foi entendido e uma pergunta objetiva para continuar.",
         },
         {
           role: "user",
@@ -283,6 +287,31 @@ export async function answerAudioTranscriptFallback(args: {
     | Array<{ message?: { content?: unknown } }>
     | undefined;
   return normalizeTranscript(textValue(choices?.[0]?.message?.content));
+}
+
+function isTranscriptRequest(message: string): boolean {
+  const normalized = message
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  return [
+    "o que foi falado",
+    "oq foi falado",
+    "que foi falado",
+    "o que falaram",
+    "oq falaram",
+    "transcrev",
+    "transcricao",
+    "transcrição",
+    "texto do audio",
+    "texto do áudio",
+    "o que diz",
+    "oq diz",
+    "o que ele disse",
+    "o que ela disse",
+    "o que foi dito",
+    "oq foi dito",
+  ].some((pattern) => normalized.includes(pattern));
 }
 
 function errorAttachment(
