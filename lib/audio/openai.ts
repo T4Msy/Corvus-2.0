@@ -346,10 +346,17 @@ function isTranscriptRequest(message: string): boolean {
     .toLowerCase();
   return [
     "o que foi falado",
+    "o que falou",
     "oq foi falado",
+    "oq falou",
     "que foi falado",
+    "que falou",
     "o que falaram",
     "oq falaram",
+    "falou nesse audio",
+    "falou no audio",
+    "falaram nesse audio",
+    "falaram no audio",
     "transcrev",
     "transcricao",
     "transcrição",
@@ -361,7 +368,11 @@ function isTranscriptRequest(message: string): boolean {
     "o que ela disse",
     "o que foi dito",
     "oq foi dito",
-  ].some((pattern) => normalized.includes(pattern));
+  ].some((pattern) => normalized.includes(pattern)) ||
+    (normalized.includes("audio") &&
+      /\b(o que|oq|que)\b.*\b(falou|falaram|fala|diz|disse|dito)\b/.test(
+        normalized
+      ));
 }
 
 function errorAttachment(
