@@ -59,7 +59,7 @@ export function getServerConfig() {
       ),
       realtimeTranscriptionModel: optional(
         process.env.OPENAI_REALTIME_TRANSCRIPTION_MODEL,
-        "gpt-4o-transcribe"
+        "gpt-realtime-whisper"
       ),
       language: optional(process.env.AUDIO_STT_LANGUAGE, "pt"),
       locale: optional(process.env.AUDIO_STT_LOCALE, "pt-BR"),

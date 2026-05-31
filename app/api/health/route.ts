@@ -22,7 +22,7 @@ export function GET() {
         process.env.OPENAI_TRANSCRIPTION_MODEL?.trim() || "gpt-4o-transcribe",
       realtimeTranscriptionModel:
         process.env.OPENAI_REALTIME_TRANSCRIPTION_MODEL?.trim() ||
-        "gpt-4o-transcribe",
+        "gpt-realtime-whisper",
     },
     supabase: {
       configured: supabase.configured,

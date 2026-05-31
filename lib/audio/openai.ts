@@ -66,7 +66,6 @@ export async function createOpenAIRealtimeToken(): Promise<{
             transcription: {
               model: audio.realtimeTranscriptionModel,
               language: audio.language,
-              prompt: AUDIO_PROMPT,
             },
             turn_detection: {
               type: "server_vad",
