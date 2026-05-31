@@ -67,12 +67,6 @@ export async function createOpenAIRealtimeToken(): Promise<{
               model: audio.realtimeTranscriptionModel,
               language: audio.language,
             },
-            turn_detection: {
-              type: "server_vad",
-              threshold: 0.5,
-              prefix_padding_ms: 300,
-              silence_duration_ms: 500,
-            },
           },
         },
         include: ["item.input_audio_transcription.logprobs"],
