@@ -3560,7 +3560,8 @@ html[data-theme="light"] .dictation-button.recording {
 /* Ajuste final mobile: reserva uma coluna propria para o botao de voz. */
 @media (max-width: 768px) {
   .composer-dock {
-    grid-template-columns: 40px minmax(0, 1fr) 40px 40px 42px !important;
+    display: grid !important;
+    grid-template-columns: 40px minmax(88px, 1fr) 40px 40px 42px !important;
     grid-template-areas:
       "attach input voice agent send" !important;
     gap: 5px !important;
@@ -3578,42 +3579,50 @@ html[data-theme="light"] .dictation-button.recording {
     min-width: 0 !important;
   }
 
-  .attachment-button:not(.dictation-button) {
+  .attachment-file-button {
     grid-area: attach !important;
   }
 
+  .attachment-voice-button,
   .dictation-button {
     grid-area: voice !important;
+    display: grid !important;
+    place-items: center !important;
     width: 40px !important;
     min-width: 40px !important;
     max-width: 40px !important;
     height: 40px !important;
   }
+
+  .attachment-voice-button span {
+    display: none !important;
+  }
 }
 
 @media (max-width: 380px) {
   .composer-dock {
-    grid-template-columns: 38px minmax(0, 1fr) 38px 38px 40px !important;
+    grid-template-columns: 36px minmax(74px, 1fr) 36px 36px 38px !important;
     gap: 4px !important;
     padding: 7px !important;
   }
 
   .attachment-button,
+  .attachment-voice-button,
   .dictation-button,
   .agent-picker,
   .compact-agent-picker,
   .agent-picker-button,
   .compact-agent-picker .agent-picker-button {
-    width: 38px !important;
-    min-width: 38px !important;
-    max-width: 38px !important;
-    height: 38px !important;
+    width: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    height: 36px !important;
   }
 
   .send-button {
-    width: 40px !important;
-    min-width: 40px !important;
-    max-width: 40px !important;
-    height: 38px !important;
+    width: 38px !important;
+    min-width: 38px !important;
+    max-width: 38px !important;
+    height: 36px !important;
   }
 }

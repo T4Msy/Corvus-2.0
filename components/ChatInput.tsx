@@ -330,7 +330,9 @@ export function ChatInput({
             />
             <button
               type="button"
-              className={`attachment-button${attachmentDisabled ? " restricted" : ""}`}
+              className={`attachment-button attachment-file-button${
+                attachmentDisabled ? " restricted" : ""
+              }`}
               aria-label="Anexar arquivo"
               title="Anexar arquivo"
               disabled={attachmentBusy}
@@ -347,7 +349,7 @@ export function ChatInput({
             </button>
             <button
               type="button"
-              className={`attachment-button dictation-button${
+              className={`attachment-button attachment-voice-button dictation-button${
                 dictating ? " recording" : ""
               }${dictationDisabled ? " restricted" : ""}`}
               aria-label={dictating ? "Parar ditado" : "Iniciar ditado"}
