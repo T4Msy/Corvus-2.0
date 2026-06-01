@@ -3557,20 +3557,20 @@ html[data-theme="light"] .dictation-button.recording {
   background: rgba(239, 68, 68, 0.1) !important;
 }
 
-/* Ajuste final mobile: reserva uma coluna propria para o botao de voz. */
+/* Ajuste final mobile: modo na antiga coluna de voz, voz perto do envio. */
 @media (max-width: 768px) {
   .composer-dock {
     display: grid !important;
     grid-template-columns: 40px 40px minmax(0, 1fr) 40px 42px !important;
     grid-template-areas:
-      "attach voice input agent send" !important;
+      "attach agent input voice send" !important;
     gap: 5px !important;
   }
 
   .composer-dock:has(.composer-attachment-chip) {
     grid-template-areas:
       "chips chips chips chips chips"
-      "attach voice input agent send" !important;
+      "attach agent input voice send" !important;
   }
 
   .composer-input-row,

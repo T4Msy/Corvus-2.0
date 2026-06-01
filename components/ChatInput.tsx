@@ -90,6 +90,7 @@ export function ChatInput({
   const [dictationStatus, setDictationStatus] = useState<
     "idle" | "connecting" | "recording"
   >("idle");
+  const [compactPlaceholder, setCompactPlaceholder] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -108,6 +109,14 @@ export function ChatInput({
     }
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 520px)");
+    const updatePlaceholder = () => setCompactPlaceholder(media.matches);
+    updatePlaceholder();
+    media.addEventListener("change", updatePlaceholder);
+    return () => media.removeEventListener("change", updatePlaceholder);
   }, []);
 
   useEffect(() => {
@@ -251,7 +260,11 @@ export function ChatInput({
               ref={textareaRef}
               rows={1}
               className="composer-textarea"
-              placeholder="Como posso ajudar você hoje?"
+              placeholder={
+                compactPlaceholder
+                  ? "Como posso ajudar?"
+                  : "Como posso ajudar você hoje?"
+              }
               aria-label="Mensagem"
               spellCheck
               value={value}
@@ -347,41 +360,6 @@ export function ChatInput({
               {attachmentBusy ? <Loader2 size={16} /> : <Plus size={18} />}
               <span>{attachmentBusy ? "..." : "Anexos"}</span>
             </button>
-            <button
-              type="button"
-              className={`attachment-button attachment-voice-button dictation-button${
-                dictating ? " recording" : ""
-              }${dictationDisabled ? " restricted" : ""}`}
-              aria-label={dictating ? "Parar ditado" : "Iniciar ditado"}
-              title={dictating ? "Parar ditado" : "Ditado por voz"}
-              disabled={dictationStatus === "connecting"}
-              onClick={() => {
-                if (dictating) {
-                  void stopDictation();
-                  return;
-                }
-                void startDictation();
-              }}
-            >
-              {dictationStatus === "connecting" ? (
-                <Loader2 size={16} />
-              ) : dictating ? (
-                <Square size={15} />
-              ) : (
-                <Mic size={16} />
-              )}
-              <span>
-                {dictationStatus === "connecting"
-                  ? "..."
-                  : dictating
-                    ? "Gravando"
-                    : "Voz"}
-              </span>
-            </button>
-            <SyncStatus status={syncStatus} />
-          </div>
-
-          <div className="composer-tool-group composer-send-group">
             <div
               className="agent-picker compact-agent-picker"
               data-agent-mode={mode}
@@ -441,6 +419,41 @@ export function ChatInput({
                 )}
               </AnimatePresence>
             </div>
+            <SyncStatus status={syncStatus} />
+          </div>
+
+          <div className="composer-tool-group composer-send-group">
+            <button
+              type="button"
+              className={`attachment-button attachment-voice-button dictation-button${
+                dictating ? " recording" : ""
+              }${dictationDisabled ? " restricted" : ""}`}
+              aria-label={dictating ? "Parar ditado" : "Iniciar ditado"}
+              title={dictating ? "Parar ditado" : "Ditado por voz"}
+              disabled={dictationStatus === "connecting"}
+              onClick={() => {
+                if (dictating) {
+                  void stopDictation();
+                  return;
+                }
+                void startDictation();
+              }}
+            >
+              {dictationStatus === "connecting" ? (
+                <Loader2 size={16} />
+              ) : dictating ? (
+                <Square size={15} />
+              ) : (
+                <Mic size={16} />
+              )}
+              <span>
+                {dictationStatus === "connecting"
+                  ? "..."
+                  : dictating
+                    ? "Gravando"
+                    : "Voz"}
+              </span>
+            </button>
             <button
               type="button"
               className="send-button"
