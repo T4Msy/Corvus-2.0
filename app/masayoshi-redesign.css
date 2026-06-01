@@ -3556,3 +3556,64 @@ html[data-theme="light"] .dictation-button.recording {
   color: #991b1b !important;
   background: rgba(239, 68, 68, 0.1) !important;
 }
+
+/* Ajuste final mobile: reserva uma coluna propria para o botao de voz. */
+@media (max-width: 768px) {
+  .composer-dock {
+    grid-template-columns: 40px minmax(0, 1fr) 40px 40px 42px !important;
+    grid-template-areas:
+      "attach input voice agent send" !important;
+    gap: 5px !important;
+  }
+
+  .composer-dock:has(.composer-attachment-chip) {
+    grid-template-areas:
+      "chips chips chips chips chips"
+      "attach input voice agent send" !important;
+  }
+
+  .composer-input-row,
+  .composer-text-field,
+  .composer-textarea {
+    min-width: 0 !important;
+  }
+
+  .attachment-button:not(.dictation-button) {
+    grid-area: attach !important;
+  }
+
+  .dictation-button {
+    grid-area: voice !important;
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    height: 40px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .composer-dock {
+    grid-template-columns: 38px minmax(0, 1fr) 38px 38px 40px !important;
+    gap: 4px !important;
+    padding: 7px !important;
+  }
+
+  .attachment-button,
+  .dictation-button,
+  .agent-picker,
+  .compact-agent-picker,
+  .agent-picker-button,
+  .compact-agent-picker .agent-picker-button {
+    width: 38px !important;
+    min-width: 38px !important;
+    max-width: 38px !important;
+    height: 38px !important;
+  }
+
+  .send-button {
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    height: 38px !important;
+  }
+}
