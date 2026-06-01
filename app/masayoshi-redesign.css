@@ -881,7 +881,7 @@ textarea {
     max-width: 46vw;
   }
 
-  .topbar-actions .icon-button[title="Letras personalizadas"],
+  .topbar-actions .icon-button[title="Fontes personalizadas"],
   .topbar-actions .icon-button[title="Detalhes da conversa"] {
     display: none;
   }
@@ -1972,7 +1972,7 @@ textarea {
   }
 
   .topbar-status-board,
-  .topbar-actions .icon-button[title="Letras personalizadas"],
+  .topbar-actions .icon-button[title="Fontes personalizadas"],
   .topbar-actions .icon-button[title="Modo foco"],
   .topbar-actions .icon-button[title="Mostrar sidebar"],
   .topbar-actions .icon-button[title="Detalhes da conversa"] {
@@ -3655,5 +3655,27 @@ html[data-theme="light"] .dictation-button.recording {
     min-width: 38px !important;
     max-width: 38px !important;
     height: 36px !important;
+  }
+}
+
+/* Sidebar: tempo direto na lista; menu sempre disponivel no celular. */
+.conversation-open {
+  width: auto !important;
+}
+
+.conversation-meta,
+.conversation-time {
+  display: block !important;
+}
+
+.conversation-time {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+@media (hover: none), (max-width: 768px) {
+  .conversation-menu-button {
+    display: inline-flex !important;
+    opacity: 1 !important;
   }
 }

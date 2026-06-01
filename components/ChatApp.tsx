@@ -29,7 +29,6 @@ import {
   Sparkles,
   Square,
   Star,
-  Tag,
   Trash2,
   Volume2,
   X,
@@ -72,13 +71,12 @@ import type {
   UserProfile,
 } from "@/lib/types";
 
-type HistoryFilter = "all" | "pinned" | "favorite" | "tagged" | "archived";
+type HistoryFilter = "all" | "pinned" | "favorite" | "archived";
 
 const HISTORY_FILTERS: Array<{ value: HistoryFilter; label: string }> = [
   { value: "all", label: "Todas" },
   { value: "pinned", label: "Fixadas" },
   { value: "favorite", label: "Favoritas" },
-  { value: "tagged", label: "Tags" },
   { value: "archived", label: "Arquivo" },
 ];
 
@@ -103,10 +101,7 @@ export function ChatApp() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const [tagEditorId, setTagEditorId] = useState<string | null>(null);
-  const [tagInput, setTagInput] = useState("");
   const [detailsSummary, setDetailsSummary] = useState("");
-  const [detailsTagInput, setDetailsTagInput] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmDeleteAllOpen, setConfirmDeleteAllOpen] = useState(false);
   const [topbarEditing, setTopbarEditing] = useState(false);
@@ -257,22 +252,8 @@ export function ChatApp() {
   }, [openMenuId]);
 
   useEffect(() => {
-    if (!tagEditorId) return;
-    function handlePointerDown(event: MouseEvent) {
-      const target = event.target as HTMLElement | null;
-      if (!target?.closest(`[data-conversation-id="${tagEditorId}"]`)) {
-        setTagEditorId(null);
-        setTagInput("");
-      }
-    }
-    document.addEventListener("mousedown", handlePointerDown);
-    return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [tagEditorId]);
-
-  useEffect(() => {
     if (!detailsOpen) return;
     setDetailsSummary(conversations.activeConversation?.summary ?? "");
-    setDetailsTagInput("");
   }, [conversations.activeConversation, detailsOpen]);
 
   useEffect(() => {
@@ -452,9 +433,6 @@ export function ChatApp() {
       favorite: conversations.conversations.filter(
         (item) => item.favorite && !item.archived
       ).length,
-      tagged: conversations.conversations.filter(
-        (item) => !item.archived && (item.tags?.length ?? 0) > 0
-      ).length,
       archived: conversations.conversations.filter((item) => item.archived)
         .length,
     }),
@@ -577,7 +555,6 @@ export function ChatApp() {
     setDetailsOpen(false);
     setTopbarEditing(false);
     setOpenMenuId(null);
-    setTagEditorId(null);
     setConfirmDeleteId(null);
     setConfirmDeleteAllOpen(false);
     setSelectionMode(false);
@@ -631,63 +608,18 @@ export function ChatApp() {
         typeof meta.summaryCandidate === "string"
           ? meta.summaryCandidate.trim()
           : "";
-      const tags = Array.isArray(meta.tags)
-        ? normalizeTags(
-            meta.tags.filter((tag): tag is string => typeof tag === "string")
-          )
-        : [];
-
       if (summary && summary !== (conversation.summary ?? "")) {
         patch.summary = summary.slice(0, 1_200);
-      }
-      if (tags.length > 0) {
-        patch.tags = normalizeTags([...(conversation.tags ?? []), ...tags]);
       }
       if (Object.keys(patch).length > 0) {
         updateConversation(conversation.id, patch);
       }
   }
 
-  const openTagEditor = useCallback((conversation: Conversation) => {
-    setTagEditorId(conversation.id);
-    setTagInput("");
-    setOpenMenuId(null);
-    setConfirmDeleteId(null);
-  }, []);
-
-  const addConversationTag = useCallback(
-    (conversation: Conversation, rawTag: string) => {
-      const tag = normalizeTag(rawTag);
-      if (!tag) return;
-      const tags = normalizeTags([...(conversation.tags ?? []), tag]);
-      updateConversation(conversation.id, { tags });
-      setTagInput("");
-      setDetailsTagInput("");
-    },
-    [updateConversation]
-  );
-
-  const removeConversationTag = useCallback(
-    (conversation: Conversation, tag: string) => {
-      const tags = normalizeTags(
-        (conversation.tags ?? []).filter((item) => item !== tag)
-      );
-      updateConversation(conversation.id, { tags });
-    },
-    [updateConversation]
-  );
-
-  const searchTag = useCallback((tag: string) => {
-    setHistoryFilter("tagged");
-    setQuery(tag);
-    setCommandOpen(false);
-  }, []);
-
   const startRename = useCallback((conversation: Conversation) => {
     setRenameId(conversation.id);
     setRenameValue(conversation.title);
     setOpenMenuId(null);
-    setTagEditorId(null);
     setConfirmDeleteId(null);
   }, []);
 
@@ -727,7 +659,6 @@ export function ChatApp() {
   const deleteConversation = useCallback(
     async (conversationId: string) => {
       setOpenMenuId(null);
-      setTagEditorId(null);
       setConfirmDeleteId(null);
       const wasActive = conversationId === conversations.activeConversationId;
       const nextId = await conversations.deleteConversation(conversationId);
@@ -788,7 +719,6 @@ export function ChatApp() {
     setConfirmDeleteAllOpen(false);
     exitSelectionMode();
     setOpenMenuId(null);
-    setTagEditorId(null);
     setConfirmDeleteId(null);
     setDetailsOpen(false);
     setQuery("");
@@ -1151,7 +1081,7 @@ export function ChatApp() {
               }}
             >
               <Sparkles size={14} />
-              <span>Letras</span>
+              <span>Fontes</span>
               <kbd>MSY</kbd>
             </button>
           </div>
@@ -1348,9 +1278,7 @@ export function ChatApp() {
                         <span className="conversation-copy">
                           <span className="conversation-title">{conversation.title}</span>
                           <span className="conversation-meta">
-                            {(conversation.tags ?? []).length > 0
-                              ? (conversation.tags ?? []).slice(0, 2).map((tag) => `#${tag}`).join(" ")
-                              : conversation.summary || "Conversa MSY"}
+                            {conversation.summary || "Conversa MSY"}
                           </span>
                         </span>
                         {!selectionMode && (
@@ -1441,14 +1369,6 @@ export function ChatApp() {
                             <button
                               type="button"
                               role="menuitem"
-                              onClick={() => openTagEditor(conversation)}
-                            >
-                              <Tag size={13} />
-                              <span>Tags</span>
-                            </button>
-                            <button
-                              type="button"
-                              role="menuitem"
                               onClick={() => {
                                 exportConversationAsMarkdown(conversation);
                                 setOpenMenuId(null);
@@ -1493,64 +1413,6 @@ export function ChatApp() {
                               <span>Excluir</span>
                             </button>
                           </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    <AnimatePresence>
-                      {tagEditorId === conversation.id && (
-                        <motion.div
-                          className="conversation-tag-editor"
-                          initial={{ opacity: 0, y: 4, scale: 0.98 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: 4, scale: 0.98 }}
-                          transition={{ duration: 0.12 }}
-                        >
-                          <div className="tag-chip-list">
-                            {(conversation.tags ?? []).length > 0 ? (
-                              (conversation.tags ?? []).map((tag) => (
-                                <button
-                                  key={tag}
-                                  type="button"
-                                  className="tag-chip removable"
-                                  title="Remover tag"
-                                  onClick={() =>
-                                    removeConversationTag(conversation, tag)
-                                  }
-                                >
-                                  <span>{tag}</span>
-                                  <X size={11} />
-                                </button>
-                              ))
-                            ) : (
-                              <span className="tag-empty">Sem tags</span>
-                            )}
-                          </div>
-                          <form
-                            className="tag-input-row"
-                            onSubmit={(event) => {
-                              event.preventDefault();
-                              addConversationTag(conversation, tagInput);
-                            }}
-                          >
-                            <input
-                              autoFocus
-                              value={tagInput}
-                              maxLength={24}
-                              placeholder="Adicionar tag"
-                              onChange={(event) =>
-                                setTagInput(event.target.value)
-                              }
-                              onKeyDown={(event) => {
-                                if (event.key === "Escape") {
-                                  event.preventDefault();
-                                  setTagEditorId(null);
-                                  setTagInput("");
-                                }
-                              }}
-                            />
-                            <button type="submit">Adicionar</button>
-                          </form>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -1741,8 +1603,8 @@ export function ChatApp() {
             <button
               type="button"
               className="icon-button"
-              title="Letras personalizadas"
-              aria-label="Abrir letras personalizadas"
+              title="Fontes personalizadas"
+              aria-label="Abrir fontes personalizadas"
               onClick={() => setCustomLettersOpen(true)}
             >
               <Sparkles size={17} />
@@ -1891,7 +1753,6 @@ export function ChatApp() {
         onQuickPrompt={requestSend}
         historyFilter={historyFilter}
         onSetHistoryFilter={setHistoryFilter}
-        onSearchTag={searchTag}
         onUpdateActiveConversation={updateActiveConversation}
       />
 
@@ -1939,8 +1800,8 @@ export function ChatApp() {
                     <small>arquivos</small>
                   </span>
                   <span>
-                    <strong>{(conversations.activeConversation.tags ?? []).length}</strong>
-                    <small>tags</small>
+                    <strong>{formatRelative(conversations.activeConversation.updatedAt)}</strong>
+                    <small>atividade</small>
                   </span>
                 </div>
 
@@ -1960,54 +1821,6 @@ export function ChatApp() {
                   >
                     Salvar resumo
                   </button>
-                </section>
-
-                <section className="details-section">
-                  <h3>Tags</h3>
-                  <div className="tag-chip-list">
-                    {(conversations.activeConversation.tags ?? []).length > 0 ? (
-                      (conversations.activeConversation.tags ?? []).map((tag) => (
-                        <button
-                          key={tag}
-                          type="button"
-                          className="tag-chip removable"
-                          onClick={() =>
-                            removeConversationTag(
-                              conversations.activeConversation as Conversation,
-                              tag
-                            )
-                          }
-                        >
-                          <span>{tag}</span>
-                          <X size={11} />
-                        </button>
-                      ))
-                    ) : (
-                      <span className="tag-empty">Nenhuma tag cadastrada</span>
-                    )}
-                  </div>
-                  <form
-                    className="tag-input-row"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      if (conversations.activeConversation) {
-                        addConversationTag(
-                          conversations.activeConversation,
-                          detailsTagInput
-                        );
-                      }
-                    }}
-                  >
-                    <input
-                      value={detailsTagInput}
-                      maxLength={24}
-                      placeholder="Nova tag"
-                      onChange={(event) =>
-                        setDetailsTagInput(event.target.value)
-                      }
-                    />
-                    <button type="submit">Adicionar</button>
-                  </form>
                 </section>
 
                 <section className="details-section">
@@ -2332,7 +2145,6 @@ function SyncPill({
 function sectionConversations(items: Conversation[], filter: HistoryFilter) {
   if (filter === "pinned") return [{ label: "Fixadas", items }];
   if (filter === "favorite") return [{ label: "Favoritas", items }];
-  if (filter === "tagged") return [{ label: "Com tags", items }];
   if (filter === "archived") return [{ label: "Arquivadas", items }];
 
   const pinned = items.filter((item) => item.pinned && !item.archived);
@@ -2358,7 +2170,6 @@ function matchesHistoryFilter(
   if (conversation.archived) return false;
   if (filter === "pinned") return Boolean(conversation.pinned);
   if (filter === "favorite") return Boolean(conversation.favorite);
-  if (filter === "tagged") return (conversation.tags?.length ?? 0) > 0;
   return true;
 }
 
@@ -2366,27 +2177,10 @@ function getConversationSearchText(conversation: Conversation): string {
   return [
     conversation.title,
     conversation.summary,
-    ...(conversation.tags ?? []),
     ...(conversation.messages ?? []).slice(0, 4).map((message) => message.text),
   ]
     .join(" ")
     .toLowerCase();
-}
-
-function normalizeTag(value: string): string {
-  return value
-    .replace(/^#/, "")
-    .replace(/\s+/g, "-")
-    .replace(/[^\p{L}\p{N}_-]/gu, "")
-    .toLowerCase()
-    .slice(0, 24);
-}
-
-function normalizeTags(values: string[]): string[] {
-  return Array.from(new Set(values.map(normalizeTag).filter(Boolean))).slice(
-    0,
-    8
-  );
 }
 
 function formatDateTime(time: number): string {
@@ -2422,7 +2216,8 @@ function formatRelative(time: number): string {
   const hour = 60 * minute;
   const day = 24 * hour;
   if (diff < minute) return "agora";
-  if (diff < hour) return `${Math.floor(diff / minute)}m`;
-  if (diff < day) return `${Math.floor(diff / hour)}h`;
-  return `${Math.floor(diff / day)}d`;
+  if (diff < hour) return `há ${Math.floor(diff / minute)} min`;
+  if (diff < day) return `há ${Math.floor(diff / hour)} h`;
+  const days = Math.floor(diff / day);
+  return `há ${days} ${days === 1 ? "dia" : "dias"}`;
 }

@@ -15,12 +15,11 @@ import {
   Settings,
   Sparkles,
   Star,
-  Tag,
   Zap,
 } from "lucide-react";
 import type { AgentMode, Conversation } from "@/lib/types";
 
-type HistoryFilter = "all" | "pinned" | "favorite" | "tagged" | "archived";
+type HistoryFilter = "all" | "pinned" | "favorite" | "archived";
 
 interface Props {
   open: boolean;
@@ -37,7 +36,6 @@ interface Props {
   onToggleFocus: () => void;
   onQuickPrompt: (prompt: string) => void;
   onSetHistoryFilter: (filter: HistoryFilter) => void;
-  onSearchTag: (tag: string) => void;
   onUpdateActiveConversation: (
     patch: Partial<
       Pick<Conversation, "pinned" | "favorite" | "archived">
@@ -93,12 +91,6 @@ const HISTORY_FILTERS: Array<{
     icon: <Star size={15} />,
   },
   {
-    value: "tagged",
-    label: "Com tags",
-    description: "Conversas com etiquetas manuais",
-    icon: <Tag size={15} />,
-  },
-  {
     value: "archived",
     label: "Arquivadas",
     description: "Conversas fora dos recentes",
@@ -121,7 +113,6 @@ export function CommandPalette({
   onToggleFocus,
   onQuickPrompt,
   onSetHistoryFilter,
-  onSearchTag,
   onUpdateActiveConversation,
 }: Props) {
   const [query, setQuery] = useState("");
@@ -245,20 +236,6 @@ export function CommandPalette({
     [activeConversationId, conversations]
   );
 
-  const tags = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          conversations
-            .flatMap((conversation) => conversation.tags ?? [])
-            .filter(Boolean)
-        )
-      )
-        .sort((a, b) => a.localeCompare(b, "pt-BR"))
-        .slice(0, 12),
-    [conversations]
-  );
-
   function run(action: () => void) {
     action();
     onClose();
@@ -341,7 +318,7 @@ export function CommandPalette({
                 />
                 <CommandItem
                   icon={<Sparkles size={15} />}
-                  label="Letras personalizadas"
+                  label="Fontes personalizadas"
                   description="Fontes Unicode e símbolos aesthetic"
                   onClick={() => run(onOpenCustomLetters)}
                 />
@@ -430,21 +407,6 @@ export function CommandPalette({
                 ))}
               </section>
 
-              {tags.length > 0 && (
-                <section>
-                  <p>Tags</p>
-                  {tags.map((tag) => (
-                    <CommandItem
-                      key={tag}
-                      icon={<Tag size={15} />}
-                      label={`#${tag}`}
-                      description="Buscar conversas com esta tag"
-                      onClick={() => run(() => onSearchTag(tag))}
-                    />
-                  ))}
-                </section>
-              )}
-
               <section>
                 <p>Conversas</p>
                 {filteredConversations.length === 0 && (
@@ -512,7 +474,8 @@ function formatRelative(time: number): string {
   const hour = 60 * minute;
   const day = 24 * hour;
   if (diff < minute) return "agora";
-  if (diff < hour) return `${Math.floor(diff / minute)}m`;
-  if (diff < day) return `${Math.floor(diff / hour)}h`;
-  return `${Math.floor(diff / day)}d`;
+  if (diff < hour) return `há ${Math.floor(diff / minute)} min`;
+  if (diff < day) return `há ${Math.floor(diff / hour)} h`;
+  const days = Math.floor(diff / day);
+  return `há ${days} ${days === 1 ? "dia" : "dias"}`;
 }

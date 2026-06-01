@@ -12889,7 +12889,7 @@ body {
 
 @media (max-width: 520px) {
   .sidebar-custom-letters-button kbd,
-  .topbar-actions .icon-button[title="Letras personalizadas"] {
+  .topbar-actions .icon-button[title="Fontes personalizadas"] {
     display: none;
   }
 
@@ -13450,5 +13450,27 @@ body[data-theme="light"] .dictation-button.recording {
 
   .message-text.markdown .markdown-table-wrap table {
     min-width: 560px;
+  }
+}
+
+/* Sidebar: tempo sempre visivel e acoes acessiveis em telas sem hover. */
+.conversation-open {
+  width: auto;
+}
+
+.conversation-meta,
+.conversation-time {
+  display: block;
+}
+
+.conversation-time {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+@media (hover: none), (max-width: 768px) {
+  .conversation-menu-button {
+    display: inline-flex;
+    opacity: 1;
   }
 }

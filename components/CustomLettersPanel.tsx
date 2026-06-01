@@ -97,7 +97,7 @@ export function CustomLettersPanel({ open, onClose }: Props) {
           <motion.button
             type="button"
             className="custom-letters-scrim"
-            aria-label="Fechar letras personalizadas"
+            aria-label="Fechar fontes personalizadas"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -108,7 +108,7 @@ export function CustomLettersPanel({ open, onClose }: Props) {
             className="custom-letters-panel"
             role="dialog"
             aria-modal="true"
-            aria-label="Letras personalizadas"
+            aria-label="Fontes personalizadas"
             initial={{ opacity: 0, x: 26 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 22 }}
@@ -120,13 +120,13 @@ export function CustomLettersPanel({ open, onClose }: Props) {
                   <Sparkles size={13} />
                   Ferramenta MSY
                 </span>
-                <h2>Letras Personalizadas</h2>
+                <h2>Fontes Personalizadas</h2>
                 <p>Fontes Unicode e símbolos para bio, nick, status e redes sociais.</p>
               </div>
               <button
                 type="button"
                 className="dialog-close"
-                aria-label="Fechar letras personalizadas"
+                aria-label="Fechar fontes personalizadas"
                 onClick={onClose}
               >
                 <X size={18} />
