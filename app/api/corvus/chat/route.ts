@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { createAttachmentSignedUrl } from "@/integrations/supabase/storage";
+import { getServerConfig } from "@/lib/config";
 import {
   answerAudioTranscriptFallback,
   buildAudioContext,
@@ -180,6 +181,77 @@ function statusForError(err: ChatErrorResponse): number {
     default:
       return 500;
   }
+}
+
+async function answerWithServerFallback(args: {
+  message: string;
+  modo: AgentMode;
+  userContext: UserContext;
+}): Promise<string> {
+  const config = getServerConfig();
+  const apiKey = config.audio.openAiApiKey;
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY ausente para fallback do Corvus.");
+  }
+
+  const modeLabel =
+    args.modo === "fenrir"
+      ? "modo Fenrir, com visao criativa e expansiva"
+      : "modo Corvus, com tom institucional, preciso e objetivo";
+  const userLabel = [
+    args.userContext.nome ? `Nome: ${args.userContext.nome}` : "",
+    args.userContext.cargo ? `Cargo: ${args.userContext.cargo}` : "",
+    args.userContext.sigla ? `Sigla: ${args.userContext.sigla}` : "",
+    args.userContext.tipo ? `Tipo: ${args.userContext.tipo}` : "",
+  ]
+    .filter(Boolean)
+    .join(" | ");
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    cache: "no-store",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: config.audio.responseFallbackModel,
+      temperature: args.modo === "fenrir" ? 0.75 : 0.35,
+      max_tokens: 900,
+      messages: [
+        {
+          role: "system",
+          content:
+            `Voce e o Corvus (${modeLabel}). Responda em pt-BR. ` +
+            "Seja util, direto e bem estruturado. Nao mencione n8n, workflow, fallback, erro tecnico ou infraestrutura. " +
+            "Quando o pedido envolver comparacao, ranking, cargos, estrutura, plano, decisao ou analise, use organizacao clara e tabela markdown quando ajudar.",
+        },
+        {
+          role: "user",
+          content: [userLabel ? `Contexto do usuario: ${userLabel}` : "", args.message]
+            .filter(Boolean)
+            .join("\n\n"),
+        },
+      ],
+    }),
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | {
+        error?: { message?: string };
+        choices?: Array<{ message?: { content?: string } }>;
+      }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(
+      data?.error?.message || `OpenAI retornou HTTP ${response.status}.`
+    );
+  }
+
+  const reply = data?.choices?.[0]?.message?.content?.trim() || "";
+  if (!reply) throw new Error("OpenAI retornou resposta vazia.");
+  return reply;
 }
 
 export async function POST(req: Request) {
@@ -598,6 +670,34 @@ export async function POST(req: Request) {
           agent: "Corvus",
           usedAudio: true,
           upstreamFallback: "audio_response",
+        },
+      };
+    }
+  }
+
+  if (!result.ok && result.error.code === "upstream_invalid_response") {
+    const originalError = result.error;
+    try {
+      const fallbackReply = await answerWithServerFallback({
+        message: messageForN8n,
+        modo,
+        userContext: payload.userContext,
+      });
+      result = {
+        ok: true,
+        reply: fallbackReply,
+        meta: {
+          agent: modo === "fenrir" ? "Fenrir" : "Corvus",
+          upstreamFallback: "openai_direct",
+        },
+      };
+    } catch {
+      result = {
+        ok: false,
+        error: {
+          ...originalError,
+          message:
+            "O workflow do n8n respondeu sem conteudo. Verifique se N8N_WEBHOOK_URL aponta para o webhook de producao ativo e se o node 'Respond to Webhook' esta conectado ao final do fluxo.",
         },
       };
     }
