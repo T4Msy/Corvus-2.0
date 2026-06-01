@@ -3561,16 +3561,16 @@ html[data-theme="light"] .dictation-button.recording {
 @media (max-width: 768px) {
   .composer-dock {
     display: grid !important;
-    grid-template-columns: 40px minmax(0, 1fr) 40px 40px 42px !important;
+    grid-template-columns: 40px 40px minmax(0, 1fr) 40px 42px !important;
     grid-template-areas:
-      "attach input voice agent send" !important;
+      "attach voice input agent send" !important;
     gap: 5px !important;
   }
 
   .composer-dock:has(.composer-attachment-chip) {
     grid-template-areas:
       "chips chips chips chips chips"
-      "attach input voice agent send" !important;
+      "attach voice input agent send" !important;
   }
 
   .composer-input-row,
@@ -3632,7 +3632,7 @@ html[data-theme="light"] .dictation-button.recording {
 
 @media (max-width: 380px) {
   .composer-dock {
-    grid-template-columns: 34px minmax(0, 1fr) 34px 34px 38px !important;
+    grid-template-columns: 34px 34px minmax(0, 1fr) 34px 38px !important;
     gap: 4px !important;
     padding: 7px !important;
   }
