@@ -158,7 +158,7 @@ export function ChatInput({
       typeof navigator === "undefined" ||
       !navigator.mediaDevices?.getUserMedia
     ) {
-      onDictationError?.("Este navegador nao suporta ditado por microfone.");
+      onDictationError?.("Este navegador não suporta ditado por microfone.");
       return;
     }
 
@@ -183,7 +183,7 @@ export function ChatInput({
         throw new Error(
           tokenData && !tokenData.ok
             ? tokenData.error.message
-            : "Nao foi possivel iniciar o ditado."
+            : "Não foi possível iniciar o ditado."
         );
       }
 
@@ -202,7 +202,7 @@ export function ChatInput({
     } catch (err) {
       setDictationStatus("idle");
       onDictationError?.(
-        err instanceof Error ? err.message : "Nao foi possivel iniciar o ditado."
+        err instanceof Error ? err.message : "Não foi possível iniciar o ditado."
       );
     }
   }

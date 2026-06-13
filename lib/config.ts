@@ -22,6 +22,16 @@ function asInt(value: string | undefined, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
+let warnedMissingSecret = false;
+function warnIfWebhookUnauthenticated(secret: string): void {
+  if (secret || warnedMissingSecret) return;
+  warnedMissingSecret = true;
+  console.warn(
+    "[corvus/config] N8N_WEBHOOK_SECRET ausente: o webhook n8n será chamado SEM autenticação " +
+      "(header X-Corvus-Secret omitido). Recomenda-se configurar o secret e o Header Auth no node Webhook."
+  );
+}
+
 export const clientConfig = {
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
@@ -32,10 +42,12 @@ export function getServerConfig() {
   if (typeof window !== "undefined") {
     throw new Error("[corvus/config] serverConfig acessado no browser.");
   }
+  const webhookSecret = optional(process.env.N8N_WEBHOOK_SECRET, "");
+  warnIfWebhookUnauthenticated(webhookSecret);
   return {
     n8n: {
       webhookUrl: required("N8N_WEBHOOK_URL", process.env.N8N_WEBHOOK_URL),
-      webhookSecret: optional(process.env.N8N_WEBHOOK_SECRET, ""),
+      webhookSecret,
       timeoutMs: asInt(process.env.N8N_TIMEOUT_MS, 30_000),
       maxRetries: asInt(process.env.N8N_MAX_RETRIES, 2),
     },

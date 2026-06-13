@@ -6,6 +6,7 @@ import type {
 
 const MAX_EXTRACTED_CHARS_PER_FILE = 18_000;
 const MAX_DOCUMENT_CONTEXT_CHARS = 28_000;
+const MAX_DOCUMENT_DOWNLOAD_BYTES = 15 * 1024 * 1024;
 const TEXT_DECODER = new TextDecoder("utf-8", { fatal: false });
 
 const SUPPORTED_TEXT_TYPES = new Set([
@@ -51,7 +52,16 @@ export async function extractDocumentText(
     throw new Error("Nao foi possivel baixar o documento anexado.");
   }
 
+  // Guarda anti-OOM: rejeita arquivos grandes antes de materializar em memória.
+  const declaredSize = Number(response.headers.get("content-length") || "0");
+  if (declaredSize > MAX_DOCUMENT_DOWNLOAD_BYTES) {
+    throw new Error("Documento anexado excede o tamanho maximo permitido.");
+  }
+
   const buffer = Buffer.from(await response.arrayBuffer());
+  if (buffer.byteLength > MAX_DOCUMENT_DOWNLOAD_BYTES) {
+    throw new Error("Documento anexado excede o tamanho maximo permitido.");
+  }
   const normalized = attachment.type.toLowerCase();
   const extension = extensionOf(attachment.name);
 

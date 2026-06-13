@@ -740,23 +740,39 @@ export function ChatApp() {
       const active = conversations.activeConversation;
       if (!active) return;
 
-      // Update DB: patch message text + remove all messages after it
+      // Atualiza o banco: edita o texto da mensagem e remove tudo que veio depois.
+      // Sequencial (PATCH → DELETE) para detectar falha parcial — se o DELETE falhar,
+      // as mensagens antigas reapareceriam no reload sem aviso.
       if (auth.status === "authed" && conversations.online && auth.accessToken) {
         const base = `/api/conversations/${active.id}/messages`;
-        await Promise.all([
-          fetch(base, {
+        try {
+          const patchRes = await fetch(base, {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${auth.accessToken}`,
             },
             body: JSON.stringify({ createdAt: originalCreatedAt, text: newText }),
-          }),
-          fetch(`${base}?from=${originalCreatedAt + 1}`, {
+          });
+          if (!patchRes.ok) throw new Error("Falha ao salvar a edição da mensagem.");
+
+          const deleteRes = await fetch(`${base}?from=${originalCreatedAt + 1}`, {
             method: "DELETE",
             headers: { Authorization: `Bearer ${auth.accessToken}` },
-          }),
-        ]).catch(() => undefined);
+          });
+          if (!deleteRes.ok) {
+            throw new Error("Mensagem editada, mas não foi possível remover as respostas seguintes.");
+          }
+        } catch (err) {
+          toast.push({
+            tone: "error",
+            title: "Edição não sincronizada",
+            message:
+              err instanceof Error
+                ? err.message
+                : "Não foi possível sincronizar a edição com o servidor.",
+          });
+        }
       }
 
       await chat.editAndResend(originalCreatedAt, newText, {
@@ -777,6 +793,7 @@ export function ChatApp() {
       chat,
       conversations,
       mode,
+      toast,
       userContext,
     ]
   );

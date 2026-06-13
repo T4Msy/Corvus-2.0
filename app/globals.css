@@ -95,16 +95,18 @@
   --surface-active: rgba(20, 18, 22, 0.07);
   --surface-pressed: rgba(20, 18, 22, 0.1);
 
-  --hairline: rgba(20, 18, 22, 0.04);
-  --border-subtle: rgba(20, 18, 22, 0.06);
-  --border: rgba(20, 18, 22, 0.09);
-  --border-strong: rgba(20, 18, 22, 0.15);
+  /* Bordas com opacidade maior no light para ficarem visíveis sobre off-white. */
+  --hairline: rgba(20, 18, 22, 0.1);
+  --border-subtle: rgba(20, 18, 22, 0.12);
+  --border: rgba(20, 18, 22, 0.14);
+  --border-strong: rgba(20, 18, 22, 0.22);
 
+  /* Texto com contraste corrigido (WCAG AA) sobre --bg #f8f7f5. */
   --text-strong: #0a0809;
   --text: #1a1719;
-  --text-muted: #5d575b;
-  --text-dim: #8c868a;
-  --text-faint: #b8b3b6;
+  --text-muted: #575155;
+  --text-dim: #6b656a;
+  --text-faint: #7a757a;
 
   --accent: #c41a3a;
   --accent-strong: #d62043;

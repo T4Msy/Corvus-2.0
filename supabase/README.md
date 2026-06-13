@@ -7,6 +7,9 @@ Migrations SQL para o Supabase do Corvus. Aplicar **na ordem** abaixo, no SQL Ed
 | 1 | `corvus_v3_schema.sql` | Tabelas base (`msy_usuarios`, `msy_conversas`, `msy_mensagens`) — idempotente. |
 | 2 | `corvus_v3_policies.sql` | RLS + storage bucket de anexos. |
 | 3 | `corvus_v3_profile.sql` | Coluna `theme_preference`, `preferences jsonb`, trigger `updated_at`, policies de write em `msy_usuarios`. |
+| 4 | `corvus_v3_conversation_metadata.sql` | Colunas `pinned`/`favorite`/`archived`/`tags`/`summary` + índices. |
+| 5 | `corvus_v3_fix_conversas_updated_trigger.sql` | Correção do trigger `updated_at` de `msy_conversas`. |
+| 6 | `corvus_v3_messages_update_policy.sql` | Policy RLS de **UPDATE** em `msy_mensagens` (faltava — necessária para editar mensagem sem service role). |
 
 ## Checklist após aplicar
 
@@ -14,7 +17,7 @@ Migrations SQL para o Supabase do Corvus. Aplicar **na ordem** abaixo, no SQL Ed
 
    - `msy_usuarios`: `select own`, `insert own`, `update own`
    - `msy_conversas`: `select own`, `insert own`, `update own`, `delete own`
-   - `msy_mensagens`: `select own`, `insert own`, `delete own`
+   - `msy_mensagens`: `select own`, `insert own`, `update own`, `delete own`
 
 2. Em **Storage**, confirme que o bucket `corvus-attachments` existe e é privado.
 

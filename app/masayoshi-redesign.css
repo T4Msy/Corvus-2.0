@@ -1,5 +1,24 @@
 /* Masayoshi visual system
-   Final override layer for the Corvus premium dark-first redesign. */
+   Final override layer for the Corvus premium dark-first redesign.
+
+   ──────────────────────────────────────────────────────────────────────────
+   CONTRATO DE CAMADAS (leia antes de mexer em tokens)
+   ──────────────────────────────────────────────────────────────────────────
+   - Este arquivo é importado DEPOIS de globals.css (ver app/layout.tsx). Ele é
+     intencionalmente uma camada de override: define a paleta `--msy-*` e reaponta
+     os tokens base (--bg, --accent, --text, ...) para a paleta escura final.
+   - Os overrides de token aqui ficam em `:root`. Como `:root` e `[data-theme="light"]`
+     têm a MESMA especificidade, e este arquivo carrega por último, o `:root` daqui
+     venceria o bloco light do globals.css NO ELEMENTO <html>.
+   - O tema light funciona porque `globals.css [data-theme="light"]` também casa no
+     `<body>` (o layout.tsx seta data-theme em html E body). As variáveis definidas no
+     <body> são herdadas pelos componentes e vencem as do <html>. POR ISSO o atributo
+     data-theme no <body> é LOAD-BEARING: não remova.
+   - NÃO existe um "merge trivial" deste arquivo com o globals.css sem reescrever esse
+     mecanismo. Tokens `--msy-*`, `--ui-*`, `--border-focus`, `--panel-blur` e
+     `--text-faint` são amplamente usados — não são mortos.
+   ──────────────────────────────────────────────────────────────────────────
+*/
 
 :root {
   --msy-black: #030304;

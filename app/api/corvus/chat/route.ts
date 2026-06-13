@@ -17,6 +17,7 @@ import {
   supportedDocumentLabel,
 } from "@/lib/documents/extract";
 import { sendChatToN8n } from "@/lib/n8n/client";
+import { checkRateLimit, clientIpFromHeaders } from "@/lib/rate-limit";
 import {
   analyzeImagesWithOpenAI,
   directVisionReply,
@@ -38,10 +39,13 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MAX_MESSAGE_CHARS = 8_000;
+const RATE_LIMIT_MAX = 20; // requisições por janela
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minuto
 const MAX_IMAGE_ATTACHMENTS = 4;
 const MAX_DOCUMENT_ATTACHMENTS = 4;
 const MAX_AUDIO_ATTACHMENTS = 3;
 const MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_AUDIO_DOWNLOAD_BYTES = 25 * 1024 * 1024;
 const IMAGE_URL_EXPIRES_IN = 10 * 60;
 const DOCUMENT_URL_EXPIRES_IN = 10 * 60;
 const AUDIO_URL_EXPIRES_IN = 10 * 60;
@@ -58,6 +62,20 @@ function bad(message: string, status = 400): NextResponse<ChatErrorResponse> {
   return NextResponse.json<ChatErrorResponse>(
     { ok: false, error: { code: "validation", message, retryable: false } },
     { status }
+  );
+}
+
+function tooManyRequests(retryAfterSeconds: number): NextResponse<ChatErrorResponse> {
+  return NextResponse.json<ChatErrorResponse>(
+    {
+      ok: false,
+      error: {
+        code: "validation",
+        message: `Muitas requisições em sequência. Aguarde ${retryAfterSeconds}s e tente novamente.`,
+        retryable: true,
+      },
+    },
+    { status: 429, headers: { "Retry-After": String(retryAfterSeconds) } }
   );
 }
 
@@ -152,17 +170,27 @@ async function downloadAttachmentBuffer(
     throw new Error("Nao foi possivel baixar o audio anexado.");
   }
 
-  const contentType = response.headers.get("content-type") || expectedType;
+  // Guarda anti-OOM: rejeita arquivos grandes antes de materializar em memória.
+  const declaredSize = Number(response.headers.get("content-length") || "0");
+  if (declaredSize > MAX_AUDIO_DOWNLOAD_BYTES) {
+    throw new Error("Audio anexado excede o tamanho maximo permitido.");
+  }
+
+  const contentType = (response.headers.get("content-type") || expectedType).toLowerCase();
   if (
     contentType &&
-    !contentType.toLowerCase().startsWith("audio/") &&
-    !contentType.toLowerCase().startsWith("video/") &&
+    !contentType.startsWith("audio/") &&
+    !contentType.startsWith("video/") &&
     !isSupportedAudioType(expectedType, name)
   ) {
     throw new Error("Arquivo anexado nao parece ser audio valido.");
   }
 
-  return Buffer.from(await response.arrayBuffer());
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (buffer.byteLength > MAX_AUDIO_DOWNLOAD_BYTES) {
+    throw new Error("Audio anexado excede o tamanho maximo permitido.");
+  }
+  return buffer;
 }
 
 function statusForError(err: ChatErrorResponse): number {
@@ -273,9 +301,10 @@ export async function POST(req: Request) {
   const modoRaw = asString(b.modo, "corvus") as AgentMode;
   const modo: AgentMode = VALID_MODES.has(modoRaw) ? modoRaw : "corvus";
 
-  const requestedUserId = asString(b.userId, "anonymous");
-  let resolvedUserId = requestedUserId;
   const token = bearerToken(req);
+  // Segurança: nunca confiar no `userId` do body. Sem JWT válido, a identidade é
+  // "anonymous" (modo convidado) — impede forjar a identidade de outro usuário.
+  let resolvedUserId = "anonymous";
   let userSupabase: ReturnType<typeof createServerSupabaseClient> | null = null;
 
   if (token) {
@@ -294,6 +323,16 @@ export async function POST(req: Request) {
         503
       );
     }
+  }
+
+  // Rate limiting best-effort: por usuário autenticado, ou por IP no modo convidado.
+  const rateKey =
+    resolvedUserId !== "anonymous"
+      ? `user:${resolvedUserId}`
+      : `ip:${clientIpFromHeaders(req.headers)}`;
+  const rate = checkRateLimit(rateKey, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS);
+  if (!rate.ok) {
+    return tooManyRequests(rate.retryAfterSeconds);
   }
 
   const conversationId = asString(b.conversationId, "");
