@@ -1056,6 +1056,19 @@ export function ChatApp() {
               <small>MSY private intelligence</small>
             </span>
             <span className="brand-badge">V3</span>
+            <button
+              type="button"
+              className="icon-button sidebar-focus-toggle"
+              title={focusMode ? "Mostrar barra lateral" : "Modo foco"}
+              aria-label={focusMode ? "Mostrar barra lateral" : "Ativar modo foco"}
+              onClick={() => setFocusMode((current) => !current)}
+            >
+              {focusMode ? (
+                <PanelLeftOpen size={16} />
+              ) : (
+                <PanelLeftClose size={16} />
+              )}
+            </button>
           </div>
           <button
             type="button"
@@ -1072,35 +1085,44 @@ export function ChatApp() {
               className="new-chat-button"
               onClick={createConversation}
             >
-              <Plus size={15} />
-              <span>
+              <span className="new-chat-glow" aria-hidden="true" />
+              <span className="new-chat-icon">
+                <Plus size={16} />
+              </span>
+              <span className="new-chat-label">
                 <strong>Nova consulta</strong>
                 <small>Rascunho privado</small>
               </span>
             </button>
 
-            <button
-              type="button"
-              className="sidebar-command-button"
-              onClick={() => setCommandOpen(true)}
-            >
-              <Command size={14} />
-              <span>Comandos</span>
-              <kbd>Ctrl K</kbd>
-            </button>
+            <div className="sidebar-quick-actions">
+              <button
+                type="button"
+                className="sidebar-command-button"
+                onClick={() => setCommandOpen(true)}
+              >
+                <span className="command-button-icon">
+                  <Command size={15} />
+                </span>
+                <span className="command-button-text">Comandos</span>
+                <kbd>Ctrl K</kbd>
+              </button>
 
-            <button
-              type="button"
-              className="sidebar-command-button sidebar-custom-letters-button"
-              onClick={() => {
-                setCustomLettersOpen(true);
-                setSidebarOpen(false);
-              }}
-            >
-              <Sparkles size={14} />
-              <span>Fontes</span>
-              <kbd>MSY</kbd>
-            </button>
+              <button
+                type="button"
+                className="sidebar-command-button sidebar-custom-letters-button"
+                onClick={() => {
+                  setCustomLettersOpen(true);
+                  setSidebarOpen(false);
+                }}
+              >
+                <span className="command-button-icon fonts-icon">
+                  <Sparkles size={15} />
+                </span>
+                <span className="command-button-text">Fontes</span>
+                <kbd>MSY</kbd>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1498,7 +1520,22 @@ export function ChatApp() {
         </div>
       </aside>
 
+      {focusMode && (
+        <button
+          type="button"
+          className="focus-exit-fab"
+          title="Mostrar barra lateral"
+          aria-label="Mostrar barra lateral"
+          onClick={() => setFocusMode(false)}
+        >
+          <PanelLeftOpen size={18} />
+        </button>
+      )}
+
       <section className="workspace rebuilt-workspace">
+        <div className="workspace-watermark" aria-hidden="true">
+          CORVUS
+        </div>
         <header className="topbar rebuilt-topbar">
           <div className="topbar-left">
             <button
@@ -1608,56 +1645,33 @@ export function ChatApp() {
             </label>
 
             <div className="topbar-actions">
-            <button
-              type="button"
-              className="icon-button"
-              title="Comandos"
-              aria-label="Abrir comandos"
-              onClick={() => setCommandOpen(true)}
-            >
-              <Command size={17} />
-            </button>
-            <button
-              type="button"
-              className="icon-button"
-              title="Fontes personalizadas"
-              aria-label="Abrir fontes personalizadas"
-              onClick={() => setCustomLettersOpen(true)}
-            >
-              <Sparkles size={17} />
-            </button>
-            <button
-              type="button"
-              className="icon-button"
-              title={focusMode ? "Mostrar sidebar" : "Modo foco"}
-              aria-label={focusMode ? "Mostrar sidebar" : "Ativar modo foco"}
-              onClick={() => setFocusMode((current) => !current)}
-            >
-              {focusMode ? (
-                <PanelLeftOpen size={17} />
-              ) : (
-                <PanelLeftClose size={17} />
-              )}
-            </button>
-            <button
-              type="button"
-              className="icon-button"
-              title="Detalhes da conversa"
-              aria-label="Abrir detalhes da conversa"
-              disabled={!conversations.activeConversation}
-              onClick={() => setDetailsOpen(true)}
-            >
-              <Info size={17} />
-            </button>
-            <button
-              type="button"
-              className="icon-button"
-              title="Configurações"
-              aria-label="Abrir configurações"
-              onClick={() => setSettingsOpen(true)}
-            >
-              <Settings size={17} />
-            </button>
+              <button
+                type="button"
+                className="icon-button"
+                title="Detalhes da conversa"
+                aria-label="Abrir detalhes da conversa"
+                disabled={!conversations.activeConversation}
+                onClick={() => setDetailsOpen(true)}
+              >
+                <Info size={17} />
+              </button>
+              <button
+                type="button"
+                className="topbar-profile-button"
+                title="Meu perfil"
+                aria-label="Abrir configurações"
+                onClick={() => setSettingsOpen(true)}
+              >
+                <span className="profile-avatar topbar-profile-avatar">
+                  {avatarSrc ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={avatarSrc} alt="" />
+                  ) : (
+                    userName.charAt(0).toUpperCase()
+                  )}
+                </span>
+                <span className="topbar-profile-label">Meu perfil</span>
+              </button>
             </div>
           </div>
         </header>
