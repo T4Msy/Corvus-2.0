@@ -8,33 +8,35 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "904a11f0-5719-4857-9845-a5eac5978ceb",
+      "id": "a7b864fd-18ba-4e32-9006-910e029322e9",
       "name": "Webhook Chat",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
       "position": [
-        46960,
-        17872
+        332080,
+        -261440
       ],
       "webhookId": "2da8f0d8-030a-45c3-b750-c4f975832dda"
     },
     {
       "parameters": {
-        "jsCode": "\nconst rawBody = $json.body ?? $json;\nconst message = (rawBody.message ?? rawBody.text ?? '').toString().trim();\nconst userId = (rawBody.userId ?? rawBody.user ?? 'anonymous').toString().trim();\nconst sessionId = (rawBody.sessionId ?? rawBody.conversationId ?? userId).toString().trim();\nconst userContext = rawBody.userContext ?? {};\nconst modo = (rawBody.modo ?? 'auto').toString().toLowerCase().trim();\n\nconst rawImages = Array.isArray(rawBody.imageAttachments)\n  ? rawBody.imageAttachments\n  : (Array.isArray(rawBody.images) ? rawBody.images : []);\nconst imageAttachments = rawImages\n  .filter((item) => item && (item.dataUrl || item.imageUrl || item.url || item.signedUrl) && item.type && item.type.startsWith('image/'))\n  .slice(0, 4)\n  .map((item) => {\n    const imageUrl = (item.dataUrl || item.imageUrl || item.url || item.signedUrl || '').toString();\n    return {\n      name: (item.name ?? 'imagem').toString(),\n      type: (item.type ?? 'image/*').toString(),\n      size: Number(item.size ?? 0),\n      signedUrl: (item.signedUrl || item.imageUrl || item.url || imageUrl).toString(),\n      imageUrl,\n      url: imageUrl,\n      dataUrl: item.dataUrl ? item.dataUrl.toString() : undefined,\n    };\n  });\n\nconst rawDocuments = Array.isArray(rawBody.documentAttachments)\n  ? rawBody.documentAttachments\n  : (Array.isArray(rawBody.documents) ? rawBody.documents : []);\nconst documentAttachments = rawDocuments\n  .filter((item) => item && item.name && item.type)\n  .slice(0, 4)\n  .map((item) => ({\n    name: (item.name ?? 'documento').toString(),\n    type: (item.type ?? 'application/octet-stream').toString(),\n    size: Number(item.size ?? 0),\n    signedUrl: (item.signedUrl || item.url || '').toString(),\n    url: (item.url || item.signedUrl || '').toString(),\n    text: item.text ? item.text.toString() : '',\n    extractionError: item.extractionError ? item.extractionError.toString() : '',\n  }));\n\nconst documentContext = rawBody.documentContext || null;\nconst documentCtxString = (rawBody.documentCtxString || documentContext?.text || '').toString().trim();\nconst visualContext = rawBody.visualContext || null;\nconst visualCtxString = (rawBody.visualCtxString || '').toString().trim();\n\nif (!message && imageAttachments.length === 0 && documentAttachments.length === 0) {\n  return [{ ok: false, error: \"Missing 'message'\" }];\n}\n\nconst memoryKey = userId + '__' + sessionId;\nreturn [{\n  ok: true,\n  message,\n  userId,\n  sessionId,\n  memoryKey,\n  userContext,\n  modo,\n  imageAttachments,\n  hasImages: imageAttachments.length > 0 || rawBody.hasImages === true,\n  visualContext,\n  visualCtxString,\n  usedVision: rawBody.usedVision === true || Boolean(visualContext || visualCtxString),\n  documentAttachments,\n  documentContext,\n  documentCtxString,\n  hasDocuments: documentAttachments.length > 0 || rawBody.hasDocuments === true || Boolean(documentContext || documentCtxString),\n  receivedAt: new Date().toISOString(),\n}];\n"
+        "jsCode": "\nconst rawBody = $json.body ?? $json;\nconst message = (rawBody.message ?? rawBody.text ?? '').toString().trim();\nconst userId = (rawBody.userId ?? rawBody.user ?? 'anonymous').toString().trim();\nconst sessionId = (rawBody.sessionId ?? rawBody.conversationId ?? userId).toString().trim();\nconst userContext = rawBody.userContext ?? {};\nconst modo = (rawBody.modo ?? 'auto').toString().toLowerCase().trim();\n\nconst rawImages = Array.isArray(rawBody.imageAttachments)\n  ? rawBody.imageAttachments\n  : (Array.isArray(rawBody.images) ? rawBody.images : []);\nconst imageAttachments = rawImages\n  .filter((item) => item && (item.dataUrl || item.imageUrl || item.url || item.signedUrl) && item.type && item.type.startsWith('image/'))\n  .slice(0, 4)\n  .map((item) => {\n    const imageUrl = (item.dataUrl || item.imageUrl || item.url || item.signedUrl || '').toString();\n    return {\n      name: (item.name ?? 'imagem').toString(),\n      type: (item.type ?? 'image/*').toString(),\n      size: Number(item.size ?? 0),\n      signedUrl: (item.signedUrl || item.imageUrl || item.url || imageUrl).toString(),\n      imageUrl,\n      url: imageUrl,\n      dataUrl: item.dataUrl ? item.dataUrl.toString() : undefined,\n    };\n  });\n\nconst rawDocuments = Array.isArray(rawBody.documentAttachments)\n  ? rawBody.documentAttachments\n  : (Array.isArray(rawBody.documents) ? rawBody.documents : []);\nconst documentAttachments = rawDocuments\n  .filter((item) => item && item.name && item.type)\n  .slice(0, 4)\n  .map((item) => ({\n    name: (item.name ?? 'documento').toString(),\n    type: (item.type ?? 'application/octet-stream').toString(),\n    size: Number(item.size ?? 0),\n    signedUrl: (item.signedUrl || item.url || '').toString(),\n    url: (item.url || item.signedUrl || '').toString(),\n    text: item.text ? item.text.toString() : '',\n    extractionError: item.extractionError ? item.extractionError.toString() : '',\n  }));\n\nconst rawAudios = Array.isArray(rawBody.audioAttachments)\n  ? rawBody.audioAttachments\n  : (Array.isArray(rawBody.audios) ? rawBody.audios : []);\nconst audioAttachments = rawAudios\n  .filter((item) => item && item.name && item.type)\n  .slice(0, 3)\n  .map((item) => ({\n    name: (item.name ?? 'audio').toString(),\n    type: (item.type ?? 'audio/*').toString(),\n    size: Number(item.size ?? 0),\n    signedUrl: (item.signedUrl || item.url || '').toString(),\n    url: (item.url || item.signedUrl || '').toString(),\n    text: item.text ? item.text.toString() : '',\n    provider: item.provider ? item.provider.toString() : '',\n    model: item.model ? item.model.toString() : '',\n    language: item.language ? item.language.toString() : '',\n    confidence: Number(item.confidence ?? 0) || undefined,\n    transcriptionError: item.transcriptionError ? item.transcriptionError.toString() : '',\n  }));\n\nconst documentContext = rawBody.documentContext || null;\nconst documentCtxString = (rawBody.documentCtxString || documentContext?.text || '').toString().trim();\nconst audioContext = rawBody.audioContext || null;\nconst audioCtxString = (rawBody.audioCtxString || audioContext?.text || '').toString().trim();\nconst visualContext = rawBody.visualContext || null;\nconst visualCtxString = (rawBody.visualCtxString || '').toString().trim();\n\nif (!message && imageAttachments.length === 0 && documentAttachments.length === 0 && audioAttachments.length === 0) {\n  return [{ ok: false, error: \"Missing 'message'\" }];\n}\n\nconst memoryKey = userId + '__' + sessionId;\nreturn [{\n  ok: true,\n  message,\n  userId,\n  sessionId,\n  memoryKey,\n  userContext,\n  modo,\n  imageAttachments,\n  hasImages: imageAttachments.length > 0 || rawBody.hasImages === true,\n  visualContext,\n  visualCtxString,\n  usedVision: rawBody.usedVision === true || Boolean(visualContext || visualCtxString),\n  documentAttachments,\n  documentContext,\n  documentCtxString,\n  hasDocuments: documentAttachments.length > 0 || rawBody.hasDocuments === true || Boolean(documentContext || documentCtxString),\n  audioAttachments,\n  audioContext,\n  audioCtxString,\n  hasAudio: audioAttachments.length > 0 || rawBody.hasAudio === true || Boolean(audioContext || audioCtxString),\n  usedAudioTranscription: rawBody.usedAudioTranscription === true || Boolean(audioContext || audioCtxString),\n  receivedAt: new Date().toISOString(),\n}];\n"
       },
-      "id": "b343765f-4559-4771-8d28-81b8ba71bcfa",
+      "id": "9d5be97f-fe01-459e-9a51-6f994153bf6e",
       "name": "Normalize Input",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        47200,
-        17872
+        332320,
+        -261440
       ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -46,18 +48,16 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"temperature\": 0,\n  \"max_tokens\": 256,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Voce e um classificador de mensagens para um sistema de IA institucional chamado Corvus da Ordem Masayoshi (MSY). Analise mensagem e contexto visual, se houver. Retorne SOMENTE JSON valido, sem markdown, com: tipo, area, complexidade, usarBase, usarMemoria, modo_sugerido, ehSimulacao, ehDecisao. Modos validos: corvus, fenrir, cipher, conselho, simulacao. Use usarBase=true para contexto institucional MSY. Use simulacao para cenarios hipoteticos. Use conselho apenas para decisoes estrategicas complexas.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Mensagem: {{ $json.message }}\\n\\nContexto visual: {{ JSON.stringify($json.visualContext || null) }}\"\n    }\n  ]\n}",
-        "options": {},
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "openAiApi"
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"temperature\": 0,\n  \"max_tokens\": 256,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Voce e um classificador de mensagens para um sistema de IA institucional chamado Corvus da Ordem Masayoshi (MSY). Analise mensagem, contexto visual, documentos e audio transcrito, se houver. Retorne SOMENTE JSON valido, sem markdown, com: tipo, area, complexidade, usarBase, usarMemoria, modo_sugerido, ehSimulacao, ehDecisao. Modos validos: corvus, fenrir, cipher, conselho, simulacao. Use usarBase=true para contexto institucional MSY. Use simulacao para cenarios hipoteticos. Use conselho apenas para decisoes estrategicas complexas.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Mensagem: {{ $json.message }}\\n\\nContexto visual: {{ JSON.stringify($json.visualContext || null) }}\\n\\nContexto documental: {{ $json.documentCtxString || \"\" }}\\n\\nContexto de audio: {{ $json.audioCtxString || \"\" }}\"\n    }\n  ]\n}",
+        "options": {}
       },
-      "id": "62010935-8ebe-4a56-a3e2-62de06b7b741",
+      "id": "fa7deebc-21ce-4796-878a-1252b710ec2d",
       "name": "LLM Classifier",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        47440,
-        17872
+        332560,
+        -261440
       ],
       "credentials": {
         "openAiApi": {
@@ -68,15 +68,15 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst routedInput = $('Fast Router').item.json;\nconst classifierResponse = $json;\n\nlet cls = routedInput.fastRoute?.classifier || {};\nif (!routedInput.fastRoute?.skipClassifier) {\n  try {\n    const raw = classifierResponse.choices[0].message.content.trim();\n    const fence = String.fromCharCode(96, 96, 96);\n    const clean = raw.replace(new RegExp(fence + 'json|' + fence, 'g'), '').trim();\n    cls = JSON.parse(clean);\n  } catch {\n    cls = routedInput.fastRoute?.classifier || {\n      tipo:'geral', area:'geral', complexidade:'media', usarBase:false,\n      usarMemoria:true, modo_sugerido:'corvus', ehSimulacao:false, ehDecisao:false\n    };\n  }\n}\n\nconst validModes = ['corvus','fenrir','cipher','conselho','simulacao'];\nconst modoManual = routedInput.modo;\nlet resolvedMode = validModes.includes(modoManual) ? modoManual : (cls.modo_sugerido || 'corvus');\nif (cls.ehSimulacao && modoManual === 'auto') resolvedMode = 'simulacao';\nif (resolvedMode === 'conselho' && cls.complexidade !== 'alta') resolvedMode = 'cipher';\n\nconst topKMap = { baixa: 3, media: 5, alta: 8 };\nconst topK = topKMap[cls.complexidade] || 5;\nconst baseConf = { baixa: 0.92, media: 0.78, alta: 0.65 };\nconst typeMod = { pergunta:0.05, decisao:-0.05, simulacao:-0.10, ideia:-0.08, criativo:-0.06, problema:0, geral:0 };\nconst fastConfidence = routedInput.fastRoute?.confidence || 0;\nconst estimatedConfidence = Math.min(0.99, Math.max(0.40,\n  fastConfidence || ((baseConf[cls.complexidade] || 0.75) + (typeMod[cls.tipo] || 0))\n)).toFixed(2);\n\nconst userContext = routedInput.userContext || {};\nconst userCtxString = [\n  'Nome: ' + (userContext.nome || 'Desconhecido'),\n  'Cargo: ' + (userContext.cargo || '-'),\n  'Sigla: ' + (userContext.sigla || '-'),\n  'Tipo: ' + (userContext.tipo || 'convidado')\n].join(' | ');\n\nconst visualContext = routedInput.visualContext || null;\nconst documentContext = routedInput.documentContext || null;\nconst documentCtxString = (routedInput.documentCtxString || documentContext?.text || '').toString();\nconst visualCtxString = routedInput.visualCtxString\n  || (visualContext\n    ? [\n        'OCR: ' + (visualContext.ocrText || 'sem texto detectado'),\n        'Descricao: ' + (visualContext.description || ''),\n        'Itens: ' + ((visualContext.relevantItems || []).join(', ') || '-'),\n        'Limitacoes: ' + (visualContext.limitations || '-')\n      ].join('\\n')\n    : '');\n\nreturn [{\n  message: routedInput.message,\n  userId: routedInput.userId,\n  sessionId: routedInput.sessionId,\n  memoryKey: routedInput.memoryKey,\n  userContext,\n  userCtxString,\n  visualContext,\n  visualCtxString,\n  usedVision: Boolean(visualContext || visualCtxString),\n  imageAttachments: routedInput.imageAttachments || [],\n  documentContext,\n  documentCtxString,\n  hasDocuments: Boolean(documentCtxString),\n  documentAttachments: routedInput.documentAttachments || [],\n  receivedAt: routedInput.receivedAt,\n  visionError: routedInput.visionError || '',\n  orchestrator: {\n    tipo: cls.tipo || 'geral', area: cls.area || 'geral',\n    complexidade: cls.complexidade || 'media',\n    usarBase: cls.usarBase !== false,\n    usarMemoria: cls.usarMemoria !== false,\n    modoSugerido: cls.modo_sugerido || 'corvus',\n    ehSimulacao: cls.ehSimulacao === true,\n    ehDecisao: cls.ehDecisao === true,\n    requestedMode: routedInput.modo,\n    resolvedMode,\n    topK,\n    fastPath: routedInput.fastRoute?.skipClassifier === true,\n    estimatedConfidence: parseFloat(estimatedConfidence)\n  }\n}];\n"
+        "jsCode": "\nconst routedInput = $('Fast Router').item.json;\nconst classifierResponse = $json;\n\nlet cls = routedInput.fastRoute?.classifier || {};\nif (!routedInput.fastRoute?.skipClassifier) {\n  try {\n    const raw = classifierResponse.choices[0].message.content.trim();\n    const fence = String.fromCharCode(96, 96, 96);\n    const clean = raw.replace(new RegExp(fence + 'json|' + fence, 'g'), '').trim();\n    cls = JSON.parse(clean);\n  } catch {\n    cls = routedInput.fastRoute?.classifier || {\n      tipo:'geral', area:'geral', complexidade:'media', usarBase:false,\n      usarMemoria:true, modo_sugerido:'corvus', ehSimulacao:false, ehDecisao:false\n    };\n  }\n}\n\nconst validModes = ['corvus','fenrir','cipher','conselho','simulacao'];\nconst modoManual = routedInput.modo;\nlet resolvedMode = validModes.includes(modoManual) ? modoManual : (cls.modo_sugerido || 'corvus');\nif (cls.ehSimulacao && modoManual === 'auto') resolvedMode = 'simulacao';\nif (resolvedMode === 'conselho' && cls.complexidade !== 'alta') resolvedMode = 'cipher';\n\nconst topKMap = { baixa: 3, media: 5, alta: 8 };\nconst topK = topKMap[cls.complexidade] || 5;\nconst baseConf = { baixa: 0.92, media: 0.78, alta: 0.65 };\nconst typeMod = { pergunta:0.05, decisao:-0.05, simulacao:-0.10, ideia:-0.08, criativo:-0.06, problema:0, geral:0 };\nconst fastConfidence = routedInput.fastRoute?.confidence || 0;\nconst estimatedConfidence = Math.min(0.99, Math.max(0.40,\n  fastConfidence || ((baseConf[cls.complexidade] || 0.75) + (typeMod[cls.tipo] || 0))\n)).toFixed(2);\n\nconst userContext = routedInput.userContext || {};\nconst userCtxString = [\n  'Nome: ' + (userContext.nome || 'Desconhecido'),\n  'Cargo: ' + (userContext.cargo || '-'),\n  'Sigla: ' + (userContext.sigla || '-'),\n  'Tipo: ' + (userContext.tipo || 'convidado')\n].join(' | ');\n\nconst visualContext = routedInput.visualContext || null;\nconst documentContext = routedInput.documentContext || null;\nconst documentCtxString = (routedInput.documentCtxString || documentContext?.text || '').toString();\nconst audioContext = routedInput.audioContext || null;\nconst audioCtxString = (routedInput.audioCtxString || audioContext?.text || '').toString();\nconst visualCtxString = routedInput.visualCtxString\n  || (visualContext\n    ? [\n        'OCR: ' + (visualContext.ocrText || 'sem texto detectado'),\n        'Descricao: ' + (visualContext.description || ''),\n        'Itens: ' + ((visualContext.relevantItems || []).join(', ') || '-'),\n        'Limitacoes: ' + (visualContext.limitations || '-')\n      ].join('\\n')\n    : '');\n\nreturn [{\n  message: routedInput.message,\n  userId: routedInput.userId,\n  sessionId: routedInput.sessionId,\n  memoryKey: routedInput.memoryKey,\n  userContext,\n  userCtxString,\n  visualContext,\n  visualCtxString,\n  usedVision: Boolean(visualContext || visualCtxString),\n  imageAttachments: routedInput.imageAttachments || [],\n  documentContext,\n  documentCtxString,\n  hasDocuments: Boolean(documentCtxString),\n  documentAttachments: routedInput.documentAttachments || [],\n  audioContext,\n  audioCtxString,\n  hasAudio: Boolean(audioCtxString),\n  usedAudioTranscription: Boolean(audioContext || audioCtxString),\n  audioAttachments: routedInput.audioAttachments || [],\n  receivedAt: routedInput.receivedAt,\n  visionError: routedInput.visionError || '',\n  orchestrator: {\n    tipo: cls.tipo || 'geral', area: cls.area || 'geral',\n    complexidade: cls.complexidade || 'media',\n    usarBase: cls.usarBase !== false,\n    usarMemoria: cls.usarMemoria !== false,\n    modoSugerido: cls.modo_sugerido || 'corvus',\n    ehSimulacao: cls.ehSimulacao === true,\n    ehDecisao: cls.ehDecisao === true,\n    requestedMode: routedInput.modo,\n    resolvedMode,\n    topK,\n    fastPath: routedInput.fastRoute?.skipClassifier === true,\n    estimatedConfidence: parseFloat(estimatedConfidence)\n  }\n}];\n"
       },
-      "id": "4909a923-ad6f-452a-8e9a-6409f08c42b1",
+      "id": "ec2242f6-2765-4845-929b-5af479723d0d",
       "name": "Orchestrator",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        47680,
-        17872
+        332800,
+        -261440
       ]
     },
     {
@@ -197,13 +197,13 @@
         },
         "options": {}
       },
-      "id": "b5afb940-16b5-4574-9c1b-db3486add81d",
+      "id": "c977130e-0bb9-41b9-8525-a0b6329e5874",
       "name": "Mode Switch",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.4,
       "position": [
-        47920,
-        17872
+        333040,
+        -261440
       ]
     },
     {
@@ -212,7 +212,7 @@
           "string": [
             {
               "name": "corvus_system",
-              "value": "=VocÃª Ã© CORVUS em modo FENRIR â€” o lado criativo, expansivo e visionÃ¡rio da Ordem Masayoshi.\n\nVersÃ£o: 3.1 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nMISSÃƒO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nAuxiliar na criaÃ§Ã£o de ideias, campanhas, textos, projetos e brainstorming no contexto da MSY. Pensar de forma ampla, sem restriÃ§Ãµes criativas, mas dentro da identidade da Ordem.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONSULTA DE BASE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Consulte a tool buscar_base_msy para embasar a criaÃ§Ã£o com a identidade da MSY.' : 'DESATIVADO: Responda com criatividade sem consultar a base â€” foco na geraÃ§Ã£o de ideias.' }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\nTipo: {{ $json.orchestrator.tipo }} | Ãrea: {{ $json.orchestrator.area }} | Complexidade: {{ $json.orchestrator.complexidade }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCOMPORTAMENTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n- Respostas longas, ricas, elaboradas\n- Explore mÃºltiplas possibilidades antes de concluir\n- Use linguagem expressiva e com personalidade\n- Proponha variaÃ§Ãµes e alternativas\n- Conecte ideias de forma nÃ£o Ã³bvia\n- Seja ousado e memorÃ¡vel\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nOusado. Expansivo. Inspirador. Ainda institucional, mas com liberdade criativa total.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar.\n\nCONTEXTO DOCUMENTAL\n{{ $json.documentCtxString ? $json.documentCtxString : ($json.hasDocuments ? 'Documento anexado, mas nenhum texto legivel foi extraido.' : 'Nenhum documento foi anexado nesta mensagem.') }}\n\nSe houver contexto documental, use-o como fonte do arquivo anexado. Nao diga que nao consegue acessar o documento quando este bloco tiver conteudo."
+              "value": "=VocÃª Ã© CORVUS em modo FENRIR â€” o lado criativo, expansivo e visionÃ¡rio da Ordem Masayoshi.\n\nVersÃ£o: 3.1 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nMISSÃƒO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nAuxiliar na criaÃ§Ã£o de ideias, campanhas, textos, projetos e brainstorming no contexto da MSY. Pensar de forma ampla, sem restriÃ§Ãµes criativas, mas dentro da identidade da Ordem.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONSULTA DE BASE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Consulte a tool buscar_base_msy para embasar a criaÃ§Ã£o com a identidade da MSY.' : 'DESATIVADO: Responda com criatividade sem consultar a base â€” foco na geraÃ§Ã£o de ideias.' }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\nTipo: {{ $json.orchestrator.tipo }} | Ãrea: {{ $json.orchestrator.area }} | Complexidade: {{ $json.orchestrator.complexidade }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCOMPORTAMENTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n- Respostas longas, ricas, elaboradas\n- Explore mÃºltiplas possibilidades antes de concluir\n- Use linguagem expressiva e com personalidade\n- Proponha variaÃ§Ãµes e alternativas\n- Conecte ideias de forma nÃ£o Ã³bvia\n- Seja ousado e memorÃ¡vel\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nOusado. Expansivo. Inspirador. Ainda institucional, mas com liberdade criativa total.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar.\n\nCONTEXTO DOCUMENTAL\n{{ $json.documentCtxString ? $json.documentCtxString : ($json.hasDocuments ? 'Documento anexado, mas nenhum texto legivel foi extraido.' : 'Nenhum documento foi anexado nesta mensagem.') }}\n\nSe houver contexto documental, use-o como fonte do arquivo anexado. Nao diga que nao consegue acessar o documento quando este bloco tiver conteudo.\n\nCONTEXTO DE AUDIO\n{{ $json.audioCtxString ? $json.audioCtxString : ($json.hasAudio ? 'Audio anexado, mas nenhuma fala legivel foi transcrita.' : 'Nenhum audio foi anexado nesta mensagem.') }}\n\nSe houver contexto de audio, trate a transcricao como conteudo do anexo. Nao diga que nao consegue ouvir ou acessar o audio quando este bloco tiver conteudo."
             },
             {
               "name": "chatInput",
@@ -277,18 +277,38 @@
             {
               "name": "imageAttachments",
               "value": "={{ JSON.stringify($json.imageAttachments || []) }}"
+            },
+            {
+              "name": "audioContext",
+              "value": "={{ JSON.stringify($json.audioContext || null) }}"
+            },
+            {
+              "name": "audioCtxString",
+              "value": "={{ $json.audioCtxString || \"\" }}"
+            },
+            {
+              "name": "hasAudio",
+              "value": "={{ $json.hasAudio === true }}"
+            },
+            {
+              "name": "usedAudioTranscription",
+              "value": "={{ $json.usedAudioTranscription === true }}"
+            },
+            {
+              "name": "audioAttachments",
+              "value": "={{ JSON.stringify($json.audioAttachments || []) }}"
             }
           ]
         },
         "options": {}
       },
-      "id": "5ed1e565-c809-4bcf-b6cc-584a1fc14ce3",
+      "id": "de93c5e3-9e46-4553-8109-b5042af23848",
       "name": "Set Fenrir Prompt",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        48416,
-        17088
+        333536,
+        -262224
       ]
     },
     {
@@ -297,7 +317,7 @@
           "string": [
             {
               "name": "corvus_system",
-              "value": "=VocÃª Ã© CORVUS em modo CIPHER â€” o estrategista analÃ­tico da Ordem Masayoshi.\n\nVersÃ£o: 3.1 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nMISSÃƒO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nApoiar decisÃµes complexas, anÃ¡lises de risco e planejamento estratÃ©gico. VocÃª pensa como um conselheiro sÃªnior â€” calculado, preciso, com visÃ£o sistÃªmica.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONSULTA DE BASE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Consulte buscar_base_msy para embasar a anÃ¡lise com contexto institucional real.' : 'DESATIVADO: Use raciocÃ­nio estratÃ©gico puro.' }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\nTipo: {{ $json.orchestrator.tipo }} | Ãrea: {{ $json.orchestrator.area }} | Complexidade: {{ $json.orchestrator.complexidade }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nESTRUTURA OBRIGATÃ“RIA DE RESPOSTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nSempre que possÃ­vel, estruture sua resposta assim:\n\n**AnÃ¡lise**\n(diagnÃ³stico objetivo da situaÃ§Ã£o)\n\n**Riscos**\n(o que pode dar errado, grau de impacto)\n\n**RecomendaÃ§Ã£o**\n(aÃ§Ã£o concreta e direta)\n\n**PrÃ³ximos Passos**\n(2 a 3 aÃ§Ãµes prioritÃ¡rias)\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCOMPORTAMENTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n- RaciocÃ­nio de primeira e segunda ordem\n- Apresente trade-offs claros quando hÃ¡ mÃºltiplas rotas\n- Quantifique quando possÃ­vel\n- Nunca romantize decisÃµes difÃ­ceis\n- Direto, sem floreios\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nEstratÃ©gico. AnalÃ­tico. Preciso. Fale como um conselheiro sÃªnior da Ordem.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar.\n\nCONTEXTO DOCUMENTAL\n{{ $json.documentCtxString ? $json.documentCtxString : ($json.hasDocuments ? 'Documento anexado, mas nenhum texto legivel foi extraido.' : 'Nenhum documento foi anexado nesta mensagem.') }}\n\nSe houver contexto documental, use-o como fonte do arquivo anexado. Nao diga que nao consegue acessar o documento quando este bloco tiver conteudo."
+              "value": "=VocÃª Ã© CORVUS em modo CIPHER â€” o estrategista analÃ­tico da Ordem Masayoshi.\n\nVersÃ£o: 3.1 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nMISSÃƒO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nApoiar decisÃµes complexas, anÃ¡lises de risco e planejamento estratÃ©gico. VocÃª pensa como um conselheiro sÃªnior â€” calculado, preciso, com visÃ£o sistÃªmica.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONSULTA DE BASE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Consulte buscar_base_msy para embasar a anÃ¡lise com contexto institucional real.' : 'DESATIVADO: Use raciocÃ­nio estratÃ©gico puro.' }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\nTipo: {{ $json.orchestrator.tipo }} | Ãrea: {{ $json.orchestrator.area }} | Complexidade: {{ $json.orchestrator.complexidade }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nESTRUTURA OBRIGATÃ“RIA DE RESPOSTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nSempre que possÃ­vel, estruture sua resposta assim:\n\n**AnÃ¡lise**\n(diagnÃ³stico objetivo da situaÃ§Ã£o)\n\n**Riscos**\n(o que pode dar errado, grau de impacto)\n\n**RecomendaÃ§Ã£o**\n(aÃ§Ã£o concreta e direta)\n\n**PrÃ³ximos Passos**\n(2 a 3 aÃ§Ãµes prioritÃ¡rias)\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCOMPORTAMENTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n- RaciocÃ­nio de primeira e segunda ordem\n- Apresente trade-offs claros quando hÃ¡ mÃºltiplas rotas\n- Quantifique quando possÃ­vel\n- Nunca romantize decisÃµes difÃ­ceis\n- Direto, sem floreios\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nEstratÃ©gico. AnalÃ­tico. Preciso. Fale como um conselheiro sÃªnior da Ordem.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar.\n\nCONTEXTO DOCUMENTAL\n{{ $json.documentCtxString ? $json.documentCtxString : ($json.hasDocuments ? 'Documento anexado, mas nenhum texto legivel foi extraido.' : 'Nenhum documento foi anexado nesta mensagem.') }}\n\nSe houver contexto documental, use-o como fonte do arquivo anexado. Nao diga que nao consegue acessar o documento quando este bloco tiver conteudo.\n\nCONTEXTO DE AUDIO\n{{ $json.audioCtxString ? $json.audioCtxString : ($json.hasAudio ? 'Audio anexado, mas nenhuma fala legivel foi transcrita.' : 'Nenhum audio foi anexado nesta mensagem.') }}\n\nSe houver contexto de audio, trate a transcricao como conteudo do anexo. Nao diga que nao consegue ouvir ou acessar o audio quando este bloco tiver conteudo."
             },
             {
               "name": "chatInput",
@@ -362,18 +382,38 @@
             {
               "name": "imageAttachments",
               "value": "={{ JSON.stringify($json.imageAttachments || []) }}"
+            },
+            {
+              "name": "audioContext",
+              "value": "={{ JSON.stringify($json.audioContext || null) }}"
+            },
+            {
+              "name": "audioCtxString",
+              "value": "={{ $json.audioCtxString || \"\" }}"
+            },
+            {
+              "name": "hasAudio",
+              "value": "={{ $json.hasAudio === true }}"
+            },
+            {
+              "name": "usedAudioTranscription",
+              "value": "={{ $json.usedAudioTranscription === true }}"
+            },
+            {
+              "name": "audioAttachments",
+              "value": "={{ JSON.stringify($json.audioAttachments || []) }}"
             }
           ]
         },
         "options": {}
       },
-      "id": "fde42077-0734-42f4-b708-5aa295c972db",
+      "id": "6ec37b30-c646-438c-9deb-1f3b2cafd156",
       "name": "Set Cipher Prompt",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        48368,
-        17648
+        333488,
+        -261664
       ]
     },
     {
@@ -382,7 +422,7 @@
           "string": [
             {
               "name": "corvus_system",
-              "value": "=VocÃª Ã© CORVUS â€” o agente institucional oficial da Ordem Masayoshi (MSY).\n\nVersÃ£o: 3.1 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nPROTOCOLO DE CONSULTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Execute buscar_base_msy ANTES de formular qualquer resposta sobre a MSY.' : 'DESATIVADO: Responda com base no conhecimento institucional consolidado â€” sem consulta Ã  base.' }}\n\nRegra de integridade: Ã‰ proibido inventar nomes de membros, cargos, datas, decisÃµes ou eventos formais.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nIDENTIDADE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nNome: Corvus | VersÃ£o: 3.1 Beta\nCriadores: T4 Masayoshi (Fundador) e Xitter (Coordenador Geral)\nVocÃª existe exclusivamente para servir Ã  MSY. VocÃª fala como a instituiÃ§Ã£o fala.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\nTipo: {{ $json.orchestrator.tipo }} | Ãrea: {{ $json.orchestrator.area }} | Complexidade: {{ $json.orchestrator.complexidade }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONDUTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n- Nunca mencione bastidores tÃ©cnicos, banco de dados, APIs ou tools\n- Nunca peÃ§a esclarecimentos Ã³bvios\n- 1 pergunta objetiva se necessÃ¡rio\n- Respostas entre 3 e 8 linhas para conversas gerais\n- Para anÃ¡lises complexas, estruture com clareza\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nVALORES\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nLealdade â€” UniÃ£o â€” JustiÃ§a â€” Liberdade\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nFirme. EstratÃ©gico. Institucional. Direto. Sem hesitaÃ§Ã£o.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar.\n\nCONTEXTO DOCUMENTAL\n{{ $json.documentCtxString ? $json.documentCtxString : ($json.hasDocuments ? 'Documento anexado, mas nenhum texto legivel foi extraido.' : 'Nenhum documento foi anexado nesta mensagem.') }}\n\nSe houver contexto documental, use-o como fonte do arquivo anexado. Nao diga que nao consegue acessar o documento quando este bloco tiver conteudo."
+              "value": "=VocÃª Ã© CORVUS â€” o agente institucional oficial da Ordem Masayoshi (MSY).\n\nVersÃ£o: 3.1 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nPROTOCOLO DE CONSULTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Execute buscar_base_msy ANTES de formular qualquer resposta sobre a MSY.' : 'DESATIVADO: Responda com base no conhecimento institucional consolidado â€” sem consulta Ã  base.' }}\n\nRegra de integridade: Ã‰ proibido inventar nomes de membros, cargos, datas, decisÃµes ou eventos formais.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nIDENTIDADE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nNome: Corvus | VersÃ£o: 3.1 Beta\nCriadores: T4 Masayoshi (Fundador) e Xitter (Coordenador Geral)\nVocÃª existe exclusivamente para servir Ã  MSY. VocÃª fala como a instituiÃ§Ã£o fala.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\nTipo: {{ $json.orchestrator.tipo }} | Ãrea: {{ $json.orchestrator.area }} | Complexidade: {{ $json.orchestrator.complexidade }}\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nCONDUTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n- Nunca mencione bastidores tÃ©cnicos, banco de dados, APIs ou tools\n- Nunca peÃ§a esclarecimentos Ã³bvios\n- 1 pergunta objetiva se necessÃ¡rio\n\nPADRAO DE ENTREGA\n\nVoce deve escolher o formato da resposta de acordo com o pedido.\n\nPara perguntas simples:\n-> Responda curto, direto e sem enfeitar.\n\nPara pedidos que pedem comparacao, explicacao, ranking, decisao, plano, estudo, diagnostico, estrategia ou analise:\n-> Entregue resposta premium, organizada e visualmente clara.\n-> Abra com uma sintese objetiva.\n-> Use tabelas quando houver comparacao real.\nREGRA FORTE PARA COMPARATIVOS\nSe o pedido usar palavras como compare, comparativo, ranking, maior para menor, menor para maior, melhores, piores, hierarquia, cargos, funcoes ou diferencas, a resposta DEVE usar tabela markdown.\nNao responda comparativos em lista numerada quando uma tabela puder mostrar melhor a informacao.\nPara ranking/hierarquia, use colunas como: Posicao | Item/Cargo | Responsavel (se houver) | Funcao principal | Importancia | Observacao.\nDepois da tabela, escreva uma conclusao curta com a leitura estrategica principal.\n-> Use criterios quando precisar avaliar opcoes.\n-> Use ranking quando existir hierarquia.\n-> Use checklist ou plano de acao quando houver execucao.\n-> Feche com conclusao, recomendacao ou proximos passos.\n\nNao alongue respostas simples.\nNao use tabela se ela nao melhorar a resposta.\nNao exponha raciocinio interno literal; mostre apenas conclusoes, criterios e etapas uteis.\nNao copie estilo de outro assistente; adapte a entrega ao tom do Corvus: firme, estrategico, institucional e elegante.\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nVALORES\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nLealdade â€” UniÃ£o â€” JustiÃ§a â€” Liberdade\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nFirme. EstratÃ©gico. Institucional. Direto. Sem hesitaÃ§Ã£o.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar.\n\nCONTEXTO DOCUMENTAL\n{{ $json.documentCtxString ? $json.documentCtxString : ($json.hasDocuments ? 'Documento anexado, mas nenhum texto legivel foi extraido.' : 'Nenhum documento foi anexado nesta mensagem.') }}\n\nSe houver contexto documental, use-o como fonte do arquivo anexado. Nao diga que nao consegue acessar o documento quando este bloco tiver conteudo.\n\nCONTEXTO DE AUDIO\n{{ $json.audioCtxString ? $json.audioCtxString : ($json.hasAudio ? 'Audio anexado, mas nenhuma fala legivel foi transcrita.' : 'Nenhum audio foi anexado nesta mensagem.') }}\n\nSe houver contexto de audio, trate a transcricao como conteudo do anexo. Nao diga que nao consegue ouvir ou acessar o audio quando este bloco tiver conteudo."
             },
             {
               "name": "chatInput",
@@ -447,18 +487,38 @@
             {
               "name": "imageAttachments",
               "value": "={{ JSON.stringify($json.imageAttachments || []) }}"
+            },
+            {
+              "name": "audioContext",
+              "value": "={{ JSON.stringify($json.audioContext || null) }}"
+            },
+            {
+              "name": "audioCtxString",
+              "value": "={{ $json.audioCtxString || \"\" }}"
+            },
+            {
+              "name": "hasAudio",
+              "value": "={{ $json.hasAudio === true }}"
+            },
+            {
+              "name": "usedAudioTranscription",
+              "value": "={{ $json.usedAudioTranscription === true }}"
+            },
+            {
+              "name": "audioAttachments",
+              "value": "={{ JSON.stringify($json.audioAttachments || []) }}"
             }
           ]
         },
         "options": {}
       },
-      "id": "243c2659-43ad-4e30-889e-85b3296d2fac",
+      "id": "718a26bc-b69c-41ec-a008-9b3085f10c35",
       "name": "Set Corvus Prompt",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        48832,
-        18096
+        333952,
+        -261216
       ]
     },
     {
@@ -472,10 +532,10 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
       "position": [
-        48656,
-        17088
+        333776,
+        -262224
       ],
-      "id": "62ac19db-2db0-4f4b-8de1-c8232e39ee04",
+      "id": "5e6d380b-e3a9-4a38-a555-42137559df69",
       "name": "AI Agent (Fenrir)"
     },
     {
@@ -494,10 +554,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        48528,
-        17232
+        333648,
+        -262080
       ],
-      "id": "53f44329-026c-4ceb-b0ba-1af1dd47667d",
+      "id": "936a82be-0c12-41e7-904e-822950eb80c6",
       "name": "GPT-4o (Fenrir)",
       "credentials": {
         "openAiApi": {
@@ -523,10 +583,10 @@
       "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
       "typeVersion": 1.3,
       "position": [
-        48816,
-        17280
+        333936,
+        -262032
       ],
-      "id": "5b6414e8-f1db-4458-b088-e432fa8b1b63",
+      "id": "c637ff30-819a-4c7c-a24f-0d9db6b6b9f0",
       "name": "VectorStore (Fenrir)",
       "credentials": {
         "supabaseApi": {
@@ -544,10 +604,10 @@
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.3,
       "position": [
-        48656,
-        17232
+        333776,
+        -262080
       ],
-      "id": "7c08d722-dc25-48f0-b996-ab842b6a2997",
+      "id": "50f8544d-12b6-47e6-aa29-b4c501f174e0",
       "name": "Memory (Fenrir)",
       "credentials": {
         "postgres": {
@@ -563,10 +623,10 @@
       "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
       "typeVersion": 1.2,
       "position": [
-        48896,
-        17408
+        334016,
+        -261904
       ],
-      "id": "c59c67e3-0dc4-4abd-ba95-ac5a9e3c9a24",
+      "id": "bae6a77a-8a47-4bf6-885b-07dfc2308c04",
       "name": "Embeddings (Fenrir)",
       "credentials": {
         "openAiApi": {
@@ -586,10 +646,10 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
       "position": [
-        48560,
-        17376
+        333680,
+        -261936
       ],
-      "id": "97885e48-0c33-41b0-9ffb-1702d3f2a718",
+      "id": "1c2a43fd-5ef6-4d2b-80d6-1f40b71046eb",
       "name": "AI Agent (Cipher)"
     },
     {
@@ -608,10 +668,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        48544,
-        17568
+        333664,
+        -261744
       ],
-      "id": "47a7f5e8-289d-46c3-a2a7-b36a79832dde",
+      "id": "6cd0d798-9d6d-4dc4-ae24-ce196f18f482",
       "name": "GPT-4o (Cipher)",
       "credentials": {
         "openAiApi": {
@@ -637,10 +697,10 @@
       "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
       "typeVersion": 1.3,
       "position": [
-        48784,
-        17568
+        333904,
+        -261744
       ],
-      "id": "f1a1368e-c49c-404f-bc15-3149d5eb15bd",
+      "id": "57857dcf-989b-4f69-b20c-e86a1fefa9c1",
       "name": "VectorStore (Cipher)",
       "credentials": {
         "supabaseApi": {
@@ -658,10 +718,10 @@
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.3,
       "position": [
-        48656,
-        17568
+        333776,
+        -261744
       ],
-      "id": "8e4e9390-2c25-471a-8096-cf1795deba37",
+      "id": "3723e3d1-db68-438a-9ed4-12812ccfb7df",
       "name": "Memory (Cipher)",
       "credentials": {
         "postgres": {
@@ -677,10 +737,10 @@
       "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
       "typeVersion": 1.2,
       "position": [
-        48784,
-        17744
+        333904,
+        -261568
       ],
-      "id": "67cadd1d-3bd8-4200-ab71-4ef92e6ce15f",
+      "id": "7fe6c87d-ada8-4239-8422-ab9ab5a140cb",
       "name": "Embeddings (Cipher)",
       "credentials": {
         "openAiApi": {
@@ -700,10 +760,10 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
       "position": [
-        49232,
-        18096
+        334352,
+        -261216
       ],
-      "id": "9e127c59-ca3f-4a31-be02-4dd84aed05aa",
+      "id": "2934e26b-a045-48bb-8ae9-9eea5f5a48af",
       "name": "AI Agent (Corvus)"
     },
     {
@@ -722,10 +782,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        49232,
-        18304
+        334352,
+        -261008
       ],
-      "id": "0445f237-05ce-4bf0-a5f8-df8fdb16503a",
+      "id": "ad0751d8-c2f7-4132-8311-48945db3e523",
       "name": "GPT-4o (Corvus)",
       "credentials": {
         "openAiApi": {
@@ -751,10 +811,10 @@
       "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
       "typeVersion": 1.3,
       "position": [
-        49664,
-        18208
+        334784,
+        -261104
       ],
-      "id": "4c48406c-74b5-4f87-a5d3-01f9a560ee3d",
+      "id": "b9cca457-9741-442a-964e-e64e41051042",
       "name": "VectorStore (Corvus)",
       "credentials": {
         "supabaseApi": {
@@ -772,10 +832,10 @@
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.3,
       "position": [
-        49328,
-        18304
+        334448,
+        -261008
       ],
-      "id": "69469c44-73ba-45fa-87c3-9eee91ab7709",
+      "id": "5fe17c39-b58b-4531-b9e7-77f23b8301ce",
       "name": "Memory (Corvus)",
       "credentials": {
         "postgres": {
@@ -791,10 +851,10 @@
       "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
       "typeVersion": 1.2,
       "position": [
-        49584,
-        18448
+        334704,
+        -260864
       ],
-      "id": "55c1e15e-6580-44fd-be48-0d6e0007d67c",
+      "id": "2ba01b2e-72a8-4fef-baac-9a3e2035f4ec",
       "name": "Embeddings (Corvus)",
       "credentials": {
         "openAiApi": {
@@ -807,40 +867,41 @@
       "parameters": {
         "jsCode": "\nconst agentOutput = $input.first().json;\nlet oc = {};\ntry { oc = agentOutput.orchestrator || JSON.parse(agentOutput.orchestratorData || '{}'); } catch {}\nif (oc.ehDecisao === true) {\n  console.log('[corvus:decision]', JSON.stringify({\n    msg: (agentOutput.message||'').substring(0,200),\n    tipo: oc.tipo, area: oc.area, modo: oc.resolvedMode, ts: new Date().toISOString()\n  }));\n}\nreturn [agentOutput];\n"
       },
-      "id": "2bf58e30-3b29-4c45-9d2d-4c24680e92c1",
+      "id": "d95e3b17-e225-4fc6-92dc-79d742be37f9",
       "name": "Decision Log",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        49552,
-        17696
+        334672,
+        -261616
       ]
     },
     {
       "parameters": {
-        "jsCode": "\nconst agentOutput = $input.first().json;\n\nlet oc = {};\ntry {\n  oc = agentOutput.orchestrator || JSON.parse(agentOutput.orchestratorData || '{}');\n} catch {}\n\nconst resolvedMode = agentOutput.resolvedMode || oc.resolvedMode || 'corvus';\nconst modeLabels = {\n  corvus:'Corvus - Institucional', fenrir:'Fenrir - Criativo',\n  cipher:'Cipher - Estrategico', conselho:'Conselho - Perspectiva Tripla',\n  simulacao:'Simulacao - Analise de Cenarios'\n};\n\nconst base = oc.estimatedConfidence || 0.75;\nconst ragBonus = oc.usarBase ? 0.05 : 0;\nconst cxPenalty = oc.complexidade === 'alta' ? -0.08 : (oc.complexidade === 'baixa' ? 0.04 : 0);\nconst confidence = Math.min(0.99, Math.max(0.40, base + ragBonus + cxPenalty));\nconst visualContext = agentOutput.visualContext || null;\nconst usedVision = Boolean(agentOutput.usedVision || visualContext);\nconst documentContext = agentOutput.documentContext || null;\nconst usedDocuments = Boolean(agentOutput.hasDocuments || agentOutput.documentCtxString || documentContext);\n\nconst suggestionsMap = {\n  decisao: ['Simular cenario', 'Ver alternativas', 'Analisar riscos com Cipher'],\n  problema: ['Analisar com Cipher', 'Simular solucao', 'Consultar Conselho'],\n  ideia: ['Expandir com Fenrir', 'Analisar viabilidade', 'Simular impacto'],\n  simulacao: ['Analisar decisao', 'Consultar Conselho', 'Salvar como decisao'],\n  conselho: ['Aprofundar com Cipher', 'Expandir com Fenrir', 'Simular cenario'],\n  geral: ['Gerar ideia', 'Analisar decisao', 'Simular cenario']\n};\nconst suggestions = suggestionsMap[oc.tipo] || suggestionsMap.geral;\n\nfunction cleanText(value) {\n  return (value || '').toString().replace(/\\s+/g, ' ').trim();\n}\nfunction makeTags() {\n  const tags = new Set();\n  if (oc.area && oc.area !== 'geral') tags.add(oc.area);\n  if (oc.tipo && oc.tipo !== 'geral') tags.add(oc.tipo);\n  if (resolvedMode && resolvedMode !== 'corvus') tags.add(resolvedMode);\n  if (usedVision) tags.add('imagem');\n  if (usedDocuments) tags.add('documento');\n  if (oc.usarBase) tags.add('msy');\n  return Array.from(tags).slice(0, 5);\n}\nfunction makeNextActions(reply) {\n  const lines = reply.split('\\n').map(cleanText).filter(Boolean);\n  const actionLines = lines.filter((line) => /^(\\d+\\.|-|\\*)?\\s*(definir|validar|revisar|criar|enviar|priorizar|analisar|executar|documentar|alinhar)/i.test(line));\n  return (actionLines.length ? actionLines : suggestions).slice(0, 4);\n}\n\nif (agentOutput.consiliumPayload?.isConselho) {\n  const consiliumText = agentOutput.consiliumPayload.blocks.map((block) => block.label + ': ' + block.reply).join('\\n');\n  return {\n    json: {\n      ok: true,\n      reply: consiliumText,\n      consilium: agentOutput.consiliumPayload.blocks,\n      meta: {\n        agent:'Corvus 3.2 Beta', model:'gpt-4o', mode:'conselho',\n        modeLabel: modeLabels.conselho,\n        complexity: oc.complexidade || 'media', usedRAG: oc.usarBase || false,\n        usedVision, visualSummary: visualContext?.description || '',\n        usedDocuments, documentSummary: (agentOutput.documentCtxString || documentContext?.text || '').toString().slice(0, 240),\n        confidence: parseFloat(confidence.toFixed(2)), tipo: oc.tipo || 'geral',\n        summaryCandidate: cleanText(consiliumText).slice(0, 360),\n        tags: makeTags(),\n        nextActions: makeNextActions(consiliumText),\n        decisionCandidate: oc.ehDecisao === true,\n        timestamp: new Date().toISOString(), suggestions, visionError: agentOutput.visionError || ''\n      }\n    }\n  };\n}\n\nconst reply = (\n  agentOutput.output ?? agentOutput.text ?? agentOutput.response ??\n  agentOutput.message ?? (agentOutput.choices && agentOutput.choices[0]?.message?.content) ?? ''\n).toString().trim();\n\nif (!reply) {\n  return { json: { ok: false, error: 'Agente nao retornou resposta.', code: 'agent_empty_response' } };\n}\n\nreturn {\n  json: {\n    ok: true,\n    reply,\n    consilium: null,\n    meta: {\n      agent:'Corvus 3.2 Beta', model:'gpt-4o', mode: resolvedMode,\n      modeLabel: modeLabels[resolvedMode] ?? resolvedMode,\n      complexity: oc.complexidade || 'media', usedRAG: oc.usarBase === true,\n      usedVision, visualSummary: visualContext?.description || '',\n        usedDocuments, documentSummary: (agentOutput.documentCtxString || documentContext?.text || '').toString().slice(0, 240),\n      confidence: parseFloat(confidence.toFixed(2)), tipo: oc.tipo || 'geral',\n      summaryCandidate: cleanText(reply).slice(0, 360),\n      tags: makeTags(),\n      nextActions: makeNextActions(reply),\n      decisionCandidate: oc.ehDecisao === true,\n      timestamp: new Date().toISOString(), suggestions, visionError: agentOutput.visionError || ''\n    }\n  }\n};\n"
+        "jsCode": "\nconst agentOutput = $input.first()?.json || {};\n\nlet oc = {};\ntry {\n  oc = agentOutput.orchestrator || JSON.parse(agentOutput.orchestratorData || '{}');\n} catch {}\n\nconst resolvedMode = agentOutput.resolvedMode || oc.resolvedMode || 'corvus';\nconst modeLabels = {\n  corvus:'Corvus - Institucional', fenrir:'Fenrir - Criativo',\n  cipher:'Cipher - Estrategico', conselho:'Conselho - Perspectiva Tripla',\n  simulacao:'Simulacao - Analise de Cenarios'\n};\n\nfunction parseMaybeJson(value, fallback = null) {\n  if (!value) return fallback;\n  if (typeof value === 'object') return value;\n  try { return JSON.parse(value); } catch { return fallback; }\n}\n\nconst base = oc.estimatedConfidence || 0.75;\nconst ragBonus = oc.usarBase ? 0.05 : 0;\nconst cxPenalty = oc.complexidade === 'alta' ? -0.08 : (oc.complexidade === 'baixa' ? 0.04 : 0);\nconst confidence = Math.min(0.99, Math.max(0.40, base + ragBonus + cxPenalty));\nconst visualContext = parseMaybeJson(agentOutput.visualContext, agentOutput.visualContext || null);\nconst documentContext = parseMaybeJson(agentOutput.documentContext, agentOutput.documentContext || null);\nconst audioContext = parseMaybeJson(agentOutput.audioContext, agentOutput.audioContext || null);\nconst usedVision = Boolean(agentOutput.usedVision || visualContext || agentOutput.visualCtxString);\nconst usedDocuments = Boolean(agentOutput.hasDocuments || agentOutput.documentCtxString || documentContext);\nconst usedAudio = Boolean(agentOutput.hasAudio || agentOutput.audioCtxString || audioContext);\nconst audioSummary = (agentOutput.audioCtxString || audioContext?.text || '').toString().slice(0, 240);\nconst documentSummary = (agentOutput.documentCtxString || documentContext?.text || '').toString().slice(0, 240);\n\nconst suggestionsMap = {\n  decisao: ['Simular cenario', 'Ver alternativas', 'Analisar riscos com Cipher'],\n  problema: ['Analisar com Cipher', 'Simular solucao', 'Consultar Conselho'],\n  ideia: ['Expandir com Fenrir', 'Analisar viabilidade', 'Simular impacto'],\n  audio: ['Transcrever integralmente', 'Resumir audio', 'Extrair acoes'],\n  simulacao: ['Analisar decisao', 'Consultar Conselho', 'Salvar como decisao'],\n  conselho: ['Aprofundar com Cipher', 'Expandir com Fenrir', 'Simular cenario'],\n  geral: ['Gerar ideia', 'Analisar decisao', 'Simular cenario']\n};\nconst suggestions = suggestionsMap[oc.tipo] || suggestionsMap.geral;\n\nfunction cleanText(value) {\n  return (value || '').toString().replace(/\\s+/g, ' ').trim();\n}\nfunction makeTags() {\n  const tags = new Set();\n  if (oc.area && oc.area !== 'geral') tags.add(oc.area);\n  if (oc.tipo && oc.tipo !== 'geral') tags.add(oc.tipo);\n  if (resolvedMode && resolvedMode !== 'corvus') tags.add(resolvedMode);\n  if (usedVision) tags.add('imagem');\n  if (usedDocuments) tags.add('documento');\n  if (usedAudio) tags.add('audio');\n  if (oc.usarBase) tags.add('msy');\n  return Array.from(tags).slice(0, 5);\n}\nfunction makeNextActions(reply) {\n  const lines = reply.split('\n').map(cleanText).filter(Boolean);\n  const actionLines = lines.filter((line) => /^(\\d+\\.|-|\\*)?\\s*(definir|validar|revisar|criar|enviar|priorizar|analisar|executar|documentar|alinhar)/i.test(line));\n  return (actionLines.length ? actionLines : suggestions).slice(0, 4);\n}\nfunction makeMeta(replyText, mode) {\n  return {\n    agent:'Corvus 3.2 Beta', model:'gpt-4o', mode,\n    modeLabel: modeLabels[mode] ?? mode,\n    complexity: oc.complexidade || 'media', usedRAG: oc.usarBase === true,\n    usedVision, visualSummary: visualContext?.description || '',\n    usedDocuments, documentSummary,\n    usedAudio, audioSummary,\n    confidence: parseFloat(confidence.toFixed(2)), tipo: oc.tipo || 'geral',\n    summaryCandidate: cleanText(replyText).slice(0, 360),\n    tags: makeTags(),\n    nextActions: makeNextActions(replyText),\n    decisionCandidate: oc.ehDecisao === true,\n    timestamp: new Date().toISOString(), suggestions, visionError: agentOutput.visionError || ''\n  };\n}\n\nif (agentOutput.consiliumPayload?.isConselho) {\n  const consiliumText = agentOutput.consiliumPayload.blocks.map((block) => block.label + ': ' + block.reply).join('\n');\n  return [{\n    json: {\n      ok: true,\n      reply: consiliumText,\n      consilium: agentOutput.consiliumPayload.blocks,\n      meta: { ...makeMeta(consiliumText, 'conselho'), usedRAG: oc.usarBase || false }\n    }\n  }];\n}\n\nlet reply = (\n  agentOutput.reply ?? agentOutput.output ?? agentOutput.text ?? agentOutput.response ??\n  agentOutput.message ?? (agentOutput.choices && agentOutput.choices[0]?.message?.content) ?? ''\n).toString().trim();\n\nif (!reply && usedAudio && audioSummary) {\n  reply = [\n    'Recebi e transcrevi o audio. O workflow nao retornou uma resposta do agente, entao segue a transcricao para continuidade:',\n    '',\n    audioSummary\n  ].join('\n');\n}\n\nif (!reply) {\n  reply = 'Recebi a mensagem, mas o agente nao retornou uma resposta. Verifique o ultimo node executado no n8n.';\n}\n\nreturn [{\n  json: {\n    ok: true,\n    reply,\n    consilium: null,\n    meta: makeMeta(reply, resolvedMode)\n  }\n}];\n"
       },
-      "id": "ec4154ba-24af-46e9-8a2d-97d672e13a30",
+      "id": "122ac25d-63c8-4090-b7bb-e7dc88f8b89d",
       "name": "Post Processor",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        49728,
-        17696
+        334848,
+        -261616
       ]
     },
     {
       "parameters": {
-        "respondWith": "allIncomingItems",
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
         "options": {}
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        49952,
-        17696
+        335072,
+        -261616
       ],
-      "id": "55625da3-efda-4b53-82fd-f73a2b9011e3",
+      "id": "f66dde61-de69-4f05-bfe4-b49f88ebdca2",
       "name": "Respond to Webhook"
     },
     {
@@ -904,33 +965,35 @@
         },
         "options": {}
       },
-      "id": "074b3c92-8892-4c9b-bda8-811dac2c2aac",
+      "id": "1af674b5-bdd0-4fd9-b927-256fdb734813",
       "name": "Formulario",
       "type": "n8n-nodes-base.formTrigger",
       "typeVersion": 2.2,
       "position": [
-        46928,
-        18160
+        332048,
+        -261152
       ],
-      "webhookId": "e519845f-2c2b-410e-9469-2904b3224844"
+      "webhookId": "7a751c2c-91a3-4614-9ceb-28a17bab7165"
     },
     {
       "parameters": {
         "jsCode": "const d = $json;\nconst titulo   = (d['Titulo']   || '').trim();\nconst conteudo = (d['Conteudo'] || '').trim();\nconst categoria= (d['Categoria']|| 'Geral').trim();\nconst tagsRaw  = (d['Tags']     || '').trim();\nconst tags     = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];\nconst texto    = titulo + '\\n\\n' + conteudo;\nreturn [{ titulo, conteudo, categoria, tags, texto }];"
       },
-      "id": "ccc2f7cd-5af9-4174-a46c-a7ba6b84314a",
+      "id": "f67936a4-1280-42b6-b782-544c09ecaef5",
       "name": "Preparar",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        47168,
-        18160
+        332288,
+        -261152
       ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -953,17 +1016,15 @@
             }
           ]
         },
-        "options": {},
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "openAiApi"
+        "options": {}
       },
-      "id": "e27e2fd4-e591-402e-937c-7261747e65dc",
+      "id": "695fa980-85ae-4a35-8ad5-d29c2e9cd0db",
       "name": "Gerar Embedding",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        47392,
-        18160
+        332512,
+        -261152
       ],
       "credentials": {
         "openAiApi": {
@@ -976,13 +1037,13 @@
       "parameters": {
         "jsCode": "const prep      = $('Preparar').item.json;\nconst embedding = $json.data[0].embedding;\nreturn [{\n  titulo:    prep.titulo,\n  conteudo:  prep.conteudo,\n  categoria: prep.categoria,\n  tags:      prep.tags,\n  embedding: '[' + embedding.join(',') + ']'\n}];"
       },
-      "id": "0da5afad-7294-4359-8098-99d756f8c202",
+      "id": "3742451c-bd40-42b3-8132-d6ce25291c36",
       "name": "Montar",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        47632,
-        18160
+        332752,
+        -261152
       ]
     },
     {
@@ -991,13 +1052,13 @@
         "query": "INSERT INTO msy_knowledge (titulo, conteudo, categoria, tags, ativo, embedding, criado_em, atualizado_em) VALUES ('{{ $json.titulo }}', '{{ $json.conteudo }}', '{{ $json.categoria }}', ARRAY[{{ $json.tags.map(t => \"'\" + t + \"'\").join(',') }}]::text[], true, '{{ $json.embedding }}'::vector, now(), now());",
         "options": {}
       },
-      "id": "75319e81-e32f-45c8-8e4d-3f07e5987fca",
+      "id": "e2f5e34e-5dfb-4191-a79e-d5333663d33b",
       "name": "Salvar Supabase",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        47840,
-        18160
+        332960,
+        -261152
       ],
       "credentials": {
         "postgres": {
@@ -1008,15 +1069,15 @@
     },
     {
       "parameters": {
-        "jsCode": "\nconst d  = $input.first().json;\nconst oc = d.orchestrator;\n\nconst baseInst = oc.usarBase\n  ? 'Consulte o contexto institucional da MSY: valores, estrutura, membros, histÃ³ria.'\n  : 'Responda com base no conhecimento geral da Ordem Masayoshi.';\n\nconst ctx = `UsuÃ¡rio: ${d.userCtxString}\\nTipo: ${oc.tipo} | Ãrea: ${oc.area} | Complexidade: ${oc.complexidade}`;\n\nconst sCorvus = `VocÃª Ã© CORVUS â€” agente institucional da Ordem Masayoshi. ${baseInst}\\n${ctx}\\nResposta precisa, direta e institucional. MÃ¡ximo 6 linhas.`;\nconst sFenrir = `VocÃª Ã© CORVUS modo FENRIR â€” lado criativo da Ordem Masayoshi. ${baseInst}\\n${ctx}\\nVisÃ£o criativa, expansiva, inspiradora. MÃ¡ximo 8 linhas.`;\nconst sCipher = `VocÃª Ã© CORVUS modo CIPHER â€” estrategista da Ordem Masayoshi. ${baseInst}\\n${ctx}\\nEstruture: **AnÃ¡lise** â†’ **Riscos** â†’ **RecomendaÃ§Ã£o** â†’ **PrÃ³ximos Passos**.`;\n\n// PrÃ©-serializa os bodies completos â€” evita problema de expressÃ£o dentro de JSON\nconst bodyCorvus = JSON.stringify({\n  model:'gpt-4o', temperature:0.3, max_tokens:600,\n  messages:[{role:'system',content:sCorvus},{role:'user',content:d.message}]\n});\nconst bodyFenrir = JSON.stringify({\n  model:'gpt-4o', temperature:1.0, max_tokens:700,\n  messages:[{role:'system',content:sFenrir},{role:'user',content:d.message}]\n});\nconst bodyCipher = JSON.stringify({\n  model:'gpt-4o', temperature:0.5, max_tokens:800,\n  messages:[{role:'system',content:sCipher},{role:'user',content:d.message}]\n});\n\nreturn [{\n  _message:       d.message,\n  _userId:        d.userId,\n  _sessionId:     d.sessionId,\n  _memoryKey:     d.memoryKey,\n  _orchestrator:  JSON.stringify(oc),\n  _bodyCorvus:    bodyCorvus,\n  _bodyFenrir:    bodyFenrir,\n  _bodyCipher:    bodyCipher\n}];\n"
+        "jsCode": "\nconst d  = $input.first().json;\nconst oc = d.orchestrator;\n\nconst baseInst = oc.usarBase\n  ? 'Consulte o contexto institucional da MSY: valores, estrutura, membros, histÃ³ria.'\n  : 'Responda com base no conhecimento geral da Ordem Masayoshi.';\n\nconst ctx = `UsuÃ¡rio: ${d.userCtxString}\\nTipo: ${oc.tipo} | Ãrea: ${oc.area} | Complexidade: ${oc.complexidade}`;\n\nconst sCorvus = `VocÃª Ã© CORVUS â€” agente institucional da Ordem Masayoshi. ${baseInst}\\n${ctx}\\nResposta precisa, direta e institucional. Para perguntas simples, responda curto. Para comparacao, explicacao, ranking, decisao, plano, estudo, diagnostico, estrategia ou analise, entregue resposta premium: sintese objetiva, estrutura visual clara, tabelas quando houver comparacao real, criterios quando precisar avaliar opcoes, ranking quando existir hierarquia, checklist ou plano de acao quando houver execucao, e conclusao/recomendacao/proximos passos. Nao exponha raciocinio interno literal. Se o pedido usar compare, comparativo, ranking, maior para menor, melhores, hierarquia, cargos, funcoes ou diferencas, use obrigatoriamente tabela markdown com colunas claras; nao use lista numerada para comparativos que cabem em tabela.`;\nconst sFenrir = `VocÃª Ã© CORVUS modo FENRIR â€” lado criativo da Ordem Masayoshi. ${baseInst}\\n${ctx}\\nVisÃ£o criativa, expansiva, inspiradora. MÃ¡ximo 8 linhas.`;\nconst sCipher = `VocÃª Ã© CORVUS modo CIPHER â€” estrategista da Ordem Masayoshi. ${baseInst}\\n${ctx}\\nEstruture: **AnÃ¡lise** â†’ **Riscos** â†’ **RecomendaÃ§Ã£o** â†’ **PrÃ³ximos Passos**.`;\n\n// PrÃ©-serializa os bodies completos â€” evita problema de expressÃ£o dentro de JSON\nconst bodyCorvus = JSON.stringify({\n  model:'gpt-4o', temperature:0.3, max_tokens:1200,\n  messages:[{role:'system',content:sCorvus},{role:'user',content:d.message}]\n});\nconst bodyFenrir = JSON.stringify({\n  model:'gpt-4o', temperature:1.0, max_tokens:700,\n  messages:[{role:'system',content:sFenrir},{role:'user',content:d.message}]\n});\nconst bodyCipher = JSON.stringify({\n  model:'gpt-4o', temperature:0.5, max_tokens:800,\n  messages:[{role:'system',content:sCipher},{role:'user',content:d.message}]\n});\n\nreturn [{\n  _message:       d.message,\n  _userId:        d.userId,\n  _sessionId:     d.sessionId,\n  _memoryKey:     d.memoryKey,\n  _orchestrator:  JSON.stringify(oc),\n  _bodyCorvus:    bodyCorvus,\n  _bodyFenrir:    bodyFenrir,\n  _bodyCipher:    bodyCipher\n}];\n"
       },
-      "id": "5574f14f-4920-4f51-9f8e-b10b794a09fb",
+      "id": "f714d567-782c-4490-ad14-796cefccfdc5",
       "name": "Prep Conselho",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        47936,
-        17696
+        333056,
+        -261616
       ]
     },
     {
@@ -1059,19 +1120,21 @@
         },
         "options": {}
       },
-      "id": "d72ef819-4b7e-4544-b5a4-92302933e16e",
+      "id": "705627a5-1f6a-4e1b-91e9-ce4c75bba153",
       "name": "Set Corvus Body",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        48272,
-        17808
+        333392,
+        -261504
       ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -1083,18 +1146,16 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "options": {},
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "openAiApi",
-        "jsonBody": "={{ JSON.parse($json._bodyCorvus || '{}') }}"
+        "jsonBody": "={{ JSON.parse($json._bodyCorvus || '{}') }}",
+        "options": {}
       },
-      "id": "9f22152d-f828-49dd-83b5-5146cd22ad32",
+      "id": "659325eb-cbc0-45bc-9ae4-1296bc0012cd",
       "name": "Call Corvus",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        48496,
-        17808
+        333616,
+        -261504
       ],
       "credentials": {
         "openAiApi": {
@@ -1143,19 +1204,21 @@
         },
         "options": {}
       },
-      "id": "c6efb3b1-38d7-43f4-b1ee-f906e7b37b22",
+      "id": "93919270-d217-4601-9bd5-220bfaeb5c8f",
       "name": "Set Fenrir Body",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        48672,
-        17888
+        333792,
+        -261424
       ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -1167,18 +1230,16 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "options": {},
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "openAiApi",
-        "jsonBody": "={{ JSON.parse($json._bodyFenrir || '{}') }}"
+        "jsonBody": "={{ JSON.parse($json._bodyFenrir || '{}') }}",
+        "options": {}
       },
-      "id": "595f9396-ef7b-4944-99c6-9dc5ce97af8a",
+      "id": "db695ef6-2783-410d-bce1-56346a6b5790",
       "name": "Call Fenrir",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        48848,
-        17888
+        333968,
+        -261424
       ],
       "credentials": {
         "openAiApi": {
@@ -1227,19 +1288,21 @@
         },
         "options": {}
       },
-      "id": "129f6bce-f829-4a2e-979a-67775e7f8ca2",
+      "id": "51a65876-bd14-4f6f-8be8-2520496e2e4d",
       "name": "Set Cipher Body",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        48992,
-        17888
+        334112,
+        -261424
       ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -1251,18 +1314,16 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "options": {},
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "openAiApi",
-        "jsonBody": "={{ JSON.parse($json._bodyCipher || '{}') }}"
+        "jsonBody": "={{ JSON.parse($json._bodyCipher || '{}') }}",
+        "options": {}
       },
-      "id": "0f07dc9b-9c37-46b9-bc24-5c700a84a5be",
+      "id": "f0965348-1d9d-4939-916e-94e01f8c9a74",
       "name": "Call Cipher",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        49136,
-        17888
+        334256,
+        -261424
       ],
       "credentials": {
         "openAiApi": {
@@ -1275,13 +1336,13 @@
       "parameters": {
         "jsCode": "\nconst d = $input.first().json;\n\nconst safeTrim = (v) => (v || '').toString().trim() || 'Sem resposta.';\n\nconst replyCorvus = safeTrim($('Set Cipher Body').item.json._replyCorvus);\nconst replyFenrir = safeTrim($('Set Cipher Body').item.json._replyFenrir);\nconst replyCipher = safeTrim(d.choices && d.choices[0]?.message?.content);\n\nlet oc = {};\ntry { oc = JSON.parse($('Set Cipher Body').item.json._orchestrator || '{}'); } catch {}\n\nreturn [{\n  consiliumPayload: {\n    isConselho: true,\n    blocks: [\n      { mode:'corvus', label:'â¬¡ Corvus', reply: replyCorvus },\n      { mode:'fenrir', label:'âš¡ Fenrir', reply: replyFenrir },\n      { mode:'cipher', label:'â—ˆ Cipher', reply: replyCipher }\n    ]\n  },\n  orchestrator: oc,\n  resolvedMode: 'conselho',\n  message:   $('Set Cipher Body').item.json._message,\n  userId:    $('Set Cipher Body').item.json._userId,\n  sessionId: $('Set Cipher Body').item.json._sessionId\n}];\n"
       },
-      "id": "0b8a0be3-1944-4874-bac3-164d4ec1cf16",
+      "id": "9a84b23c-07e6-45b1-a82c-145cca5af680",
       "name": "Merge Conselho",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        49280,
-        17888
+        334400,
+        -261424
       ]
     },
     {
@@ -1290,7 +1351,7 @@
           "string": [
             {
               "name": "corvus_system",
-              "value": "=VocÃª Ã© CORVUS em modo SIMULAÃ‡ÃƒO â€” analista de cenÃ¡rios da Ordem Masayoshi.\n\nVersÃ£o: 3.2 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nMISSÃƒO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nAnalisar cenÃ¡rios hipotÃ©ticos (\"e se...\") com rigor estratÃ©gico, mapeando consequÃªncias reais.\n\nCONSULTA DE BASE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Consulte buscar_base_msy para embasar o cenÃ¡rio.' : 'DESATIVADO.' }}\n\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\n\nESTRUTURA OBRIGATÃ“RIA DE RESPOSTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n**ðŸŸ¢ Melhor CenÃ¡rio**\n(o que pode acontecer de positivo)\n\n**ðŸ”´ Pior CenÃ¡rio**\n(o que pode dar errado)\n\n**âš ï¸ Riscos**\n(principais ameaÃ§as e probabilidade)\n\n**ðŸ“Š Impacto**\n(consequÃªncias diretas para a Ordem)\n\n**âœ… RecomendaÃ§Ã£o**\n(aÃ§Ã£o concreta sugerida)\n\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nAnalÃ­tico. Preciso. Sem romantizar. Baseado em evidÃªncias.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar.\n\nCONTEXTO DOCUMENTAL\n{{ $json.documentCtxString ? $json.documentCtxString : ($json.hasDocuments ? 'Documento anexado, mas nenhum texto legivel foi extraido.' : 'Nenhum documento foi anexado nesta mensagem.') }}\n\nSe houver contexto documental, use-o como fonte do arquivo anexado. Nao diga que nao consegue acessar o documento quando este bloco tiver conteudo."
+              "value": "=VocÃª Ã© CORVUS em modo SIMULAÃ‡ÃƒO â€” analista de cenÃ¡rios da Ordem Masayoshi.\n\nVersÃ£o: 3.2 Beta\n\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nMISSÃƒO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nAnalisar cenÃ¡rios hipotÃ©ticos (\"e se...\") com rigor estratÃ©gico, mapeando consequÃªncias reais.\n\nCONSULTA DE BASE\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.orchestrator.usarBase ? 'ATIVO: Consulte buscar_base_msy para embasar o cenÃ¡rio.' : 'DESATIVADO.' }}\n\nCONTEXTO\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n{{ $json.userCtxString }}\n\nESTRUTURA OBRIGATÃ“RIA DE RESPOSTA\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n**ðŸŸ¢ Melhor CenÃ¡rio**\n(o que pode acontecer de positivo)\n\n**ðŸ”´ Pior CenÃ¡rio**\n(o que pode dar errado)\n\n**âš ï¸ Riscos**\n(principais ameaÃ§as e probabilidade)\n\n**ðŸ“Š Impacto**\n(consequÃªncias diretas para a Ordem)\n\n**âœ… RecomendaÃ§Ã£o**\n(aÃ§Ã£o concreta sugerida)\n\nTOM\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\nAnalÃ­tico. Preciso. Sem romantizar. Baseado em evidÃªncias.\n\nCONTEXTO VISUAL\n{{ $json.visualCtxString ? $json.visualCtxString : (($json.hasImages || $json.usedVision) ? 'Imagem anexada, mas a analise visual nao retornou detalhes suficientes.' : 'Nenhuma imagem foi anexada nesta mensagem.') }}\n\nSe houver contexto visual, use-o como fonte visual da resposta. Se estiver ilegivel ou ambiguo, declare apenas a incerteza especifica sem inventar.\n\nCONTEXTO DOCUMENTAL\n{{ $json.documentCtxString ? $json.documentCtxString : ($json.hasDocuments ? 'Documento anexado, mas nenhum texto legivel foi extraido.' : 'Nenhum documento foi anexado nesta mensagem.') }}\n\nSe houver contexto documental, use-o como fonte do arquivo anexado. Nao diga que nao consegue acessar o documento quando este bloco tiver conteudo.\n\nCONTEXTO DE AUDIO\n{{ $json.audioCtxString ? $json.audioCtxString : ($json.hasAudio ? 'Audio anexado, mas nenhuma fala legivel foi transcrita.' : 'Nenhum audio foi anexado nesta mensagem.') }}\n\nSe houver contexto de audio, trate a transcricao como conteudo do anexo. Nao diga que nao consegue ouvir ou acessar o audio quando este bloco tiver conteudo."
             },
             {
               "name": "chatInput",
@@ -1351,18 +1412,38 @@
             {
               "name": "imageAttachments",
               "value": "={{ JSON.stringify($json.imageAttachments || []) }}"
+            },
+            {
+              "name": "audioContext",
+              "value": "={{ JSON.stringify($json.audioContext || null) }}"
+            },
+            {
+              "name": "audioCtxString",
+              "value": "={{ $json.audioCtxString || \"\" }}"
+            },
+            {
+              "name": "hasAudio",
+              "value": "={{ $json.hasAudio === true }}"
+            },
+            {
+              "name": "usedAudioTranscription",
+              "value": "={{ $json.usedAudioTranscription === true }}"
+            },
+            {
+              "name": "audioAttachments",
+              "value": "={{ JSON.stringify($json.audioAttachments || []) }}"
             }
           ]
         },
         "options": {}
       },
-      "id": "86482140-15af-4bd2-bfda-bf6104f14e1d",
+      "id": "e196f7c1-a3e2-42de-9e64-58394503c0b2",
       "name": "Set Simulacao Prompt",
       "type": "n8n-nodes-base.set",
       "typeVersion": 2,
       "position": [
-        48848,
-        18304
+        333968,
+        -261008
       ]
     },
     {
@@ -1376,10 +1457,10 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
       "position": [
-        49200,
-        18544
+        334320,
+        -260768
       ],
-      "id": "e8e89e9b-62db-4693-96dc-96059d6cfdc9",
+      "id": "11ede1aa-3e3f-47fe-bd1f-e8b669f8d699",
       "name": "AI Agent (Simulacao)"
     },
     {
@@ -1398,10 +1479,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        49200,
-        18688
+        334320,
+        -260624
       ],
-      "id": "c3ea6022-6130-48f9-bbfe-62a5abc5d01e",
+      "id": "a941ee40-d96c-4c68-b41d-77535f090167",
       "name": "GPT-4o (Simulacao)",
       "credentials": {
         "openAiApi": {
@@ -1419,10 +1500,10 @@
       "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
       "typeVersion": 1.3,
       "position": [
-        49296,
-        18688
+        334416,
+        -260624
       ],
-      "id": "a60d17de-5182-43cf-ae52-066386f9d381",
+      "id": "75cf702c-f93d-443b-9b52-f1a38e0734c2",
       "name": "Memory (Simulacao)",
       "credentials": {
         "postgres": {
@@ -1483,19 +1564,21 @@
         },
         "options": {}
       },
-      "id": "630fa346-95bb-438a-9d93-3b17eb1ec036",
+      "id": "ed24f5c3-07c1-42bd-9b5a-c623c3cee301",
       "name": "Vision Gate",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.4,
       "position": [
-        520,
-        160
+        331088,
+        -261936
       ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/responses",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -1507,18 +1590,16 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "options": {},
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "openAiApi",
-        "jsonBody": "={{ { model: 'gpt-4o-mini', temperature: 0, max_output_tokens: 700, input: [{ role: 'user', content: [{ type: 'input_text', text: 'Analise as imagens anexadas para o Corvus. Responda SOMENTE JSON valido com: ocrText, description, relevantItems, limitations, confidence. Foque em OCR e analise geral. Mensagem do usuario: ' + ($json.message || '') }, ...($json.imageAttachments || []).map((image) => ({ type: 'input_image', image_url: image.dataUrl || image.imageUrl || image.url || image.signedUrl, detail: 'auto' }))] }] } }}"
+        "jsonBody": "={{ { model: 'gpt-4o-mini', temperature: 0, max_output_tokens: 700, input: [{ role: 'user', content: [{ type: 'input_text', text: 'Analise as imagens anexadas para o Corvus. Responda SOMENTE JSON valido com: ocrText, description, relevantItems, limitations, confidence. Foque em OCR e analise geral. Mensagem do usuario: ' + ($json.message || '') }, ...($json.imageAttachments || []).map((image) => ({ type: 'input_image', image_url: image.dataUrl || image.imageUrl || image.url || image.signedUrl, detail: 'auto' }))] }] } }}",
+        "options": {}
       },
-      "id": "11026ba5-4e4f-4015-8160-600b287e40a9",
+      "id": "baedcab8-e257-41b0-9354-446d269041b7",
       "name": "Vision Analyzer",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        760,
-        60
+        331328,
+        -262048
       ],
       "credentials": {
         "openAiApi": {
@@ -1532,26 +1613,26 @@
       "parameters": {
         "jsCode": "\nconst base = $('Normalize Input').item.json;\nconst raw = $json;\n\nfunction firstText(value) {\n  if (typeof value?.output_text === 'string') return value.output_text;\n  const output = Array.isArray(value?.output) ? value.output : [];\n  for (const item of output) {\n    const content = Array.isArray(item.content) ? item.content : [];\n    for (const part of content) {\n      if (typeof part.text === 'string') return part.text;\n      if (typeof part.value === 'string') return part.value;\n    }\n  }\n  return '';\n}\n\nfunction parseJson(text) {\n  try { return JSON.parse(text); } catch {}\n  const fence = String.fromCharCode(96, 96, 96);\n  const clean = text\n    .replace(new RegExp('^' + fence + '(?:json)?', 'i'), '')\n    .replace(new RegExp(fence + '$', 'i'), '')\n    .trim();\n  try { return JSON.parse(clean); } catch {}\n  return null;\n}\n\nconst text = firstText(raw).trim();\nif (!text) {\n  return [{\n    ...base,\n    visualContext: base.visualContext || null,\n    visualCtxString: base.visualCtxString || '',\n    usedVision: Boolean(base.visualContext || base.visualCtxString),\n    visionError: raw.error?.message || raw.message || 'Vision Analyzer nao retornou contexto visual.',\n  }];\n}\n\nconst parsed = parseJson(text) || {};\nconst visualContext = {\n  ocrText: (parsed.ocrText || parsed.ocr || '').toString().trim(),\n  description: (parsed.description || parsed.descricao || text || '').toString().trim(),\n  relevantItems: Array.isArray(parsed.relevantItems) ? parsed.relevantItems.slice(0, 8) : [],\n  limitations: (parsed.limitations || parsed.limits || '').toString().trim(),\n  confidence: Number(parsed.confidence || parsed.confianca || 0.7),\n};\nconst visualCtxString = [\n  'OCR: ' + (visualContext.ocrText || 'sem texto detectado'),\n  'Descricao: ' + (visualContext.description || ''),\n  'Itens: ' + ((visualContext.relevantItems || []).join(', ') || '-'),\n  'Limitacoes: ' + (visualContext.limitations || '-'),\n  Number.isFinite(visualContext.confidence) ? 'Confianca: ' + visualContext.confidence : '',\n].filter(Boolean).join('\\n');\n\nreturn [{ ...base, visualContext, visualCtxString, usedVision: Boolean(visualCtxString), hasImages: true }];\n"
       },
-      "id": "795496cb-03e4-47c4-a5c3-bd4507e8c50d",
+      "id": "d706de0b-7751-463b-a201-95e1c6fffd16",
       "name": "Vision Context Merge",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1000,
-        60
+        331568,
+        -262048
       ]
     },
     {
       "parameters": {
-        "jsCode": "\nconst item = $json;\nconst text = (item.message || '').toString();\nconst lower = text.toLowerCase();\nconst visual = item.visualContext || null;\nconst docs = item.documentContext || null;\nconst documentText = (item.documentCtxString || docs?.text || '').toString();\nconst hasVision = Boolean(visual?.description || visual?.ocrText || item.visualCtxString);\nconst hasDocuments = Boolean(documentText);\n\nconst institutionalWords = ['msy','masayoshi','ordem','membro','cargo','lideranca','lideranÃ§a','evento','valores','nevermind','britannia','corvus'];\nconst decisionWords = ['decidir','decisao','decisÃ£o','risco','estrategia','estratÃ©gia','aprovar','planejar','prioridade','problema'];\nconst creativeWords = ['ideia','crie','campanha','texto','roteiro','post','criativo','brainstorm'];\nconst simulationWords = ['e se','simula','simular','imagine que','o que aconteceria','cenario','cenÃ¡rio'];\n\nconst hasInstitutional = institutionalWords.some((word) => lower.includes(word));\nconst hasDecision = decisionWords.some((word) => lower.includes(word));\nconst hasCreative = creativeWords.some((word) => lower.includes(word));\nconst hasSimulation = simulationWords.some((word) => lower.includes(word));\nconst shortCasual = lower.length <= 80 && /^(oi|ola|olÃ¡|bom dia|boa tarde|boa noite|valeu|obrigado|teste)\\b/.test(lower);\nconst manualMode = ['corvus','fenrir','cipher','conselho','simulacao'].includes(item.modo) ? item.modo : '';\n\nlet tipo = 'geral';\nlet area = hasInstitutional ? 'estrutura' : 'geral';\nlet complexidade = lower.length > 550 || hasDecision ? 'alta' : (lower.length > 180 ? 'media' : 'baixa');\nlet modo_sugerido = manualMode || 'corvus';\nif (!manualMode && hasSimulation) modo_sugerido = 'simulacao';\nelse if (!manualMode && hasCreative) modo_sugerido = 'fenrir';\nelse if (!manualMode && hasDecision) modo_sugerido = 'cipher';\n\nif (hasSimulation) tipo = 'simulacao';\nelse if (hasDecision) tipo = 'decisao';\nelse if (hasCreative) tipo = 'ideia';\nelse if (hasInstitutional) tipo = 'pergunta';\n\nconst visualText = (visual?.ocrText || '') + ' ' + (visual?.description || '') + ' ' + documentText;\nconst classifier = {\n  tipo,\n  area,\n  complexidade,\n  usarBase: hasInstitutional || (hasVision && /msy|masayoshi|ordem|cargo|membro/i.test(visualText)),\n  usarMemoria: !shortCasual,\n  modo_sugerido,\n  ehSimulacao: hasSimulation,\n  ehDecisao: hasDecision,\n};\n\nconst confidence = shortCasual ? 0.95 : (hasVision || hasDocuments || hasInstitutional || hasDecision || hasCreative || hasSimulation ? 0.86 : 0.72);\nreturn [{ ...item, fastRoute: { skipClassifier: confidence >= 0.8, confidence, classifier } }];\n"
+        "jsCode": "\nconst item = $json;\nconst text = (item.message || '').toString();\nconst lower = text.toLowerCase();\nconst visual = item.visualContext || null;\nconst docs = item.documentContext || null;\nconst audio = item.audioContext || null;\nconst documentText = (item.documentCtxString || docs?.text || '').toString();\nconst audioText = (item.audioCtxString || audio?.text || '').toString();\nconst combinedText = [text, documentText, audioText].join(' ');\nconst combinedLower = combinedText.toLowerCase();\nconst hasVision = Boolean(visual?.description || visual?.ocrText || item.visualCtxString);\nconst hasDocuments = Boolean(documentText);\nconst hasAudio = Boolean(audioText);\n\nconst institutionalWords = ['msy','masayoshi','ordem','membro','cargo','lideranca','liderança','evento','valores','nevermind','britannia','corvus'];\nconst decisionWords = ['decidir','decisao','decisão','risco','estrategia','estratégia','aprovar','planejar','prioridade','problema'];\nconst creativeWords = ['ideia','crie','campanha','texto','roteiro','post','criativo','brainstorm'];\nconst simulationWords = ['e se','simula','simular','imagine que','o que aconteceria','cenario','cenário'];\n\nconst hasInstitutional = institutionalWords.some((word) => combinedLower.includes(word));\nconst hasDecision = decisionWords.some((word) => combinedLower.includes(word));\nconst hasCreative = creativeWords.some((word) => combinedLower.includes(word));\nconst hasSimulation = simulationWords.some((word) => combinedLower.includes(word));\nconst shortCasual = combinedLower.length <= 80 && /^(oi|ola|olá|bom dia|boa tarde|boa noite|valeu|obrigado|teste)\b/.test(combinedLower);\nconst manualMode = ['corvus','fenrir','cipher','conselho','simulacao'].includes(item.modo) ? item.modo : '';\n\nlet tipo = hasAudio ? 'audio' : 'geral';\nlet area = hasInstitutional ? 'estrutura' : 'geral';\nlet complexidade = combinedLower.length > 550 || hasDecision ? 'alta' : (combinedLower.length > 180 ? 'media' : 'baixa');\nlet modo_sugerido = manualMode || 'corvus';\nif (!manualMode && hasSimulation) modo_sugerido = 'simulacao';\nelse if (!manualMode && hasCreative) modo_sugerido = 'fenrir';\nelse if (!manualMode && hasDecision) modo_sugerido = 'cipher';\n\nif (hasSimulation) tipo = 'simulacao';\nelse if (hasDecision) tipo = 'decisao';\nelse if (hasCreative) tipo = 'ideia';\nelse if (hasInstitutional) tipo = 'pergunta';\nelse if (hasAudio) tipo = 'audio';\n\nconst visualText = (visual?.ocrText || '') + ' ' + (visual?.description || '') + ' ' + documentText + ' ' + audioText;\nconst classifier = {\n  tipo,\n  area,\n  complexidade,\n  usarBase: hasInstitutional || (hasVision && /msy|masayoshi|ordem|cargo|membro/i.test(visualText)) || (hasAudio && /msy|masayoshi|ordem|cargo|membro/i.test(audioText)),\n  usarMemoria: !shortCasual,\n  modo_sugerido,\n  ehSimulacao: hasSimulation,\n  ehDecisao: hasDecision,\n};\n\nconst confidence = shortCasual ? 0.95 : (hasVision || hasDocuments || hasAudio || hasInstitutional || hasDecision || hasCreative || hasSimulation ? 0.86 : 0.72);\nreturn [{ ...item, fastRoute: { skipClassifier: confidence >= 0.8, confidence, classifier } }];\n"
       },
-      "id": "3204534b-63b2-46eb-bfd9-f9f1c333160e",
+      "id": "58b2c3ae-5927-49c7-ac6d-e80d2f663016",
       "name": "Fast Router",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1240,
-        160
+        331808,
+        -261936
       ]
     },
     {
@@ -1606,13 +1687,13 @@
         },
         "options": {}
       },
-      "id": "c2562126-482e-4a0e-acb1-2b972f37248b",
+      "id": "5bcd0abd-d05a-42e4-a7d3-509c78a53e58",
       "name": "Classifier Gate",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.4,
       "position": [
-        1480,
-        160
+        332048,
+        -261936
       ]
     }
   ],
@@ -2170,9 +2251,9 @@
   "active": true,
   "settings": {
     "executionOrder": "v1",
-    "availableInMCP": false
+    "availableInMCP": true
   },
-  "versionId": "4d1d3420-5aef-4c68-a8b6-70baa05ac7eb",
+  "versionId": "8c7e22d8-b97c-450e-946a-7529d0f20309",
   "meta": {
     "instanceId": "a7f0e0d215509525dd33ac10745deb3c6ff572ae61fd8e56fb38099ee12d38ed"
   },
