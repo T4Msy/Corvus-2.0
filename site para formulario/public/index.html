@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Corvus — Painel do Banco</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">⬢</span>
+      <div>
+        <h1>Corvus — Painel do Banco</h1>
+        <p class="sub">Masayoshi · gerenciamento da base de conhecimento e tabelas</p>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-tab="form">➕ Adicionar Conhecimento</button>
+      <button class="tab" data-tab="db">🗄️ Banco de Dados</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ===================== ABA FORMULÁRIO ===================== -->
+    <section id="tab-form" class="panel active">
+      <div class="card form-card">
+        <h2>Adicionar à base de conhecimento</h2>
+        <p class="muted">Preenche os campos abaixo. Ao salvar, o embedding é gerado automaticamente (igual ao fluxo do n8n) e o documento entra no RAG do Corvus.</p>
+        <form id="knowledge-form">
+          <label>Título <span class="req">*</span>
+            <input type="text" name="titulo" placeholder="Ex: Valores da Ordem Masayoshi" required />
+          </label>
+          <label>Categoria <span class="req">*</span>
+            <select name="categoria" required>
+              <option value="Valores">Valores</option>
+              <option value="Estrutura">Estrutura</option>
+              <option value="Historia">Historia</option>
+              <option value="Cargo">Cargo</option>
+              <option value="Evento">Evento</option>
+              <option value="Processo">Processo</option>
+              <option value="Geral" selected>Geral</option>
+              <option value="Modelos">Modelos</option>
+              <option value="Membros">Membros</option>
+            </select>
+          </label>
+          <label>Tags <span class="muted">(separadas por vírgula)</span>
+            <input type="text" name="tags" placeholder="Ex: valores, pilares, fundamentos" />
+          </label>
+          <label>Conteúdo <span class="req">*</span>
+            <textarea name="conteudo" rows="9" placeholder="Escreva o conteúdo completo aqui." required></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn primary">Salvar conhecimento</button>
+            <span id="form-status" class="status"></span>
+          </div>
+        </form>
+      </div>
+
+      <div class="card list-card">
+        <div class="list-head">
+          <h2>Conhecimento na base <span id="kn-count" class="pill"></span></h2>
+          <input type="text" id="kn-search" placeholder="Buscar por título/conteúdo…" />
+        </div>
+        <div id="kn-list" class="kn-list"></div>
+      </div>
+    </section>
+
+    <!-- ===================== ABA BANCO ===================== -->
+    <section id="tab-db" class="panel">
+      <aside class="sidebar">
+        <h3>Tabelas</h3>
+        <ul id="table-list"></ul>
+      </aside>
+      <div class="db-main">
+        <div class="db-head">
+          <div>
+            <h2 id="db-title">Selecione uma tabela</h2>
+            <p id="db-meta" class="muted"></p>
+          </div>
+          <div class="db-actions">
+            <input type="text" id="db-search" placeholder="Buscar…" />
+            <button id="db-new" class="btn primary" disabled>＋ Novo registro</button>
+          </div>
+        </div>
+        <div id="db-grid-wrap" class="grid-wrap">
+          <p class="empty">Escolha uma tabela à esquerda para ver os dados.</p>
+        </div>
+        <div id="db-pager" class="pager"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal genérico -->
+  <div id="modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="modal-title">Registro</h3>
+        <button id="modal-close" class="icon-btn">✕</button>
+      </div>
+      <form id="modal-form" class="modal-body"></form>
+      <div class="modal-foot">
+        <span id="modal-status" class="status"></span>
+        <button id="modal-save" class="btn primary">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="config.js"></script>
+  <script src="schema.js"></script>
+  <script src="db.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

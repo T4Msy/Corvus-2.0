@@ -47,3 +47,6 @@ next-env.d.ts
 n8n/workflow.original.json
 n8n/*.local.json
 .env.local
+
+# Painel local — credenciais do site (NUNCA commitar)
+site para formulario/public/config.js

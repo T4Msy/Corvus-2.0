@@ -1,0 +1,134 @@
+// ============================================================================
+// Corvus 3.2 Beta — nó "Post Processor" (Code) — VERSÃO CORRIGIDA
+// ----------------------------------------------------------------------------
+// BUG corrigido: em 3 lugares o '\n' tinha virado uma QUEBRA DE LINHA LITERAL
+// dentro da string (split/join), o que é SyntaxError em JS e fazia o nó falhar
+// em TODA execução. Com o nó quebrado, o n8n não respondia e o app caía no
+// fallback OpenAI (sem RAG) -> recusa genérica em perguntas institucionais.
+// Pontos corrigidos: reply.split('\n'), consilium .join('\n'), audio .join('\n').
+// ============================================================================
+
+const agentOutput = $input.first()?.json || {};
+
+// Resolve orchestrator: o AI Agent só emite {output}, então o objeto
+// `orchestrator` (usarBase/tipo/area/...) precisa ser lido do nó Orchestrator.
+// try/catch + fallback: se a referência falhar, mantém o comportamento antigo.
+let oc = {};
+try {
+  oc = agentOutput.orchestrator
+    || $('Orchestrator').first().json.orchestrator
+    || JSON.parse(agentOutput.orchestratorData || '{}');
+} catch {
+  try { oc = agentOutput.orchestrator || JSON.parse(agentOutput.orchestratorData || '{}'); } catch {}
+}
+
+const resolvedMode = agentOutput.resolvedMode || oc.resolvedMode || 'corvus';
+const modeLabels = {
+  corvus:'Corvus - Institucional', fenrir:'Fenrir - Criativo',
+  cipher:'Cipher - Estrategico', conselho:'Conselho - Perspectiva Tripla',
+  simulacao:'Simulacao - Analise de Cenarios'
+};
+
+function parseMaybeJson(value, fallback = null) {
+  if (!value) return fallback;
+  if (typeof value === 'object') return value;
+  try { return JSON.parse(value); } catch { return fallback; }
+}
+
+const base = oc.estimatedConfidence || 0.75;
+const ragBonus = oc.usarBase ? 0.05 : 0;
+const cxPenalty = oc.complexidade === 'alta' ? -0.08 : (oc.complexidade === 'baixa' ? 0.04 : 0);
+const confidence = Math.min(0.99, Math.max(0.40, base + ragBonus + cxPenalty));
+const visualContext = parseMaybeJson(agentOutput.visualContext, agentOutput.visualContext || null);
+const documentContext = parseMaybeJson(agentOutput.documentContext, agentOutput.documentContext || null);
+const audioContext = parseMaybeJson(agentOutput.audioContext, agentOutput.audioContext || null);
+const usedVision = Boolean(agentOutput.usedVision || visualContext || agentOutput.visualCtxString);
+const usedDocuments = Boolean(agentOutput.hasDocuments || agentOutput.documentCtxString || documentContext);
+const usedAudio = Boolean(agentOutput.hasAudio || agentOutput.audioCtxString || audioContext);
+const audioSummary = (agentOutput.audioCtxString || audioContext?.text || '').toString().slice(0, 240);
+const documentSummary = (agentOutput.documentCtxString || documentContext?.text || '').toString().slice(0, 240);
+
+const suggestionsMap = {
+  decisao: ['Simular cenario', 'Ver alternativas', 'Analisar riscos com Cipher'],
+  problema: ['Analisar com Cipher', 'Simular solucao', 'Consultar Conselho'],
+  ideia: ['Expandir com Fenrir', 'Analisar viabilidade', 'Simular impacto'],
+  audio: ['Transcrever integralmente', 'Resumir audio', 'Extrair acoes'],
+  simulacao: ['Analisar decisao', 'Consultar Conselho', 'Salvar como decisao'],
+  conselho: ['Aprofundar com Cipher', 'Expandir com Fenrir', 'Simular cenario'],
+  geral: ['Gerar ideia', 'Analisar decisao', 'Simular cenario']
+};
+const suggestions = suggestionsMap[oc.tipo] || suggestionsMap.geral;
+
+function cleanText(value) {
+  return (value || '').toString().replace(/\s+/g, ' ').trim();
+}
+function makeTags() {
+  const tags = new Set();
+  if (oc.area && oc.area !== 'geral') tags.add(oc.area);
+  if (oc.tipo && oc.tipo !== 'geral') tags.add(oc.tipo);
+  if (resolvedMode && resolvedMode !== 'corvus') tags.add(resolvedMode);
+  if (usedVision) tags.add('imagem');
+  if (usedDocuments) tags.add('documento');
+  if (usedAudio) tags.add('audio');
+  if (oc.usarBase) tags.add('msy');
+  return Array.from(tags).slice(0, 5);
+}
+function makeNextActions(reply) {
+  const lines = reply.split('\n').map(cleanText).filter(Boolean);
+  const actionLines = lines.filter((line) => /^(\d+\.|-|\*)?\s*(definir|validar|revisar|criar|enviar|priorizar|analisar|executar|documentar|alinhar)/i.test(line));
+  return (actionLines.length ? actionLines : suggestions).slice(0, 4);
+}
+function makeMeta(replyText, mode) {
+  return {
+    agent:'Corvus 3.2 Beta', model:'gpt-4o', mode,
+    modeLabel: modeLabels[mode] ?? mode,
+    complexity: oc.complexidade || 'media', usedRAG: oc.usarBase === true,
+    usedVision, visualSummary: visualContext?.description || '',
+    usedDocuments, documentSummary,
+    usedAudio, audioSummary,
+    confidence: parseFloat(confidence.toFixed(2)), tipo: oc.tipo || 'geral',
+    summaryCandidate: cleanText(replyText).slice(0, 360),
+    tags: makeTags(),
+    nextActions: makeNextActions(replyText),
+    decisionCandidate: oc.ehDecisao === true,
+    timestamp: new Date().toISOString(), suggestions, visionError: agentOutput.visionError || ''
+  };
+}
+
+if (agentOutput.consiliumPayload?.isConselho) {
+  const consiliumText = agentOutput.consiliumPayload.blocks.map((block) => block.label + ': ' + block.reply).join('\n');
+  return [{
+    json: {
+      ok: true,
+      reply: consiliumText,
+      consilium: agentOutput.consiliumPayload.blocks,
+      meta: { ...makeMeta(consiliumText, 'conselho'), usedRAG: oc.usarBase || false }
+    }
+  }];
+}
+
+let reply = (
+  agentOutput.reply ?? agentOutput.output ?? agentOutput.text ?? agentOutput.response ??
+  agentOutput.message ?? (agentOutput.choices && agentOutput.choices[0]?.message?.content) ?? ''
+).toString().trim();
+
+if (!reply && usedAudio && audioSummary) {
+  reply = [
+    'Recebi e transcrevi o audio. O workflow nao retornou uma resposta do agente, entao segue a transcricao para continuidade:',
+    '',
+    audioSummary
+  ].join('\n');
+}
+
+if (!reply) {
+  reply = 'Recebi a mensagem, mas o agente nao retornou uma resposta. Verifique o ultimo node executado no n8n.';
+}
+
+return [{
+  json: {
+    ok: true,
+    reply,
+    consilium: null,
+    meta: makeMeta(reply, resolvedMode)
+  }
+}];
