@@ -477,13 +477,15 @@ textarea {
   object-fit: contain;
   object-position: center;
   transform-origin: center;
-  /* Offset em % do próprio emblema para acompanhar a escala do mark (antes -12px/-11px
-     fixos ficavam grandes demais quando o mark encolhia). */
-  --emblem-x: -16%;
-  --emblem-y: -15%;
+  /* Sem offset: o emblema é centralizado pelo place-items:center do .welcome-msy-mark
+     + object-fit:contain. O translate negativo de antes (-16%/-15%) empurrava o corvo
+     pra cima/esquerda e, como o box é dimensionado em vw, o deslocamento variava com
+     zoom/navegador — era isso que deixava o corvo "torto" e cortado. */
+  --emblem-x: 0%;
+  --emblem-y: 0%;
   /* O posicionamento PRECISA ficar no elemento base, não só na animação. Caso contrário,
      em máquinas com "reduzir animações" (prefers-reduced-motion) o translate some junto
-     com a animação e o corvo renderiza fora do lugar ("torto"). */
+     com a animação e o corvo renderiza fora do lugar. */
   transform: translate(var(--emblem-x), var(--emblem-y));
   filter:
     drop-shadow(0 0 8px rgba(227, 27, 63, 0.5))
@@ -2373,8 +2375,8 @@ textarea {
   }
 
   .corvao-emblem-image {
-    --emblem-x: -8px;
-    --emblem-y: -9px;
+    --emblem-x: 0px;
+    --emblem-y: 0px;
   }
 
   .welcome-subtitle {
