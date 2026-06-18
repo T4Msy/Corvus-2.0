@@ -437,9 +437,12 @@ textarea {
 .welcome-msy-mark {
   display: inline-grid;
   place-items: center;
-  width: 72px !important;
-  height: 72px !important;
-  min-width: 72px !important;
+  /* Escala junto com o título — h1 é clamp(34px, 4.2vw, 46px); o emblema é ~1,57×
+     disso. Mantém a proporção idêntica em qualquer monitor (antes era 72px fixo,
+     o que deixava o corvo gigante em telas estreitas). */
+  width: clamp(54px, 6.6vw, 72px) !important;
+  height: clamp(54px, 6.6vw, 72px) !important;
+  min-width: clamp(54px, 6.6vw, 72px) !important;
   overflow: visible;
   border: 0;
   border-radius: 999px;
@@ -474,8 +477,10 @@ textarea {
   object-fit: contain;
   object-position: center;
   transform-origin: center;
-  --emblem-x: -12px;
-  --emblem-y: -11px;
+  /* Offset em % do próprio emblema para acompanhar a escala do mark (antes -12px/-11px
+     fixos ficavam grandes demais quando o mark encolhia). */
+  --emblem-x: -16%;
+  --emblem-y: -15%;
   filter:
     drop-shadow(0 0 8px rgba(227, 27, 63, 0.5))
     drop-shadow(0 8px 16px rgba(0, 0, 0, 0.76));
