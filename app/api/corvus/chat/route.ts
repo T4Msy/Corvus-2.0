@@ -7,6 +7,7 @@ import {
   buildAudioContext,
   formatAudioContext,
   isSupportedAudioType,
+  openAiSafeAudioName,
   transcribeAudioBuffer,
   transcribeAudioViaN8n,
 } from "@/lib/audio/openai";
@@ -541,11 +542,14 @@ export async function POST(req: Request) {
 
     audioAttachments = await Promise.all(
       acceptedAudio.map(async (attachment): Promise<N8nAudioAttachment> => {
+        // Força um nome com extensão aceita pela OpenAI no Content-Disposition,
+        // para que o n8n batize o binário corretamente (ex.: .opus → .ogg).
         const signedUrl = await createAttachmentSignedUrl(
           supabase,
           attachment.path,
           undefined,
-          AUDIO_URL_EXPIRES_IN
+          AUDIO_URL_EXPIRES_IN,
+          openAiSafeAudioName(attachment.name, attachment.type)
         );
         if (!signedUrl) {
           return {

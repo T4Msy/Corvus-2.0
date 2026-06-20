@@ -40,6 +40,51 @@ export function isSupportedAudioType(type: string, name: string): boolean {
   );
 }
 
+// Extensões que a API de transcrição da OpenAI reconhece. ".opus" NÃO está aqui
+// (áudio de WhatsApp): mesmo sendo Ogg/Opus por dentro, a OpenAI rejeita pelo
+// nome e devolve vazio. Por isso normalizamos o nome do arquivo antes de enviar.
+const OPENAI_AUDIO_EXTENSIONS = new Set([
+  "flac",
+  "m4a",
+  "mp3",
+  "mp4",
+  "mpeg",
+  "mpga",
+  "oga",
+  "ogg",
+  "wav",
+  "webm",
+]);
+
+/**
+ * Devolve um nome de arquivo com extensão que a OpenAI aceita. Se a extensão
+ * original já for válida, mantém. Caso contrário (ex.: .opus do WhatsApp),
+ * mapeia para a extensão aceita equivalente pelo container/MIME real.
+ */
+export function openAiSafeAudioName(name: string, type: string): string {
+  const ext = extensionOf(name);
+  if (OPENAI_AUDIO_EXTENSIONS.has(ext)) return name || `audio.${ext}`;
+
+  const t = (type || "").toLowerCase();
+  let target = "ogg";
+  if (ext === "opus" || t.includes("opus") || t.includes("ogg") || ext === "oga") {
+    target = "ogg"; // Opus/Ogg → .ogg (aceito), preserva o áudio
+  } else if (t.includes("mpeg") || t.includes("mp3") || ext === "mpga") {
+    target = "mp3";
+  } else if (t.includes("mp4") || t.includes("m4a") || t.includes("aac")) {
+    target = "m4a";
+  } else if (t.includes("wav") || t.includes("wave")) {
+    target = "wav";
+  } else if (t.includes("webm")) {
+    target = "webm";
+  } else if (t.includes("flac")) {
+    target = "flac";
+  }
+
+  const base = (name || "audio").replace(/\.[^.]+$/, "").trim() || "audio";
+  return `${base}.${target}`;
+}
+
 export async function createOpenAIRealtimeToken(): Promise<{
   token: string;
   expiresAt?: number;
@@ -160,6 +205,9 @@ export async function transcribeAudioViaN8n(args: {
       body: JSON.stringify({
         signedUrl: args.signedUrl,
         name: args.name,
+        // Nome normalizado com extensão que a OpenAI aceita (.opus -> .ogg). O
+        // n8n usa este campo para renomear o binário antes de enviar à OpenAI.
+        filename: openAiSafeAudioName(args.name, args.type),
         type: args.type,
         language: config.audio.language,
         model: config.audio.transcriptionModel,
@@ -259,7 +307,11 @@ async function transcribeWithOpenAI(args: {
   form.append("language", audio.language);
   form.append("prompt", AUDIO_PROMPT);
   form.append("response_format", "json");
-  form.append("file", bufferBlob(args.buffer, args.type), args.name);
+  form.append(
+    "file",
+    bufferBlob(args.buffer, args.type),
+    openAiSafeAudioName(args.name, args.type)
+  );
 
   const response = await fetch(OPENAI_TRANSCRIPTION_URL, {
     method: "POST",

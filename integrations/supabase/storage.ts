@@ -68,11 +68,15 @@ export async function createAttachmentSignedUrl(
   supabase: CorvusSupabaseClient,
   path: string,
   bucket = DEFAULT_ATTACHMENTS_BUCKET,
-  expiresIn = 60 * 60
+  expiresIn = 60 * 60,
+  // Quando informado, o Supabase responde com `Content-Disposition: attachment;
+  // filename="<download>"`. Usado para forçar uma extensão que a OpenAI aceite
+  // (ex.: áudio .opus do WhatsApp servido como .ogg) ao baixar via n8n.
+  download?: string
 ): Promise<string | null> {
   const { data, error } = await supabase.storage
     .from(bucket)
-    .createSignedUrl(path, expiresIn);
+    .createSignedUrl(path, expiresIn, download ? { download } : undefined);
 
   if (error) throw error;
   return data?.signedUrl || null;
