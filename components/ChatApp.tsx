@@ -200,12 +200,20 @@ export function ChatApp() {
       return;
 
     const id = conversations.activeConversationId;
+    // Conversa recém-criada nesta sessão: as mensagens são otimistas (chat.messages).
+    // Buscar o histórico do servidor aqui criaria uma corrida que apaga a primeira
+    // mensagem do usuário. O fluxo de envio já cuida do estado dessas conversas.
+    if (conversations.isSessionCreated(id)) {
+      loadedConversationRef.current = id;
+      return;
+    }
     loadedConversationRef.current = id;
     void conversations.selectConversation(id).then(chat.setHistory);
   }, [
     auth.status,
     chat.setHistory,
     conversations.activeConversationId,
+    conversations.isSessionCreated,
     conversations.loading,
     conversations.selectConversation,
   ]);

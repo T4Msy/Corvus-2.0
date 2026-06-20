@@ -38,6 +38,10 @@ export function useConversations(auth: AuthLike) {
   );
   const conversationsRef = useRef<Conversation[]>([]);
   const lastSyncActionRef = useRef<(() => Promise<void>) | null>(null);
+  // IDs de conversas criadas NESTA sessão (no fluxo de envio). Suas mensagens são
+  // otimistas em chat.messages; o histórico do servidor ainda está vazio/parcial,
+  // então não devemos buscá-lo automaticamente (apagaria a 1ª mensagem do usuário).
+  const sessionCreatedIdsRef = useRef<Set<string>>(new Set());
 
   const activeConversation = useMemo(
     () => conversations.find((item) => item.id === activeConversationId) ?? null,
@@ -150,8 +154,14 @@ export function useConversations(auth: AuthLike) {
     void refresh();
   }, [refresh]);
 
+  const isSessionCreated = useCallback(
+    (id: string) => sessionCreatedIdsRef.current.has(id),
+    []
+  );
+
   const createConversation = useCallback(async (): Promise<Conversation> => {
     const conversation = createLocalConversation();
+    sessionCreatedIdsRef.current.add(conversation.id);
     setSyncStatus(
       auth.status === "authed" && auth.supabaseReady
         ? online
@@ -683,6 +693,7 @@ export function useConversations(auth: AuthLike) {
     retrySync,
     clearActiveConversation,
     createConversation,
+    isSessionCreated,
     selectConversation,
     persistMessage,
     updateConversation,

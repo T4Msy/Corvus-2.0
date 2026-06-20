@@ -5,6 +5,7 @@ import {
 } from "@/integrations/supabase/request";
 import { getServerConfig } from "@/lib/config";
 import { createOpenAIRealtimeToken } from "@/lib/audio/openai";
+import { redactSecrets } from "@/lib/security/redact";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,10 +34,9 @@ export async function POST(req: Request) {
         ok: false,
         error: {
           code: "audio_token_failed",
-          message:
-            err instanceof Error
-              ? err.message
-              : "Nao foi possivel iniciar o ditado.",
+          message: redactSecrets(
+            err instanceof Error ? err.message : "Nao foi possivel iniciar o ditado."
+          ),
         },
       },
       { status: 503 }

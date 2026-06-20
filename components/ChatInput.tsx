@@ -235,10 +235,10 @@ export function ChatInput({
 
   function handleDictationMessage(event: RealtimeTranscriptEvent) {
     if (event.type === "conversation.item.input_audio_transcription.delta") {
-      partialTextRef.current = appendDictatedText(
-        partialTextRef.current,
-        event.delta || ""
-      );
+      // Os deltas sao fragmentos de token (ex.: "Prec" + "iso"). Concatena CRU —
+      // sem trim e sem inserir espaco, senao corta palavras no meio ("Prec iso").
+      // O proprio modelo ja emite o espaco quando comeca uma palavra nova.
+      partialTextRef.current += event.delta || "";
       renderDictationText();
       return;
     }
