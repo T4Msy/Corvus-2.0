@@ -235,6 +235,70 @@ Se o retorno voltar para frases como "nao posso analisar imagens" ou "descreva a
 
 ---
 
+## Transcrição de áudio centralizada no n8n (`transcription-workflow.json`)
+
+Por padrão o app transcreve áudio chamando a OpenAI **direto** (precisa de
+`OPENAI_API_KEY` na Vercel). Para centralizar a chave no n8n — usando a **mesma
+credencial OpenAI** que já responde o Corvus, sem manter chave separada na Vercel —
+importe o fluxo dedicado `n8n/transcription-workflow.json`.
+
+### O que ele faz
+
+```
+Webhook Transcribe (POST /webhook/corvus-transcribe)
+  → Download Audio        (HTTP GET na signedUrl do Supabase → binário "data")
+  → Transcribe (OpenAI)   (HTTP POST /v1/audio/transcriptions, multipart,
+                           Predefined Credential Type → OpenAI = "OpenAi account")
+  → Format Transcription  (Code → { ok, text })
+  → Respond to Webhook    (devolve { ok, text } ao app)
+```
+
+O app envia ao webhook:
+
+```jsonc
+{
+  "signedUrl": "https://...supabase.../audio.m4a", // URL temporária (10 min)
+  "name": "audio.m4a",
+  "type": "audio/m4a",
+  "language": "pt",                                 // de AUDIO_STT_LANGUAGE
+  "model": "gpt-4o-transcribe"                      // de OPENAI_TRANSCRIPTION_MODEL
+}
+```
+
+E espera de volta `{ "ok": true, "text": "transcrição..." }` (objeto ou array de 1 item).
+
+### Passo a passo
+
+1. No n8n: **Import from File** → `n8n/transcription-workflow.json`.
+2. Abra o node **Transcribe (OpenAI)** e confirme que a credencial
+   *Predefined Credential Type → OpenAI* está apontando para a sua conta
+   (`OpenAi account`). Se o ID não bater, selecione a credencial na lista.
+3. (Recomendado) No node **Webhook Transcribe**, em **Authentication**, ative
+   *Header Auth* com header `X-Corvus-Secret` = o mesmo valor de `N8N_WEBHOOK_SECRET`.
+   O app já envia esse header automaticamente.
+4. **Ative** o workflow (webhooks de produção exigem Active).
+5. Na Vercel (e no `.env.local`), defina:
+   ```
+   N8N_TRANSCRIPTION_WEBHOOK_URL=https://SEU-n8n/webhook/corvus-transcribe
+   ```
+   Redeploy. Pronto: o áudio passa a ser transcrito pelo n8n e a Vercel não
+   precisa mais de `OPENAI_API_KEY` só para ditado.
+
+> Se `N8N_TRANSCRIPTION_WEBHOOK_URL` ficar vazio, nada muda — o app continua
+> transcrevendo via OpenAI direto (comportamento legado).
+
+### Teste rápido (curl)
+
+```bash
+curl -X POST "$N8N_TRANSCRIPTION_WEBHOOK_URL" \
+  -H 'Content-Type: application/json' \
+  -H "X-Corvus-Secret: $N8N_WEBHOOK_SECRET" \
+  -d '{"signedUrl":"https://URL-PUBLICA-DE-UM-AUDIO.mp3","name":"t.mp3","type":"audio/mpeg","language":"pt"}'
+# Esperado: {"ok":true,"text":"..."}
+```
+
+---
+
 ## Como testar o workflow após as mudanças
 
 1. No n8n, ative o workflow.

@@ -50,6 +50,14 @@ export function getServerConfig() {
       webhookSecret,
       timeoutMs: asInt(process.env.N8N_TIMEOUT_MS, 30_000),
       maxRetries: asInt(process.env.N8N_MAX_RETRIES, 2),
+      // Opcional: webhook dedicado de transcrição de áudio. Quando setado, o
+      // áudio é transcrito PELO n8n (usando a credencial OpenAI do próprio n8n),
+      // e o app NÃO precisa de OPENAI_API_KEY para ditado. Vazio ⇒ usa OpenAI
+      // direto via OPENAI_API_KEY (comportamento legado).
+      transcriptionWebhookUrl: optional(
+        process.env.N8N_TRANSCRIPTION_WEBHOOK_URL,
+        ""
+      ),
     },
     supabase: {
       url: required(

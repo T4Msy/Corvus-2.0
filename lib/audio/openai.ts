@@ -117,6 +117,134 @@ export async function transcribeAudioBuffer(args: {
   );
 }
 
+const N8N_TRANSCRIPTION_TIMEOUT_MS = 60_000;
+
+/**
+ * Transcreve o áudio PELO n8n: envia a signedUrl ao webhook dedicado, que baixa
+ * o arquivo e chama a OpenAI usando a credencial guardada no próprio n8n. Assim o
+ * app na Vercel não precisa de OPENAI_API_KEY para o ditado — a chave fica
+ * centralizada no n8n, igual ao caminho que responde o Corvus.
+ */
+export async function transcribeAudioViaN8n(args: {
+  signedUrl: string;
+  name: string;
+  type: string;
+  size: number;
+}): Promise<N8nAudioAttachment> {
+  const config = getServerConfig();
+  const webhookUrl = config.n8n.transcriptionWebhookUrl;
+  if (!webhookUrl) {
+    return n8nErrorAttachment(
+      args,
+      new Error("N8N_TRANSCRIPTION_WEBHOOK_URL ausente no servidor.")
+    );
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(
+    () => controller.abort(),
+    N8N_TRANSCRIPTION_TIMEOUT_MS
+  );
+  try {
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      cache: "no-store",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "corvus-v3/1.0 (+vercel)",
+        ...(config.n8n.webhookSecret
+          ? { "X-Corvus-Secret": config.n8n.webhookSecret }
+          : {}),
+      },
+      body: JSON.stringify({
+        signedUrl: args.signedUrl,
+        name: args.name,
+        type: args.type,
+        language: config.audio.language,
+        model: config.audio.transcriptionModel,
+      }),
+    });
+
+    const text = await response.text();
+    if (!response.ok) {
+      throw new Error(
+        extractN8nError(text) || `n8n retornou HTTP ${response.status}.`
+      );
+    }
+
+    const transcript = extractN8nTranscript(text);
+    if (!transcript) {
+      throw new Error("n8n nao retornou transcricao utilizavel.");
+    }
+
+    return {
+      name: args.name,
+      type: args.type,
+      size: args.size,
+      signedUrl: "",
+      text: normalizeTranscript(transcript),
+      provider: "openai",
+      model: config.audio.transcriptionModel,
+      language: config.audio.language,
+    };
+  } catch (err) {
+    return n8nErrorAttachment(args, err);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function extractN8nTranscript(rawText: string): string {
+  const trimmed = rawText.trim();
+  if (!trimmed) return "";
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    // n8n pode responder texto puro com a transcrição.
+    return trimmed;
+  }
+  const item = Array.isArray(parsed) ? parsed[0] : parsed;
+  if (item && typeof item === "object") {
+    const obj = item as Record<string, unknown>;
+    return textValue(obj.text || obj.transcript || obj.output || obj.reply);
+  }
+  return textValue(parsed);
+}
+
+function extractN8nError(rawText: string): string {
+  const trimmed = rawText.trim();
+  if (!trimmed) return "";
+  try {
+    const parsed = JSON.parse(trimmed);
+    const item = Array.isArray(parsed) ? parsed[0] : parsed;
+    if (item && typeof item === "object") {
+      const obj = item as Record<string, unknown>;
+      return textValue(obj.error || obj.message);
+    }
+  } catch {
+    // ignora — texto cru abaixo
+  }
+  return trimmed.slice(0, 300);
+}
+
+function n8nErrorAttachment(
+  args: { name: string; type: string; size: number },
+  err: unknown
+): N8nAudioAttachment {
+  return {
+    name: args.name,
+    type: args.type,
+    size: args.size,
+    signedUrl: "",
+    provider: "openai",
+    transcriptionError: redactSecrets(
+      err instanceof Error ? err.message : "Falha ao transcrever audio via n8n."
+    ),
+  };
+}
+
 async function transcribeWithOpenAI(args: {
   buffer: Buffer;
   name: string;

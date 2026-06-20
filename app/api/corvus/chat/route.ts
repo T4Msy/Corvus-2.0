@@ -8,6 +8,7 @@ import {
   formatAudioContext,
   isSupportedAudioType,
   transcribeAudioBuffer,
+  transcribeAudioViaN8n,
 } from "@/lib/audio/openai";
 import {
   buildDocumentContext,
@@ -531,6 +532,13 @@ export async function POST(req: Request) {
       );
     }
 
+    // Se o webhook de transcrição do n8n estiver configurado, o áudio é
+    // transcrito lá (credencial OpenAI do próprio n8n) e o app dispensa
+    // OPENAI_API_KEY. Caso contrário, mantém o caminho OpenAI direto.
+    const useN8nTranscription = Boolean(
+      getServerConfig().n8n.transcriptionWebhookUrl
+    );
+
     audioAttachments = await Promise.all(
       acceptedAudio.map(async (attachment): Promise<N8nAudioAttachment> => {
         const signedUrl = await createAttachmentSignedUrl(
@@ -550,6 +558,20 @@ export async function POST(req: Request) {
         }
 
         try {
+          if (useN8nTranscription) {
+            const transcribed = await transcribeAudioViaN8n({
+              signedUrl,
+              name: attachment.name,
+              type: attachment.type,
+              size: attachment.size,
+            });
+            return {
+              ...transcribed,
+              signedUrl,
+              url: signedUrl,
+            };
+          }
+
           const buffer = await downloadAttachmentBuffer(
             signedUrl,
             attachment.type,

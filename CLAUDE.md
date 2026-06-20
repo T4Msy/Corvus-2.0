@@ -29,6 +29,7 @@ Validated in `lib/config.ts`. Add new vars there.
 | `N8N_WEBHOOK_URL` | server-only | Real n8n webhook URL (do not expose). |
 | `N8N_WEBHOOK_SECRET` | server-only | Sent as `X-Corvus-Secret`. Pair with Header Auth on n8n Webhook node. |
 | `N8N_TIMEOUT_MS`, `N8N_MAX_RETRIES` | server-only | Tuning for `lib/n8n/client.ts`. |
+| `N8N_TRANSCRIPTION_WEBHOOK_URL` | server-only | Optional. Dedicated n8n webhook that transcribes audio using n8n's own OpenAI credential. Set ⇒ audio dictation routes through n8n (`transcribeAudioViaN8n`) and the app needs no `OPENAI_API_KEY` for audio. Empty ⇒ OpenAI-direct (legacy). Import `n8n/transcription-workflow.json`. |
 | `NEXT_PUBLIC_SUPABASE_URL` | public | Browser auth client. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | public | Browser auth client. |
 | `SUPABASE_SERVICE_ROLE_KEY` | server-only | Used by API routes for bypass-RLS when needed. Strongly recommended; without it, routes use the user's JWT and rely on RLS being correct. |
