@@ -4652,3 +4652,225 @@ html[data-theme="light"] .dictation-button.recording {
     flex: 1;
   }
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   REFINAMENTO PREMIUM DA HOME (tela inicial)
+   ──────────────────────────────────────────────────────────────────────────
+   Eleva hero, cartões de contexto e sugestões para a MESMA linguagem da barra
+   lateral (a referência de design): painéis translúcidos com fio dourado, fundo
+   em gradiente, brilho vermelho sutil e profundidade real — em vez de caixas
+   chapadas. Tudo escopado em `body:not([data-theme="light"])` para não vazar no
+   tema claro (que já tem overrides !important em globals.css). NÃO usar
+   !important em cor/fundo aqui, para o tema claro continuar vencendo.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* 1 ─ Ambiente: halo vermelho largo e difuso atrás do hero, ancorando a
+   composição no vazio preto sem competir com o brilho do emblema. */
+body:not([data-theme="light"]) .rebuilt-welcome,
+body:not([data-theme="light"]) .welcome-panel {
+  position: relative;
+  isolation: isolate;
+}
+
+body:not([data-theme="light"]) .rebuilt-welcome::before,
+body:not([data-theme="light"]) .welcome-panel::before {
+  content: "";
+  position: absolute;
+  top: clamp(28px, 10%, 110px);
+  left: 50%;
+  width: min(660px, 84%);
+  height: 360px;
+  transform: translateX(-50%);
+  background: radial-gradient(
+    ellipse at center,
+    rgba(227, 27, 63, 0.13),
+    rgba(216, 180, 98, 0.04) 46%,
+    transparent 70%
+  );
+  filter: blur(6px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+body:not([data-theme="light"]) .welcome-copy {
+  position: relative;
+  z-index: 1;
+}
+
+/* 2 ─ Cartões de contexto (Privado / Persistente / Operacional): de retângulos
+   quase invisíveis para painéis translúcidos com fio dourado, igual à sidebar. */
+body:not([data-theme="light"]) .welcome-context {
+  width: min(560px, 100%);
+  gap: 10px;
+}
+
+body:not([data-theme="light"]) .welcome-context span {
+  min-height: 58px;
+  padding: 12px 14px 12px 15px;
+  gap: 3px;
+  border-radius: 13px;
+  border-color: rgba(216, 180, 98, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.012)),
+    rgba(18, 14, 16, 0.5);
+  box-shadow:
+    0 18px 42px -34px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px) saturate(1.08);
+  -webkit-backdrop-filter: blur(10px) saturate(1.08);
+}
+
+/* Fio de acento vermelho→dourado no topo, fortalece no hover. */
+body:not([data-theme="light"]) .welcome-context span::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(227, 27, 63, 0.55),
+    rgba(216, 180, 98, 0.5),
+    transparent
+  );
+  opacity: 0.4;
+  transition: opacity 0.25s ease;
+}
+
+/* Ponto dourado institucional antes do rótulo (par com o eyebrow vermelho). */
+body:not([data-theme="light"]) .welcome-context strong {
+  position: relative;
+  padding-left: 15px;
+  font-size: 12.5px;
+}
+
+body:not([data-theme="light"]) .welcome-context strong::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--msy-red);
+  box-shadow:
+    0 0 0 2px rgba(227, 27, 63, 0.12),
+    0 0 9px rgba(255, 54, 92, 0.75);
+}
+
+body:not([data-theme="light"]) .welcome-context span:hover {
+  transform: translateY(-2px);
+  border-color: rgba(216, 180, 98, 0.34);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02)),
+    rgba(24, 16, 19, 0.6);
+  box-shadow:
+    0 26px 52px -30px rgba(0, 0, 0, 0.95),
+    0 0 0 1px rgba(227, 27, 63, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+body:not([data-theme="light"]) .welcome-context span:hover::before {
+  opacity: 0.95;
+}
+
+/* 3 ─ Sugestões da home: de barra-toggle chapada para um controle segmentado
+   trabalhado — superfície translúcida, fio dourado, sombra e divisórias finas. */
+body:not([data-theme="light"]) .home-suggestion-row {
+  border: 1px solid rgba(216, 180, 98, 0.16) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.014)),
+    rgba(16, 12, 14, 0.72) !important;
+  box-shadow:
+    var(--msy-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.045) !important;
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+}
+
+body:not([data-theme="light"]) .home-suggestion-pill {
+  height: 48px !important;
+  position: relative;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--msy-muted);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* Divisória fina entre segmentos (todos menos o primeiro). */
+body:not([data-theme="light"]) .home-suggestion-pill + .home-suggestion-pill::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 1px;
+  height: 20px;
+  margin-top: -10px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body:not([data-theme="light"]) .home-suggestion-pill:hover:not(:disabled) {
+  background: rgba(227, 27, 63, 0.1) !important;
+  color: var(--msy-text) !important;
+}
+
+/* 4 ─ Título do hero: tipografia display (Cinzel) — institucional e premium,
+   no lugar do serif genérico (Georgia). Gradiente branco→dourado + glow sutil. */
+body:not([data-theme="light"]) .rebuilt-welcome h1,
+body:not([data-theme="light"]) .welcome-panel h1,
+body:not([data-theme="light"]) .welcome-copy h1 {
+  font-family: "Cinzel", var(--font-serif), Georgia, serif;
+  font-weight: 600;
+  letter-spacing: 0.012em;
+  line-height: 1.05;
+  gap: 16px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+/* Dá largura suficiente pro título caber em UMA linha mesmo com o emblema maior. */
+body:not([data-theme="light"]) .welcome-copy {
+  width: min(880px, 100%);
+}
+
+/* 6 ─ Emblema do corvo: levemente maior e alinhado oticamente ao título Cinzel
+   (nudge sutil pra cima, já que as maiúsculas da Cinzel sentam no alto). */
+body:not([data-theme="light"]) .welcome-msy-mark {
+  width: clamp(58px, 6.4vw, 80px) !important;
+  height: clamp(58px, 6.4vw, 80px) !important;
+  min-width: clamp(58px, 6.4vw, 80px) !important;
+  top: -10px;
+}
+
+/* No mobile o título pode quebrar normalmente (evita estourar a tela). */
+@media (max-width: 600px) {
+  body:not([data-theme="light"]) .rebuilt-welcome h1,
+  body:not([data-theme="light"]) .welcome-panel h1,
+  body:not([data-theme="light"]) .welcome-copy h1 {
+    white-space: normal;
+    flex-wrap: wrap;
+  }
+}
+
+body:not([data-theme="light"]) .welcome-copy h1 span,
+body:not([data-theme="light"]) .rebuilt-welcome h1 span {
+  background: linear-gradient(168deg, #fff1f2 2%, #e8455c 42%, #b1102d 84%, #8f0e26 122%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  filter: drop-shadow(0 2px 21px rgba(177, 16, 45, 0.4));
+}
+
+/* 5 ─ Rótulos dos cartões: micro-caption dourada refinada (uppercase, tracking
+   amplo) no lugar do vermelho cru — mais institucional e coeso com o LED
+   vermelho + fio dourado. */
+body:not([data-theme="light"]) .welcome-context small {
+  color: rgba(231, 224, 226, 0.58);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
