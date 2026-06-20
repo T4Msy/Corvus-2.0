@@ -1,0 +1,83 @@
+{
+  "name": "Corvus — LLM Proxy (chat-completion)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "corvus-llm",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-llm-corvus",
+      "name": "Webhook LLM",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [48, 320],
+      "webhookId": "corvus-llm-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: ($json.body.model || 'gpt-4o-mini'), temperature: ($json.body.temperature !== undefined ? $json.body.temperature : 0.4), max_tokens: ($json.body.max_tokens || 600), messages: $json.body.messages } }}",
+        "options": {}
+      },
+      "id": "openai-chat-corvus",
+      "name": "OpenAI Chat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [288, 320],
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const choices = $json.choices || [];\nconst content = (choices[0] && choices[0].message && choices[0].message.content) || '';\nreturn [{ ok: Boolean(content), text: content.toString() }];"
+      },
+      "id": "format-llm-corvus",
+      "name": "Formate Resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [528, 320]
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "respond-llm-corvus",
+      "name": "Responder ao Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [768, 320]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook LLM": {
+      "main": [[{ "node": "OpenAI Chat", "type": "main", "index": 0 }]]
+    },
+    "OpenAI Chat": {
+      "main": [[{ "node": "Formate Resposta", "type": "main", "index": 0 }]]
+    },
+    "Formate Resposta": {
+      "main": [[{ "node": "Responder ao Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

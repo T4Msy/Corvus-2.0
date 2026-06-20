@@ -18,6 +18,7 @@ import {
   isSupportedDocumentType,
   supportedDocumentLabel,
 } from "@/lib/documents/extract";
+import { runChatCompletion } from "@/lib/ai/chat-completion";
 import { sendChatToN8n } from "@/lib/n8n/client";
 import { checkRateLimit, clientIpFromHeaders } from "@/lib/rate-limit";
 import { redactSecrets, safeUpstreamReason } from "@/lib/security/redact";
@@ -219,12 +220,6 @@ async function answerWithServerFallback(args: {
   modo: AgentMode;
   userContext: UserContext;
 }): Promise<string> {
-  const config = getServerConfig();
-  const apiKey = config.openAiApiKey;
-  if (!apiKey) {
-    throw new Error("OPENAI_API_KEY ausente para fallback do Corvus.");
-  }
-
   const modeLabel =
     args.modo === "fenrir"
       ? "modo Fenrir, com visao criativa e expansiva"
@@ -238,51 +233,26 @@ async function answerWithServerFallback(args: {
     .filter(Boolean)
     .join(" | ");
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    cache: "no-store",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: config.audio.responseFallbackModel,
-      temperature: args.modo === "fenrir" ? 0.75 : 0.35,
-      max_tokens: 900,
-      messages: [
-        {
-          role: "system",
-          content:
-            `Voce e o Corvus (${modeLabel}). Responda em pt-BR. ` +
-            "Seja util, direto e bem estruturado. Nao mencione n8n, workflow, fallback, erro tecnico ou infraestrutura. " +
-            "Quando o pedido envolver comparacao, ranking, cargos, estrutura, plano, decisao ou analise, use organizacao clara e tabela markdown quando ajudar.",
-        },
-        {
-          role: "user",
-          content: [userLabel ? `Contexto do usuario: ${userLabel}` : "", args.message]
-            .filter(Boolean)
-            .join("\n\n"),
-        },
-      ],
-    }),
+  // Passa pelo proxy n8n quando configurado (credencial OpenAI do n8n).
+  return runChatCompletion({
+    temperature: args.modo === "fenrir" ? 0.75 : 0.35,
+    maxTokens: 900,
+    messages: [
+      {
+        role: "system",
+        content:
+          `Voce e o Corvus (${modeLabel}). Responda em pt-BR. ` +
+          "Seja util, direto e bem estruturado. Nao mencione n8n, workflow, fallback, erro tecnico ou infraestrutura. " +
+          "Quando o pedido envolver comparacao, ranking, cargos, estrutura, plano, decisao ou analise, use organizacao clara e tabela markdown quando ajudar.",
+      },
+      {
+        role: "user",
+        content: [userLabel ? `Contexto do usuario: ${userLabel}` : "", args.message]
+          .filter(Boolean)
+          .join("\n\n"),
+      },
+    ],
   });
-
-  const data = (await response.json().catch(() => null)) as
-    | {
-        error?: { message?: string };
-        choices?: Array<{ message?: { content?: string } }>;
-      }
-    | null;
-
-  if (!response.ok) {
-    throw new Error(
-      data?.error?.message || `OpenAI retornou HTTP ${response.status}.`
-    );
-  }
-
-  const reply = data?.choices?.[0]?.message?.content?.trim() || "";
-  if (!reply) throw new Error("OpenAI retornou resposta vazia.");
-  return reply;
 }
 
 export async function POST(req: Request) {

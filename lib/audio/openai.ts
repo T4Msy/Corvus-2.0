@@ -1,4 +1,5 @@
 import "server-only";
+import { runChatCompletion } from "@/lib/ai/chat-completion";
 import { getServerConfig } from "@/lib/config";
 import { redactSecrets } from "@/lib/security/redact";
 import type { AudioTranscriptContext, N8nAudioAttachment } from "@/lib/types";
@@ -8,7 +9,6 @@ const MAX_AUDIO_CONTEXT_CHARS = 32_000;
 const OPENAI_TRANSCRIPTION_URL = "https://api.openai.com/v1/audio/transcriptions";
 const OPENAI_REALTIME_CLIENT_SECRET_URL =
   "https://api.openai.com/v1/realtime/client_secrets";
-const OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
 const REALTIME_SAMPLE_RATE = 24_000;
 
 const AUDIO_PROMPT =
@@ -417,9 +417,6 @@ export async function answerAudioTranscriptFallback(args: {
   message: string;
   transcript: string;
 }): Promise<string> {
-  const config = getServerConfig();
-  const audio = config.audio;
-  if (!config.openAiApiKey) throw new Error(MISSING_OPENAI_KEY_MESSAGE);
   const wantsTranscript = isTranscriptRequest(args.message);
   if (wantsTranscript) {
     const cleanTranscript =
@@ -428,100 +425,47 @@ export async function answerAudioTranscriptFallback(args: {
     return `Foi falado:\n\n${cleanTranscript}`;
   }
 
-  const response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
-    method: "POST",
-    cache: "no-store",
-    headers: {
-      Authorization: `Bearer ${config.openAiApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: audio.responseFallbackModel,
-      temperature: 0.35,
-      max_tokens: 450,
-      messages: [
-        {
-          role: "system",
-          content:
-            "Voce e Corvus. Responda em pt-BR, de forma natural e direta, usando a transcricao do audio como a mensagem do usuario. Nao mencione workflow, n8n, fallback ou metadados tecnicos. Se o usuario pedir para transcrever, dizer o que foi falado, passar o texto do audio ou perguntar literalmente o conteudo dito, devolva a fala transcrita de forma limpa e fiel, sem resumir. Se o audio for conversa solta ou ambigua e nao houver pedido de transcricao, responda com uma leitura curta do que foi entendido e uma pergunta objetiva para continuar.",
-        },
-        {
-          role: "user",
-          content: [
-            args.message.trim() ? `Mensagem digitada: ${args.message.trim()}` : "",
-            `Audio transcrito:\n${args.transcript.trim()}`,
-          ]
-            .filter(Boolean)
-            .join("\n\n"),
-        },
-      ],
-    }),
+  // Passa pelo proxy n8n quando configurado (credencial OpenAI do n8n).
+  const content = await runChatCompletion({
+    temperature: 0.35,
+    maxTokens: 450,
+    messages: [
+      {
+        role: "system",
+        content:
+          "Voce e Corvus. Responda em pt-BR, de forma natural e direta, usando a transcricao do audio como a mensagem do usuario. Nao mencione workflow, n8n, fallback ou metadados tecnicos. Se o usuario pedir para transcrever, dizer o que foi falado, passar o texto do audio ou perguntar literalmente o conteudo dito, devolva a fala transcrita de forma limpa e fiel, sem resumir. Se o audio for conversa solta ou ambigua e nao houver pedido de transcricao, responda com uma leitura curta do que foi entendido e uma pergunta objetiva para continuar.",
+      },
+      {
+        role: "user",
+        content: [
+          args.message.trim() ? `Mensagem digitada: ${args.message.trim()}` : "",
+          `Audio transcrito:\n${args.transcript.trim()}`,
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+      },
+    ],
   });
-
-  const data = (await response.json().catch(() => null)) as Record<
-    string,
-    unknown
-  > | null;
-  if (!response.ok) {
-    throw new Error(
-      textValue((data?.error as Record<string, unknown> | undefined)?.message) ||
-        textValue(data?.message) ||
-        `OpenAI retornou HTTP ${response.status}.`
-    );
-  }
-
-  const choices = data?.choices as
-    | Array<{ message?: { content?: unknown } }>
-    | undefined;
-  return normalizeTranscript(textValue(choices?.[0]?.message?.content));
+  return normalizeTranscript(content);
 }
 
 async function cleanAudioTranscript(transcript: string): Promise<string> {
-  const config = getServerConfig();
-  const audio = config.audio;
-  if (!config.openAiApiKey) throw new Error(MISSING_OPENAI_KEY_MESSAGE);
-
-  const response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
-    method: "POST",
-    cache: "no-store",
-    headers: {
-      Authorization: `Bearer ${config.openAiApiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: audio.responseFallbackModel,
-      temperature: 0,
-      max_tokens: 500,
-      messages: [
-        {
-          role: "system",
-          content:
-            "Revise uma transcrição automática em pt-BR. Corrija apenas erros óbvios de reconhecimento de fala, pontuação e capitalização. Preserve as palavras, informalidade e hesitações do falante. Não resuma, não explique e não acrescente informações. Exemplo de correção contextual: Roday/Rodey -> rodeio quando o contexto for festa/evento.",
-        },
-        {
-          role: "user",
-          content: transcript.trim(),
-        },
-      ],
-    }),
+  const content = await runChatCompletion({
+    temperature: 0,
+    maxTokens: 500,
+    messages: [
+      {
+        role: "system",
+        content:
+          "Revise uma transcrição automática em pt-BR. Corrija apenas erros óbvios de reconhecimento de fala, pontuação e capitalização. Preserve as palavras, informalidade e hesitações do falante. Não resuma, não explique e não acrescente informações. Exemplo de correção contextual: Roday/Rodey -> rodeio quando o contexto for festa/evento.",
+      },
+      {
+        role: "user",
+        content: transcript.trim(),
+      },
+    ],
   });
-
-  const data = (await response.json().catch(() => null)) as Record<
-    string,
-    unknown
-  > | null;
-  if (!response.ok) {
-    throw new Error(
-      textValue((data?.error as Record<string, unknown> | undefined)?.message) ||
-        textValue(data?.message) ||
-        `OpenAI retornou HTTP ${response.status}.`
-    );
-  }
-
-  const choices = data?.choices as
-    | Array<{ message?: { content?: unknown } }>
-    | undefined;
-  return normalizeTranscript(textValue(choices?.[0]?.message?.content));
+  return normalizeTranscript(content);
 }
 
 function isTranscriptRequest(message: string): boolean {

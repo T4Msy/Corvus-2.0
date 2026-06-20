@@ -58,6 +58,11 @@ export function getServerConfig() {
         process.env.N8N_TRANSCRIPTION_WEBHOOK_URL,
         ""
       ),
+      // Opcional: webhook proxy de chat-completion da OpenAI. Quando setado, todo
+      // chat-completion (refinador "Aprimorar", fallback do chat, limpeza/fallback
+      // de áudio) passa PELO n8n — usando a credencial OpenAI do n8n, que funciona —
+      // em vez da OPENAI_API_KEY da Vercel. Vazio ⇒ OpenAI direto (legado).
+      llmWebhookUrl: optional(process.env.N8N_LLM_WEBHOOK_URL, ""),
     },
     supabase: {
       url: required(
