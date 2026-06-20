@@ -49,6 +49,7 @@ app/
   globals.css              # design system (~1100 lines, dark + light)
   api/
     corvus/chat/           # POST proxy → n8n + multimodal pipeline + fallback cascade (see below)
+    corvus/enhance/        # POST refinador de prompt (OpenAI direto, isolado do chat) → reescreve ideia crua em prompt melhor
     conversations/         # GET (list), POST (create)
     conversations/search/  # GET full-text search across the user's messages
     conversations/[conversationId]/         # PATCH (rename + pinned/favorite/archived/tags), DELETE
@@ -61,7 +62,8 @@ components/
   ChatApp.tsx              # top-level shell — orchestrates everything
   ChatInput.tsx            # composer + attachment picker. Enter = newline; Ctrl+Enter or button = send
   ChatMessages.tsx         # message list + welcome + retry inline + safe-markdown (highlight.js code)
-  CommandPalette.tsx       # ⌘K palette — nav, mode switch, quick prompts, history filters
+  CommandPalette.tsx       # ⌘K palette — nav, mode switch, quick prompts, history filters (botão da sidebar removido; ainda acessível por ⌘K)
+  PromptEnhancer.tsx       # painel "Aprimorar" — refina ideia crua em prompt melhor via /api/corvus/enhance; injeta no composer ou envia
   CustomLettersPanel.tsx   # Unicode text styler UI (drives lib/custom-text)
   ShortcutsDialog.tsx      # keyboard-shortcuts cheat sheet
   ToastProvider.tsx        # toast/notification context (useToast)

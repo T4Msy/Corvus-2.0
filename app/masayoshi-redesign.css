@@ -4417,3 +4417,238 @@ html[data-theme="light"] .dictation-button.recording {
 .corvus-shell.focus-mode .topbar-left {
   padding-left: 58px;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   APRIMORAR — Refinador de prompt com IA.
+   Botão da sidebar (substitui o antigo "Comandos") + painel modal.
+   Reaproveita a casca .dialog-backdrop / .dialog-panel já estilizada.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Botão da sidebar: acento dourado para diferenciar de "Fontes". */
+.sidebar-enhance-button .command-button-icon.enhance-icon {
+  color: var(--msy-gold-2, #f1d18a);
+  background: var(--msy-gold-soft, rgba(216, 180, 98, 0.14));
+}
+.sidebar-enhance-button:hover .command-button-icon.enhance-icon {
+  color: #0c0a09 !important;
+  background: linear-gradient(135deg, var(--msy-gold, #d8b462), var(--msy-gold-2, #f1d18a)) !important;
+}
+.sidebar-enhance-button kbd {
+  color: var(--msy-gold-2, #f1d18a);
+  border-color: var(--msy-gold-soft, rgba(216, 180, 98, 0.3));
+}
+
+/* Painel do refinador. */
+.enhancer-panel {
+  width: min(560px, 94vw);
+  max-height: min(88vh, 720px);
+  display: flex;
+  flex-direction: column;
+}
+
+.enhancer-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.enhancer-heading-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--msy-radius-sm, 12px);
+  color: #0c0a09;
+  background: linear-gradient(135deg, var(--msy-gold, #d8b462), var(--msy-gold-2, #f1d18a));
+  box-shadow: 0 8px 22px -12px rgba(216, 180, 98, 0.7);
+  flex-shrink: 0;
+}
+.enhancer-heading h2 {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+.enhancer-heading p {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: var(--msy-muted, #b5aeb2);
+  line-height: 1.4;
+}
+
+.enhancer-body {
+  padding: 4px 22px 8px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.enhancer-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.enhancer-field-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--msy-dim, #80777d);
+}
+
+.enhancer-input,
+.enhancer-result-text {
+  width: 100%;
+  resize: vertical;
+  border-radius: var(--msy-radius-sm, 12px);
+  border: 1px solid var(--msy-line, rgba(255, 255, 255, 0.09));
+  background: var(--msy-panel-soft, rgba(255, 255, 255, 0.035));
+  color: var(--msy-text, #f7f1f2);
+  padding: 12px 13px;
+  font-size: 14px;
+  line-height: 1.5;
+  font-family: inherit;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.enhancer-input::placeholder {
+  color: var(--msy-faint, #534b50);
+}
+.enhancer-input:focus,
+.enhancer-result-text:focus {
+  outline: none;
+  border-color: rgba(216, 180, 98, 0.5);
+  box-shadow: 0 0 0 3px rgba(216, 180, 98, 0.14);
+}
+
+.enhancer-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.enhancer-example-pill {
+  border: 1px solid var(--msy-line, rgba(255, 255, 255, 0.09));
+  background: var(--msy-panel-soft, rgba(255, 255, 255, 0.035));
+  color: var(--msy-muted, #b5aeb2);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+.enhancer-example-pill:hover {
+  color: var(--msy-text, #f7f1f2);
+  border-color: rgba(216, 180, 98, 0.4);
+  background: var(--msy-panel-hover, rgba(255, 255, 255, 0.065));
+}
+
+.enhancer-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--msy-red-2, #ff365c);
+  background: var(--msy-red-soft, rgba(227, 27, 63, 0.14));
+  border: 1px solid rgba(227, 27, 63, 0.28);
+  border-radius: var(--msy-radius-sm, 12px);
+  padding: 9px 12px;
+}
+
+.enhancer-result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.enhancer-result-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--msy-gold-2, #f1d18a);
+}
+.enhancer-result-head small {
+  margin-left: auto;
+  font-weight: 400;
+  color: var(--msy-dim, #80777d);
+}
+.enhancer-result-text {
+  border-color: rgba(216, 180, 98, 0.32);
+  background: rgba(216, 180, 98, 0.05);
+}
+
+.enhancer-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px 18px;
+  border-top: 1px solid var(--msy-line, rgba(255, 255, 255, 0.09));
+}
+.enhancer-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.enhancer-primary-btn,
+.enhancer-secondary-btn,
+.enhancer-ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: var(--msy-radius-sm, 12px);
+  padding: 10px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.16s ease;
+}
+.enhancer-run-btn {
+  width: 100%;
+}
+.enhancer-primary-btn {
+  color: #0c0a09;
+  background: linear-gradient(135deg, var(--msy-gold, #d8b462), var(--msy-gold-2, #f1d18a));
+  box-shadow: 0 10px 26px -14px rgba(216, 180, 98, 0.8);
+}
+.enhancer-primary-btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.enhancer-ghost-btn {
+  color: var(--msy-text, #f7f1f2);
+  border-color: var(--msy-line-strong, rgba(255, 255, 255, 0.16));
+  background: var(--msy-panel-soft, rgba(255, 255, 255, 0.035));
+}
+.enhancer-ghost-btn:hover:not(:disabled) {
+  background: var(--msy-panel-hover, rgba(255, 255, 255, 0.065));
+}
+.enhancer-secondary-btn {
+  color: var(--msy-muted, #b5aeb2);
+  border-color: var(--msy-line, rgba(255, 255, 255, 0.09));
+  background: transparent;
+}
+.enhancer-secondary-btn:hover:not(:disabled) {
+  color: var(--msy-text, #f7f1f2);
+  background: var(--msy-panel-soft, rgba(255, 255, 255, 0.035));
+}
+.enhancer-primary-btn:disabled,
+.enhancer-secondary-btn:disabled,
+.enhancer-ghost-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 520px) {
+  .enhancer-footer {
+    flex-wrap: wrap;
+  }
+  .enhancer-footer-actions {
+    width: 100%;
+  }
+  .enhancer-ghost-btn,
+  .enhancer-primary-btn {
+    flex: 1;
+  }
+}

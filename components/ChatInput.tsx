@@ -30,6 +30,8 @@ interface Props {
   mode: AgentMode;
   onModeChange: (m: AgentMode) => void;
   onSend: (text: string) => boolean | void;
+  /** Texto injetado externamente no composer (ex.: pelo refinador). nonce dispara a aplicação. */
+  injectedDraft?: { text: string; nonce: number };
   onAttachFile?: (file: File) => void;
   onAttachBlocked?: () => void;
   disabled: boolean;
@@ -70,6 +72,7 @@ export function ChatInput({
   mode,
   onModeChange,
   onSend,
+  injectedDraft,
   onAttachFile,
   onAttachBlocked,
   disabled,
@@ -125,6 +128,21 @@ export function ChatInput({
     ta.style.height = "auto";
     ta.style.height = `${Math.min(ta.scrollHeight, MAX_HEIGHT)}px`;
   }, [value]);
+
+  // Aplica texto injetado externamente (refinador). Reage só à mudança de nonce
+  // para não sobrescrever o que o usuário digita.
+  const injectedNonce = injectedDraft?.nonce ?? 0;
+  useEffect(() => {
+    if (!injectedDraft || injectedNonce === 0) return;
+    setValue(injectedDraft.text);
+    const ta = textareaRef.current;
+    if (ta) {
+      ta.focus();
+      const len = injectedDraft.text.length;
+      requestAnimationFrame(() => ta.setSelectionRange(len, len));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [injectedNonce]);
 
   useEffect(() => {
     return () => {

@@ -11,7 +11,6 @@ import {
   CheckSquare,
   ChevronDown,
   ChevronUp,
-  Command,
   Download,
   ExternalLink,
   FileText,
@@ -31,12 +30,14 @@ import {
   Star,
   Trash2,
   Volume2,
+  Wand2,
   X,
 } from "lucide-react";
 import { ChatInput } from "@/components/ChatInput";
 import { ChatMessages } from "@/components/ChatMessages";
 import { CommandPalette } from "@/components/CommandPalette";
 import { CustomLettersPanel } from "@/components/CustomLettersPanel";
+import { PromptEnhancer } from "@/components/PromptEnhancer";
 import { LoginScreen } from "@/components/LoginScreen";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { ShortcutsDialog } from "@/components/ShortcutsDialog";
@@ -90,6 +91,10 @@ export function ChatApp() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const [enhancerOpen, setEnhancerOpen] = useState(false);
+  const [composerSeed, setComposerSeed] = useState<{ text: string; nonce: number }>(
+    { text: "", nonce: 0 }
+  );
   const [customLettersOpen, setCustomLettersOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -1098,14 +1103,17 @@ export function ChatApp() {
             <div className="sidebar-quick-actions">
               <button
                 type="button"
-                className="sidebar-command-button"
-                onClick={() => setCommandOpen(true)}
+                className="sidebar-command-button sidebar-enhance-button"
+                onClick={() => {
+                  setEnhancerOpen(true);
+                  setSidebarOpen(false);
+                }}
               >
-                <span className="command-button-icon">
-                  <Command size={15} />
+                <span className="command-button-icon enhance-icon">
+                  <Wand2 size={15} />
                 </span>
-                <span className="command-button-text">Comandos</span>
-                <kbd>Ctrl K</kbd>
+                <span className="command-button-text">Aprimorar</span>
+                <kbd>IA</kbd>
               </button>
 
               <button
@@ -1711,6 +1719,7 @@ export function ChatApp() {
             mode={mode}
             onModeChange={setMode}
             onSend={requestSend}
+            injectedDraft={composerSeed}
             onAttachFile={(file) => void attachFile(file)}
             onAttachBlocked={() => {
               toast.push({
@@ -1785,6 +1794,18 @@ export function ChatApp() {
         historyFilter={historyFilter}
         onSetHistoryFilter={setHistoryFilter}
         onUpdateActiveConversation={updateActiveConversation}
+      />
+
+      <PromptEnhancer
+        open={enhancerOpen}
+        mode={mode}
+        accessToken={auth.accessToken}
+        online={conversations.online}
+        onClose={() => setEnhancerOpen(false)}
+        onUseDraft={(text) =>
+          setComposerSeed((prev) => ({ text, nonce: prev.nonce + 1 }))
+        }
+        onSendNow={(text) => requestSend(text)}
       />
 
       <CustomLettersPanel
