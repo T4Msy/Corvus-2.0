@@ -1,0 +1,83 @@
+{
+  "name": "Corvus — Vision Proxy (/v1/responses)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "corvus-vision",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-vision-corvus",
+      "name": "Webhook Vision",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [48, 320],
+      "webhookId": "corvus-vision-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/responses",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: ($json.body.model || 'gpt-4o-mini'), temperature: 0, max_output_tokens: 900, input: [{ role: 'user', content: [{ type: 'input_text', text: 'Analise a imagem anexada para o Corvus. Responda SOMENTE JSON valido com as chaves: ocrText, description, relevantItems, limitations, confidence. Descreva objetivamente o que aparece, pessoas, objetos, texto visivel, ambiente, cores e qualquer detalhe relevante. Mensagem do usuario: ' + ($json.body.message || '') }, ...($json.body.imageUrls || []).map((u) => ({ type: 'input_image', image_url: u, detail: 'auto' }))] }] } }}",
+        "options": {}
+      },
+      "id": "openai-vision-corvus",
+      "name": "OpenAI Vision",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [288, 320],
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json;\nlet text = '';\nif (typeof raw.output_text === 'string') {\n  text = raw.output_text;\n} else {\n  for (const item of (raw.output || [])) {\n    for (const part of (item.content || [])) {\n      if (typeof part.text === 'string') { text = part.text; break; }\n      if (typeof part.value === 'string') { text = part.value; break; }\n    }\n    if (text) break;\n  }\n}\ntext = (text || '').toString().trim();\nreturn [{ ok: Boolean(text), text }];"
+      },
+      "id": "format-vision-corvus",
+      "name": "Formate Visão",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [528, 320]
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "respond-vision-corvus",
+      "name": "Responder ao Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [768, 320]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Vision": {
+      "main": [[{ "node": "OpenAI Vision", "type": "main", "index": 0 }]]
+    },
+    "OpenAI Vision": {
+      "main": [[{ "node": "Formate Visão", "type": "main", "index": 0 }]]
+    },
+    "Formate Visão": {
+      "main": [[{ "node": "Responder ao Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

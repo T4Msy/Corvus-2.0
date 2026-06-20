@@ -1,7 +1,11 @@
 import "server-only";
+import { getServerConfig } from "@/lib/config";
+import { redactSecrets } from "@/lib/security/redact";
 import type { N8nImageAttachment, VisualContext } from "@/lib/types";
 
 const DEFAULT_MODEL = "gpt-4o-mini";
+const VISION_PROMPT =
+  "Analise a imagem anexada para o Corvus. Responda SOMENTE JSON valido com as chaves: ocrText, description, relevantItems, limitations, confidence. Descreva objetivamente o que aparece, pessoas, objetos, texto visivel, ambiente, cores e qualquer detalhe relevante. Mensagem do usuario: ";
 
 type ResponsesEnvelope = {
   output_text?: unknown;
@@ -92,14 +96,38 @@ export async function analyzeImagesWithOpenAI(
   message: string,
   images: N8nImageAttachment[]
 ): Promise<{ context: VisualContext; text: string } | null> {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey || images.length === 0) return null;
+  if (images.length === 0) return null;
 
   const imageInputs = images
     .map((image) => image.dataUrl || image.imageUrl || image.url || image.signedUrl)
     .filter(Boolean)
     .slice(0, 4);
   if (imageInputs.length === 0) return null;
+
+  const config = getServerConfig();
+  // Proxy n8n quando configurado (credencial OpenAI do n8n); senão OpenAI direto.
+  const text = config.n8n.visionWebhookUrl
+    ? await analyzeViaN8n(
+        config.n8n.visionWebhookUrl,
+        config.n8n.webhookSecret,
+        message,
+        imageInputs
+      )
+    : await analyzeViaOpenAI(config.openAiApiKey, message, imageInputs);
+
+  if (!text) return null;
+
+  const context = normalizeContext(text);
+  const formatted = formatVisualContext(context);
+  return formatted ? { context, text: formatted } : null;
+}
+
+async function analyzeViaOpenAI(
+  apiKey: string,
+  message: string,
+  imageInputs: string[]
+): Promise<string> {
+  if (!apiKey) return "";
 
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
@@ -116,12 +144,7 @@ export async function analyzeImagesWithOpenAI(
         {
           role: "user",
           content: [
-            {
-              type: "input_text",
-              text:
-                "Analise a imagem anexada para o Corvus. Responda SOMENTE JSON valido com as chaves: ocrText, description, relevantItems, limitations, confidence. Descreva objetivamente o que aparece, pessoas, objetos, texto visivel, ambiente, cores e qualquer detalhe relevante. Mensagem do usuario: " +
-                message,
-            },
+            { type: "input_text", text: VISION_PROMPT + message },
             ...imageInputs.map((imageUrl) => ({
               type: "input_image",
               image_url: imageUrl,
@@ -133,17 +156,57 @@ export async function analyzeImagesWithOpenAI(
     }),
   });
 
-  if (!response.ok) return null;
-
+  if (!response.ok) return "";
   const raw = (await response.json().catch(() => null)) as ResponsesEnvelope | null;
-  if (!raw) return null;
+  return raw ? firstText(raw).trim() : "";
+}
 
-  const text = firstText(raw).trim();
-  if (!text) return null;
+async function analyzeViaN8n(
+  url: string,
+  secret: string,
+  message: string,
+  imageInputs: string[]
+): Promise<string> {
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "corvus-v3/1.0 (+vercel)",
+        ...(secret ? { "X-Corvus-Secret": secret } : {}),
+      },
+      body: JSON.stringify({ message, imageUrls: imageInputs }),
+    });
+    const body = await res.text();
+    if (!res.ok) {
+      console.error(
+        `[corvus/vision] n8n HTTP ${res.status}: ${redactSecrets(body.slice(0, 200))}`
+      );
+      return "";
+    }
+    return extractVisionText(body);
+  } catch (err) {
+    console.error(`[corvus/vision] falha no proxy n8n: ${redactSecrets(String(err))}`);
+    return "";
+  }
+}
 
-  const context = normalizeContext(text);
-  const formatted = formatVisualContext(context);
-  return formatted ? { context, text: formatted } : null;
+/** Aceita {text}/{ok,text} (array ou objeto) ou a resposta crua do /v1/responses. */
+function extractVisionText(rawText: string): string {
+  const trimmed = rawText.trim();
+  if (!trimmed) return "";
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return trimmed;
+  }
+  const item = Array.isArray(parsed) ? parsed[0] : parsed;
+  if (!item || typeof item !== "object") return "";
+  const obj = item as Record<string, unknown>;
+  if (typeof obj.text === "string" && obj.text.trim()) return obj.text.trim();
+  return firstText(obj as ResponsesEnvelope).trim();
 }
 
 export function looksLikeImageRefusal(reply: string): boolean {

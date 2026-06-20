@@ -91,6 +91,51 @@ export async function createOpenAIRealtimeToken(): Promise<{
 }> {
   const config = getServerConfig();
   const audio = config.audio;
+
+  // Corpo da sessão de transcrição realtime — idêntico para n8n ou OpenAI direto.
+  const sessionBody = {
+    session: {
+      type: "transcription",
+      audio: {
+        input: {
+          format: { type: "audio/pcm", rate: REALTIME_SAMPLE_RATE },
+          noise_reduction: { type: "near_field" },
+          transcription: {
+            model: audio.realtimeTranscriptionModel,
+            language: audio.language,
+          },
+        },
+      },
+      include: ["item.input_audio_transcription.logprobs"],
+    },
+  };
+
+  // Proxy n8n quando configurado: o n8n emite o token efêmero com a credencial
+  // OpenAI dele (a que funciona), e o navegador conecta no WebSocket com ele.
+  if (config.n8n.realtimeWebhookUrl) {
+    const res = await fetch(config.n8n.realtimeWebhookUrl, {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "corvus-v3/1.0 (+vercel)",
+        ...(config.n8n.webhookSecret
+          ? { "X-Corvus-Secret": config.n8n.webhookSecret }
+          : {}),
+      },
+      body: JSON.stringify(sessionBody),
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      throw new Error(
+        `n8n realtime token HTTP ${res.status}: ${redactSecrets(text.slice(0, 200))}`
+      );
+    }
+    const parsed = parseRealtimeToken(safeJsonParse(text));
+    if (!parsed.token) throw new Error("n8n nao retornou token de ditado.");
+    return parsed;
+  }
+
   if (!config.openAiApiKey) {
     throw new Error(MISSING_OPENAI_KEY_MESSAGE);
   }
@@ -102,42 +147,15 @@ export async function createOpenAIRealtimeToken(): Promise<{
       Authorization: `Bearer ${config.openAiApiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      session: {
-        type: "transcription",
-        audio: {
-          input: {
-            format: {
-              type: "audio/pcm",
-              rate: REALTIME_SAMPLE_RATE,
-            },
-            noise_reduction: {
-              type: "near_field",
-            },
-            transcription: {
-              model: audio.realtimeTranscriptionModel,
-              language: audio.language,
-            },
-          },
-        },
-        include: ["item.input_audio_transcription.logprobs"],
-      },
-    }),
+    body: JSON.stringify(sessionBody),
   });
 
   const data = (await response.json().catch(() => null)) as Record<
     string,
     unknown
   > | null;
-  const clientSecret = (data?.client_secret ?? data) as
-    | Record<string, unknown>
-    | undefined;
-  const token =
-    textValue(clientSecret?.value) ||
-    textValue(clientSecret?.secret) ||
-    textValue(data?.value);
 
-  if (!response.ok || !token) {
+  if (!response.ok) {
     throw new Error(
       textValue((data?.error as Record<string, unknown> | undefined)?.message) ||
         textValue(data?.message) ||
@@ -145,11 +163,40 @@ export async function createOpenAIRealtimeToken(): Promise<{
     );
   }
 
+  const parsed = parseRealtimeToken(data);
+  if (!parsed.token) throw new Error("OpenAI nao retornou token de ditado.");
+  return parsed;
+}
+
+/** Extrai {token, expiresAt} da resposta do client_secrets (OpenAI ou via n8n). */
+function parseRealtimeToken(raw: unknown): {
+  token: string;
+  expiresAt?: number;
+} {
+  const data = (Array.isArray(raw) ? raw[0] : raw) as
+    | Record<string, unknown>
+    | undefined;
+  if (!data || typeof data !== "object") return { token: "" };
+  const clientSecret = (data.client_secret ?? data) as
+    | Record<string, unknown>
+    | undefined;
+  const token =
+    textValue(clientSecret?.value) ||
+    textValue(clientSecret?.secret) ||
+    textValue(data.value);
   const expiresAt =
     typeof clientSecret?.expires_at === "number"
       ? clientSecret.expires_at
       : undefined;
   return { token, expiresAt };
+}
+
+function safeJsonParse(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
 }
 
 export async function transcribeAudioBuffer(args: {

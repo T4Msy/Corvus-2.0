@@ -63,6 +63,11 @@ export function getServerConfig() {
       // de áudio) passa PELO n8n — usando a credencial OpenAI do n8n, que funciona —
       // em vez da OPENAI_API_KEY da Vercel. Vazio ⇒ OpenAI direto (legado).
       llmWebhookUrl: optional(process.env.N8N_LLM_WEBHOOK_URL, ""),
+      // Opcional: webhook proxy de visão (OpenAI /v1/responses) pelo n8n.
+      visionWebhookUrl: optional(process.env.N8N_VISION_WEBHOOK_URL, ""),
+      // Opcional: webhook proxy do token de ditado ao vivo (OpenAI
+      // /v1/realtime/client_secrets) pelo n8n.
+      realtimeWebhookUrl: optional(process.env.N8N_REALTIME_WEBHOOK_URL, ""),
     },
     supabase: {
       url: required(

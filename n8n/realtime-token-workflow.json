@@ -1,0 +1,70 @@
+{
+  "name": "Corvus — Realtime Token (ditado ao vivo)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "corvus-realtime-token",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-realtime-corvus",
+      "name": "Webhook Realtime",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [48, 320],
+      "webhookId": "corvus-realtime-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/realtime/client_secrets",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { session: $json.body.session } }}",
+        "options": {}
+      },
+      "id": "openai-realtime-corvus",
+      "name": "OpenAI Realtime Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [288, 320],
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "respond-realtime-corvus",
+      "name": "Responder ao Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [528, 320]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Realtime": {
+      "main": [[{ "node": "OpenAI Realtime Token", "type": "main", "index": 0 }]]
+    },
+    "OpenAI Realtime Token": {
+      "main": [[{ "node": "Responder ao Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}
