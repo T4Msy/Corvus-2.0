@@ -272,6 +272,55 @@ export function ChatInput({
       transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
     >
       <div className="composer-dock">
+        {hasAttachments && (
+          <div className="composer-attachment-strip" aria-label="Arquivos anexados">
+            {attachments.map((attachment) => (
+              <div className="composer-attachment-chip" key={attachment.id}>
+                <span className="composer-attachment-icon" aria-hidden="true">
+                  {attachment.type.startsWith("image/") ? (
+                    <ImageIcon size={14} />
+                  ) : isAudioAttachment(attachment) ? (
+                    <Volume2 size={14} />
+                  ) : (
+                    <FileText size={14} />
+                  )}
+                </span>
+                <span className="composer-attachment-copy">
+                  <strong>
+                    {attachment.type.startsWith("image/")
+                      ? "Imagem anexada"
+                      : isAudioAttachment(attachment)
+                        ? "Áudio anexado"
+                      : "Arquivo anexado"}
+                  </strong>
+                  <small>
+                    {attachment.name} · {formatFileSize(attachment.size)}
+                  </small>
+                </span>
+                {onOpenAttachment && (
+                  <button
+                    type="button"
+                    aria-label="Abrir anexo"
+                    title="Abrir anexo"
+                    onClick={() => onOpenAttachment(attachment)}
+                  >
+                    <ExternalLink size={13} />
+                  </button>
+                )}
+                {onRemoveAttachment && (
+                  <button
+                    type="button"
+                    aria-label="Remover anexo"
+                    title="Remover anexo"
+                    onClick={() => onRemoveAttachment(attachment)}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
         <div className="composer-input-row">
           <div className="composer-text-field">
             <textarea
@@ -289,55 +338,6 @@ export function ChatInput({
               onChange={(event) => setValue(event.target.value)}
               onKeyDown={handleKeyDown}
             />
-            {hasAttachments && (
-              <div className="composer-attachment-strip" aria-label="Arquivos anexados">
-                {attachments.map((attachment) => (
-                  <div className="composer-attachment-chip" key={attachment.id}>
-                    <span className="composer-attachment-icon" aria-hidden="true">
-                      {attachment.type.startsWith("image/") ? (
-                        <ImageIcon size={14} />
-                      ) : isAudioAttachment(attachment) ? (
-                        <Volume2 size={14} />
-                      ) : (
-                        <FileText size={14} />
-                      )}
-                    </span>
-                    <span className="composer-attachment-copy">
-                      <strong>
-                        {attachment.type.startsWith("image/")
-                          ? "Imagem anexada"
-                          : isAudioAttachment(attachment)
-                            ? "Áudio anexado"
-                          : "Arquivo anexado"}
-                      </strong>
-                      <small>
-                        {attachment.name} · {formatFileSize(attachment.size)}
-                      </small>
-                    </span>
-                    {onOpenAttachment && (
-                      <button
-                        type="button"
-                        aria-label="Abrir anexo"
-                        title="Abrir anexo"
-                        onClick={() => onOpenAttachment(attachment)}
-                      >
-                        <ExternalLink size={13} />
-                      </button>
-                    )}
-                    {onRemoveAttachment && (
-                      <button
-                        type="button"
-                        aria-label="Remover anexo"
-                        title="Remover anexo"
-                        onClick={() => onRemoveAttachment(attachment)}
-                      >
-                        <X size={14} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
           <div className="composer-input-meta" aria-hidden="true">
             <span>{mode === "fenrir" ? "Modo Fenrir" : "Modo Corvus"}</span>
