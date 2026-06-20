@@ -18,6 +18,7 @@ import {
 } from "@/lib/documents/extract";
 import { sendChatToN8n } from "@/lib/n8n/client";
 import { checkRateLimit, clientIpFromHeaders } from "@/lib/rate-limit";
+import { redactSecrets, safeUpstreamReason } from "@/lib/security/redact";
 import {
   analyzeImagesWithOpenAI,
   directVisionReply,
@@ -487,13 +488,14 @@ export async function POST(req: Request) {
             size: attachment.size,
             signedUrl,
             url: signedUrl,
-            extractionError:
+            extractionError: redactSecrets(
               err instanceof Error
                 ? err.message
                 : `Nao foi possivel extrair texto do ${supportedDocumentLabel(
                     attachment.type,
                     attachment.name
-                  )}.`,
+                  )}.`
+            ),
           };
         }
       })
@@ -501,11 +503,14 @@ export async function POST(req: Request) {
 
     documentContext = buildDocumentContext(documentAttachments);
     if (!documentContext) {
-      const reason =
-        documentAttachments
-          .map((attachment) => attachment.extractionError)
-          .filter(Boolean)
-          .join(" ") || "O documento nao retornou texto legivel.";
+      const rawReason = documentAttachments
+        .map((attachment) => attachment.extractionError)
+        .filter(Boolean)
+        .join(" ");
+      const reason = safeUpstreamReason(
+        rawReason,
+        "O documento nao retornou texto legivel."
+      );
       return bad(`Nao foi possivel analisar o documento anexado. ${reason}`);
     }
   }
@@ -567,10 +572,11 @@ export async function POST(req: Request) {
             size: attachment.size,
             signedUrl,
             url: signedUrl,
-            transcriptionError:
+            transcriptionError: redactSecrets(
               err instanceof Error
                 ? err.message
-                : "Nao foi possivel transcrever o audio anexado.",
+                : "Nao foi possivel transcrever o audio anexado."
+            ),
           };
         }
       })
@@ -578,11 +584,14 @@ export async function POST(req: Request) {
 
     audioContext = buildAudioContext(audioAttachments);
     if (!audioContext) {
-      const reason =
-        audioAttachments
-          .map((attachment) => attachment.transcriptionError)
-          .filter(Boolean)
-          .join(" ") || "O audio nao retornou fala legivel.";
+      const rawReason = audioAttachments
+        .map((attachment) => attachment.transcriptionError)
+        .filter(Boolean)
+        .join(" ");
+      const reason = safeUpstreamReason(
+        rawReason,
+        "O audio nao retornou fala legivel."
+      );
       return bad(`Nao foi possivel analisar o audio anexado. ${reason}`);
     }
   }
@@ -781,7 +790,7 @@ export async function POST(req: Request) {
           error: {
             code: "upstream_invalid_response",
             message:
-              visionError ||
+              (visionError && redactSecrets(visionError)) ||
               "O workflow recebeu a imagem, mas nao retornou contexto visual. Verifique o Vision Analyzer no n8n.",
             retryable: false,
           },

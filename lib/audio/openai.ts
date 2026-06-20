@@ -1,5 +1,6 @@
 import "server-only";
 import { getServerConfig } from "@/lib/config";
+import { redactSecrets } from "@/lib/security/redact";
 import type { AudioTranscriptContext, N8nAudioAttachment } from "@/lib/types";
 
 const MAX_TRANSCRIPT_CHARS_PER_FILE = 24_000;
@@ -390,8 +391,9 @@ function errorAttachment(
     size: args.buffer.byteLength,
     signedUrl: "",
     provider,
-    transcriptionError:
-      err instanceof Error ? err.message : "Falha ao transcrever audio.",
+    transcriptionError: redactSecrets(
+      err instanceof Error ? err.message : "Falha ao transcrever audio."
+    ),
   };
 }
 
