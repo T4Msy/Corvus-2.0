@@ -217,7 +217,7 @@ async function answerWithServerFallback(args: {
   userContext: UserContext;
 }): Promise<string> {
   const config = getServerConfig();
-  const apiKey = config.audio.openAiApiKey;
+  const apiKey = config.openAiApiKey;
   if (!apiKey) {
     throw new Error("OPENAI_API_KEY ausente para fallback do Corvus.");
   }

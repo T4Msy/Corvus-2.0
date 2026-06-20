@@ -43,8 +43,9 @@ export async function createOpenAIRealtimeToken(): Promise<{
   token: string;
   expiresAt?: number;
 }> {
-  const audio = getServerConfig().audio;
-  if (!audio.openAiApiKey) {
+  const config = getServerConfig();
+  const audio = config.audio;
+  if (!config.openAiApiKey) {
     throw new Error(MISSING_OPENAI_KEY_MESSAGE);
   }
 
@@ -52,7 +53,7 @@ export async function createOpenAIRealtimeToken(): Promise<{
     method: "POST",
     cache: "no-store",
     headers: {
-      Authorization: `Bearer ${audio.openAiApiKey}`,
+      Authorization: `Bearer ${config.openAiApiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -120,8 +121,9 @@ async function transcribeWithOpenAI(args: {
   name: string;
   type: string;
 }): Promise<N8nAudioAttachment> {
-  const audio = getServerConfig().audio;
-  if (!audio.openAiApiKey) throw new Error(MISSING_OPENAI_KEY_MESSAGE);
+  const config = getServerConfig();
+  const audio = config.audio;
+  if (!config.openAiApiKey) throw new Error(MISSING_OPENAI_KEY_MESSAGE);
 
   const form = new FormData();
   form.append("model", audio.transcriptionModel);
@@ -134,7 +136,7 @@ async function transcribeWithOpenAI(args: {
     method: "POST",
     cache: "no-store",
     headers: {
-      Authorization: `Bearer ${audio.openAiApiKey}`,
+      Authorization: `Bearer ${config.openAiApiKey}`,
     },
     body: form,
   });
@@ -234,8 +236,9 @@ export async function answerAudioTranscriptFallback(args: {
   message: string;
   transcript: string;
 }): Promise<string> {
-  const audio = getServerConfig().audio;
-  if (!audio.openAiApiKey) throw new Error(MISSING_OPENAI_KEY_MESSAGE);
+  const config = getServerConfig();
+  const audio = config.audio;
+  if (!config.openAiApiKey) throw new Error(MISSING_OPENAI_KEY_MESSAGE);
   const wantsTranscript = isTranscriptRequest(args.message);
   if (wantsTranscript) {
     const cleanTranscript =
@@ -248,7 +251,7 @@ export async function answerAudioTranscriptFallback(args: {
     method: "POST",
     cache: "no-store",
     headers: {
-      Authorization: `Bearer ${audio.openAiApiKey}`,
+      Authorization: `Bearer ${config.openAiApiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -293,14 +296,15 @@ export async function answerAudioTranscriptFallback(args: {
 }
 
 async function cleanAudioTranscript(transcript: string): Promise<string> {
-  const audio = getServerConfig().audio;
-  if (!audio.openAiApiKey) throw new Error(MISSING_OPENAI_KEY_MESSAGE);
+  const config = getServerConfig();
+  const audio = config.audio;
+  if (!config.openAiApiKey) throw new Error(MISSING_OPENAI_KEY_MESSAGE);
 
   const response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
     method: "POST",
     cache: "no-store",
     headers: {
-      Authorization: `Bearer ${audio.openAiApiKey}`,
+      Authorization: `Bearer ${config.openAiApiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({

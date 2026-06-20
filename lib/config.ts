@@ -63,8 +63,12 @@ export function getServerConfig() {
       ),
       serviceRoleKey: optional(process.env.SUPABASE_SERVICE_ROLE_KEY, ""),
     },
+    // Chave ÚNICA da OpenAI. Usada por TODOS os caminhos: transcrição/ditado de
+    // áudio, visão, fallback do chat e o refinador de prompt. Não existe "chave
+    // de áudio" separada — é uma só. Para usar chaves distintas no futuro, criar
+    // uma nova env var dedicada aqui (ex.: OPENAI_AUDIO_API_KEY).
+    openAiApiKey: optional(process.env.OPENAI_API_KEY, ""),
     audio: {
-      openAiApiKey: optional(process.env.OPENAI_API_KEY, ""),
       transcriptionModel: optional(
         process.env.OPENAI_TRANSCRIPTION_MODEL,
         "gpt-4o-transcribe"
