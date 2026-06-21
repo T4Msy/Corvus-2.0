@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { UserProfile } from "@/lib/types";
+import { FRIENDLY_ERROR } from "@/lib/ui-messages";
 
 interface ProfileEnvelope {
   ok?: boolean;
@@ -72,22 +73,20 @@ export function usePreferences({
         const data = (await res.json().catch(() => null)) as ProfileEnvelope | null;
         if (cancelled) return;
         if (!res.ok || !data?.ok || !data.profile) {
-          const message =
-            (typeof data?.error === "string" && data.error) ||
-            (data?.error && typeof data.error === "object" && data.error.message) ||
-            `Falha ao carregar perfil (HTTP ${res.status}).`;
-          setState({ profile: null, loading: false, saving: false, error: message });
+          console.error("[corvus] perfil (carregar): HTTP", res.status, data?.error);
+          setState({ profile: null, loading: false, saving: false, error: FRIENDLY_ERROR });
           return;
         }
         setState({ profile: data.profile, loading: false, saving: false, error: null });
         onProfileRef.current?.(data.profile);
       } catch (err) {
         if (cancelled) return;
+        console.error("[corvus] perfil (carregar):", err);
         setState({
           profile: null,
           loading: false,
           saving: false,
-          error: err instanceof Error ? err.message : "Falha de rede ao carregar perfil.",
+          error: FRIENDLY_ERROR,
         });
       }
     })();
@@ -115,21 +114,19 @@ export function usePreferences({
         });
         const data = (await res.json().catch(() => null)) as ProfileEnvelope | null;
         if (!res.ok || !data?.ok || !data.profile) {
-          const message =
-            (typeof data?.error === "string" && data.error) ||
-            (data?.error && typeof data.error === "object" && data.error.message) ||
-            `Falha ao salvar perfil (HTTP ${res.status}).`;
-          setState((s) => ({ ...s, saving: false, error: message }));
+          console.error("[corvus] perfil (salvar): HTTP", res.status, data?.error);
+          setState((s) => ({ ...s, saving: false, error: FRIENDLY_ERROR }));
           return null;
         }
         setState({ profile: data.profile, loading: false, saving: false, error: null });
         onProfileRef.current?.(data.profile);
         return data.profile;
       } catch (err) {
+        console.error("[corvus] perfil (salvar):", err);
         setState((s) => ({
           ...s,
           saving: false,
-          error: err instanceof Error ? err.message : "Falha de rede ao salvar perfil.",
+          error: FRIENDLY_ERROR,
         }));
         return null;
       }

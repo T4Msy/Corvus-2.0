@@ -36,7 +36,8 @@ export function LoginScreen({ logoSrc, onLogin, onGuest, supabaseError }: Props)
     try {
       await onLogin(email.trim(), password);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Credenciais inválidas.");
+      console.error("[corvus] login:", err);
+      setError("Não foi possível entrar. Confira o e-mail e a senha e tente novamente.");
     } finally {
       setBusy(false);
     }

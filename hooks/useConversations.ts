@@ -6,6 +6,7 @@ import {
   deriveConversationTitle,
 } from "@/integrations/supabase/conversations";
 import type { ChatMessage, Conversation, SyncStatus } from "@/lib/types";
+import { FRIENDLY_ERROR } from "@/lib/ui-messages";
 
 type AuthLike = {
   status: "loading" | "anon" | "authed" | "guest";
@@ -71,8 +72,10 @@ export function useConversations(auth: AuthLike) {
   }, []);
 
   const failSync = useCallback((message: string, status: SyncStatus = "error") => {
-    setError(message);
-    setLastSyncError(message);
+    // Causa técnica real só no console; usuário vê sempre a mensagem amigável.
+    console.error("[corvus] sync:", message);
+    setError(FRIENDLY_ERROR);
+    setLastSyncError(FRIENDLY_ERROR);
     setSyncStatus(status);
   }, []);
 

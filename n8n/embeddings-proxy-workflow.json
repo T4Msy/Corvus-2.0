@@ -1,0 +1,83 @@
+{
+  "name": "Corvus — Embeddings Proxy (text-embedding)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "corvus-embeddings",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-embed-corvus",
+      "name": "Webhook Embeddings",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [48, 320],
+      "webhookId": "corvus-embeddings-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { model: ($json.body.model || 'text-embedding-3-small'), input: $json.body.input } }}",
+        "options": {}
+      },
+      "id": "openai-embed-corvus",
+      "name": "OpenAI Embeddings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [288, 320],
+      "credentials": {
+        "openAiApi": {
+          "id": "OBylh3PHUYnyQB0n",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json.data || [];\nconst embedding = (data[0] && data[0].embedding) || null;\nreturn [{ ok: Array.isArray(embedding), embedding }];"
+      },
+      "id": "format-embed-corvus",
+      "name": "Formate Resposta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [528, 320]
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "respond-embed-corvus",
+      "name": "Responder ao Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [768, 320]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Embeddings": {
+      "main": [[{ "node": "OpenAI Embeddings", "type": "main", "index": 0 }]]
+    },
+    "OpenAI Embeddings": {
+      "main": [[{ "node": "Formate Resposta", "type": "main", "index": 0 }]]
+    },
+    "Formate Resposta": {
+      "main": [[{ "node": "Responder ao Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

@@ -8,6 +8,7 @@ import {
   uploadConversationFile,
 } from "@/integrations/supabase/storage";
 import type { ConversationAttachment } from "@/lib/types";
+import { FRIENDLY_ERROR } from "@/lib/ui-messages";
 
 type AttachmentMap = Record<string, ConversationAttachment[]>;
 
@@ -130,9 +131,8 @@ export function useConversationAttachments({
 
         return attachment;
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Falha ao enviar arquivo.";
-        setError(message);
+        console.error("[corvus] anexo (enviar):", err);
+        setError(FRIENDLY_ERROR);
         return null;
       } finally {
         setBusy(false);
@@ -165,9 +165,8 @@ export function useConversationAttachments({
         });
         return true;
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Falha ao remover arquivo.";
-        setError(message);
+        console.error("[corvus] anexo (remover):", err);
+        setError(FRIENDLY_ERROR);
         return false;
       } finally {
         setBusy(false);
@@ -208,9 +207,8 @@ export function useConversationAttachments({
         window.open(url, "_blank", "noopener,noreferrer");
         return true;
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Falha ao abrir arquivo.";
-        setError(message);
+        console.error("[corvus] anexo (abrir):", err);
+        setError(FRIENDLY_ERROR);
         return false;
       }
     },

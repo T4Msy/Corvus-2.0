@@ -57,17 +57,34 @@ async function sbFetch(url, opts = {}) {
   return res;
 }
 
-/* ---- embeddings (OpenAI direto) ---- */
+/* ---- embeddings (via webhook do n8n, DIRETO do navegador) ----
+ * A OpenAI não permite chamada do navegador (sem CORS). O n8n permite: ele
+ * reflete a origem no CORS, então funciona até abrindo o index.html por file://
+ * (origin "null"). A Key da OpenAI fica no n8n — não precisa de chave no painel.
+ * Importe/ative n8n/embeddings-proxy-workflow.json (path corvus-embeddings).
+ * Para trocar a URL, defina EMBEDDINGS_WEBHOOK_URL no config.js. */
+const EMBED_URL =
+  CFG.EMBEDDINGS_WEBHOOK_URL ||
+  'http://129.148.33.171:5678/webhook/corvus-embeddings';
+
 async function generateEmbedding(text) {
-  if (!CFG.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY ausente no config.js');
-  const res = await fetch('https://api.openai.com/v1/embeddings', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + CFG.OPENAI_API_KEY },
-    body: JSON.stringify({ model: CFG.EMBEDDING_MODEL || 'text-embedding-3-small', input: text }),
-  });
-  const j = await res.json();
-  if (!res.ok || j.error) throw new Error('OpenAI: ' + (j.error ? j.error.message : res.status));
-  return '[' + j.data[0].embedding.join(',') + ']';
+  let res;
+  try {
+    res = await fetch(EMBED_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input: text, model: CFG.EMBEDDING_MODEL || 'text-embedding-3-small' }),
+    });
+  } catch (e) {
+    throw new Error('Não consegui falar com o n8n (' + EMBED_URL + '). Veja se o workflow está ativo e se você tem rede. ' + (e.message || ''));
+  }
+  let j = null; try { j = await res.json(); } catch {}
+  const obj = Array.isArray(j) ? j[0] : j;
+  const embedding = obj && obj.embedding;
+  if (!res.ok || !Array.isArray(embedding)) {
+    throw new Error('n8n embeddings: ' + ((obj && (obj.error || obj.message)) || ('HTTP ' + res.status)));
+  }
+  return '[' + embedding.join(',') + ']';
 }
 
 /* ---- filtros de PK ---- */

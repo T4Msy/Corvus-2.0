@@ -11,6 +11,7 @@ import type {
   ConversationAttachment,
   UserContext,
 } from "@/lib/types";
+import { FRIENDLY_ERROR } from "@/lib/ui-messages";
 
 interface SendArgs {
   text: string;
@@ -96,14 +97,18 @@ export function useChat() {
       const data = (await res.json().catch(() => null)) as ChatResponse | null;
 
       if (!data) {
-        setError({ message: "Resposta invalida do servidor.", retryable: true });
+        console.error("[corvus] resposta sem corpo do servidor");
+        setError({ message: FRIENDLY_ERROR, retryable: true });
         return false;
       }
       if (!data.ok) {
-        setError({
-          message: friendlyError(data.error.code, data.error.message),
-          retryable: data.error.retryable,
-        });
+        console.error(
+          "[corvus] erro upstream:",
+          data.error.code,
+          "-",
+          data.error.message
+        );
+        setError({ message: FRIENDLY_ERROR, retryable: data.error.retryable });
         return false;
       }
 
@@ -116,8 +121,8 @@ export function useChat() {
       void args.onAssistantMessage?.(assistantMessage, data);
       return true;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erro de rede.";
-      setError({ message: `Falha de conexao: ${msg}`, retryable: true });
+      console.error("[corvus] falha de rede:", err);
+      setError({ message: FRIENDLY_ERROR, retryable: true });
       return false;
     } finally {
       setPending(false);
@@ -169,23 +174,3 @@ function hasMessage(messages: ChatMessage[], next: ChatMessage): boolean {
   });
 }
 
-function friendlyError(code: string, fallback: string): string {
-  switch (code) {
-    case "upstream_timeout":
-      return "O Corvus demorou demais para responder. Tente novamente.";
-    case "upstream_unreachable":
-      return "Nao consegui falar com o motor do Corvus agora. Tente em instantes.";
-    case "upstream_5xx":
-      return fallback || "Erro no motor do Corvus. Equipe tecnica notificada.";
-    case "upstream_4xx":
-      return "Workflow indisponivel ou desativado.";
-    case "upstream_invalid_response":
-      return fallback || "O Corvus respondeu em formato inesperado.";
-    case "validation":
-      return fallback;
-    case "internal":
-      return fallback || "Configuracao do Corvus indisponivel.";
-    default:
-      return fallback || "Falha desconhecida.";
-  }
-}

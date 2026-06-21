@@ -9,6 +9,7 @@ import {
 } from "@/integrations/supabase/client";
 import { loadUserProfile } from "@/integrations/supabase/auth";
 import type { UserProfile } from "@/lib/types";
+import { FRIENDLY_ERROR } from "@/lib/ui-messages";
 
 type AuthStatus = "loading" | "anon" | "authed" | "guest";
 
@@ -83,8 +84,9 @@ export function useAuth() {
           return;
         }
 
-        const { profile, error } = await loadUserProfile(supabase, session.user);
+        const { profile, error: profileError } = await loadUserProfile(supabase, session.user);
         if (cancelled) return;
+        if (profileError) console.error("[corvus] perfil (sessão):", profileError);
         setState({
           status: "authed",
           userId: session.user.id,
@@ -92,12 +94,13 @@ export function useAuth() {
           session,
           accessToken: session.access_token,
           supabaseReady: true,
-          error,
+          error: profileError ? FRIENDLY_ERROR : null,
         });
       }
 
       void supabase.auth.getSession().then(({ data, error }) => {
         if (error && !cancelled) {
+          console.error("[corvus] sessão:", error);
           setState({
             status: "anon",
             userId: "",
@@ -105,7 +108,7 @@ export function useAuth() {
             session: null,
             accessToken: null,
             supabaseReady: true,
-            error: error.message,
+            error: FRIENDLY_ERROR,
           });
           return;
         }
@@ -149,6 +152,7 @@ export function useAuth() {
       supabase,
       data.user
     );
+    if (profileError) console.error("[corvus] perfil (login):", profileError);
     setState({
       status: "authed",
       userId: data.user.id,
@@ -156,7 +160,7 @@ export function useAuth() {
       session: data.session,
       accessToken: data.session.access_token,
       supabaseReady: true,
-      error: profileError,
+      error: profileError ? FRIENDLY_ERROR : null,
     });
   }, []);
 

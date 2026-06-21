@@ -61,6 +61,7 @@ import {
   uploadUserFile,
 } from "@/integrations/supabase/storage";
 import { exportConversationAsMarkdown } from "@/lib/export";
+import { FRIENDLY_ERROR } from "@/lib/ui-messages";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import type {
   AgentMode,
@@ -400,13 +401,11 @@ export function ChatApp() {
         }
       };
     } catch (err) {
+      console.error("[corvus] realtime:", err);
       toast.push({
         tone: "warning",
         title: "Realtime indisponível",
-        message:
-          err instanceof Error
-            ? err.message
-            : "Não foi possível abrir a sincronização ao vivo.",
+        message: FRIENDLY_ERROR,
       });
     }
   }, [
@@ -777,13 +776,11 @@ export function ChatApp() {
             throw new Error("Mensagem editada, mas não foi possível remover as respostas seguintes.");
           }
         } catch (err) {
+          console.error("[corvus] edição:", err);
           toast.push({
             tone: "error",
             title: "Edição não sincronizada",
-            message:
-              err instanceof Error
-                ? err.message
-                : "Não foi possível sincronizar a edição com o servidor.",
+            message: FRIENDLY_ERROR,
           });
         }
       }
@@ -884,13 +881,11 @@ export function ChatApp() {
           message: "Sua identidade visual foi sincronizada.",
         });
       } catch (err) {
+        console.error("[corvus] avatar:", err);
         toast.push({
           tone: "error",
           title: "Falha no avatar",
-          message:
-            err instanceof Error
-              ? err.message
-              : "Não foi possível atualizar a imagem.",
+          message: FRIENDLY_ERROR,
         });
       } finally {
         setAvatarBusy(false);
